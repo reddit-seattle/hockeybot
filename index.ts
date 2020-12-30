@@ -1,15 +1,26 @@
 
 import { Client, Guild, Message, TextChannel } from 'discord.js'
 import { createServer } from 'http';
-import { GetSchedule } from './commands/ScheduleCommands';
+import { GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule } from './commands/ScheduleCommands';
 import { Config, Environment } from './utils/constants';
+import { GetMessageArgs } from './utils/helpers';
 
 const client: Client = new Client();
 
 client.on("message", async(message: Message) => {
+    //bad bot
     if (!message.content.startsWith(Config.prefix) || message.author.bot) return;
+    
+    const args = GetMessageArgs(message);
+    // TODO: dictionary fire commands by commands[CommandModule.name]
     if(message.content.startsWith('$nhl schedule')){
-        GetSchedule.execute(message);
+        GetSchedule.execute(message, args);
+    }
+    else if(message.content.startsWith('$nhl next')){
+        GetNextGamesForTeam.execute(message, args);
+    }
+    else if(message.content.startsWith('$nhl last')){
+        GetLastGamesForTeam.execute(message, args);
     }
 });
 

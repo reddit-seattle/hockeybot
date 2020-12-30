@@ -32,7 +32,7 @@ export module Team {
     }
 
     export interface Team {
-        id: number;
+        id: string;
         name: string;
         link: string;
         venue: Venue;
