@@ -14,25 +14,25 @@ export module Team {
     }
 
     export interface Division {
-        id: number;
+        id: string;
         name: string;
         link: string;
     }
 
     export interface Conference {
-        id: number;
+        id: string;
         name: string;
         link: string;
     }
 
     export interface Franchise {
-        franchiseId: number;
+        franchiseId: string;
         teamName: string;
         link: string;
     }
 
     export interface Team {
-        id: number;
+        id: string;
         name: string;
         link: string;
         venue: Venue;
@@ -45,7 +45,7 @@ export module Team {
         franchise: Franchise;
         shortName: string;
         officialSiteUrl: string;
-        franchiseId: number;
+        franchiseId: string;
         active: boolean;
     }
 
