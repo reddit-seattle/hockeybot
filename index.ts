@@ -2,25 +2,38 @@
 import { Client, Guild, Message, TextChannel } from 'discord.js'
 import { createServer } from 'http';
 import { GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule } from './commands/ScheduleCommands';
+import { GetTeamStats } from './commands/TeamCommands';
+import { Command } from './models/Command';
 import { Config, Environment } from './utils/constants';
 import { GetMessageArgs } from './utils/helpers';
 
 const client: Client = new Client();
 
-client.on("message", async(message: Message) => {
+//load commands
+
+const commands = [
+    GetSchedule,
+    GetLastGamesForTeam,
+    GetNextGamesForTeam,
+    GetTeamStats
+].reduce((map, obj) => {
+        map[obj.name] = obj;
+        return map;
+}, {} as { [id: string]: Command });
+
+client.on("message", async (message: Message) => {
     //bad bot
     if (!message.content.startsWith(Config.prefix) || message.author.bot) return;
-    
+
+    //send it
     const args = GetMessageArgs(message);
-    // TODO: dictionary fire commands by commands[CommandModule.name]
-    if(message.content.startsWith('$nhl schedule')){
-        GetSchedule.execute(message, args);
+    const command = commands?.[args?.[0]];
+    try{
+        command?.execute(message, args)
     }
-    else if(message.content.startsWith('$nhl next')){
-        GetNextGamesForTeam.execute(message, args);
-    }
-    else if(message.content.startsWith('$nhl last')){
-        GetLastGamesForTeam.execute(message, args);
+    catch(e: any) {
+        console.dir(e);
+        message.react('💩');
     }
 });
 
@@ -30,7 +43,7 @@ client.on('ready', async () => {
         //try to announce to servers when you go online
         client.guilds.cache.array().forEach((guild: Guild) => {
             const debugChannel = guild.channels.cache.find(channel => channel.name == 'debug') as TextChannel;
-            debugChannel?.send("HockeyBot, reporting for duty!"); 
+            debugChannel?.send("HockeyBot, reporting for duty!");
         });
     }
 });
@@ -46,7 +59,7 @@ else {
 
 //stupid fix for azure app service containers requiring a response to port 8080
 createServer(function (req, res) {
-  res.writeHead(200, {'Content-Type': 'text/plain'});
-  res.write('yeet');
-  res.end();
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.write('yeet');
+    res.end();
 }).listen(8080);

@@ -68,6 +68,11 @@ export module API {
         }
 
     }
-
-    //TODO: team stats: https://github.com/dword4/nhlapi#team-stats
+    export module Stats {
+        export const TeamStats: (id: string) => Promise<TeamStatsResponse.Stats> = async (id) => {
+            const response = await get<TeamStatsResponse.Response>(Paths.Get.TeamStats(id));
+            const statsObj = response?.stats?.filter(stat => stat.type.displayName === 'statsSingleSeason')?.[0];
+            return statsObj?.splits?.[0].stat;
+        }
+    }
 }

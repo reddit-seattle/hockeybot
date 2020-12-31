@@ -41,6 +41,8 @@ export module Paths {
             (id) => `${Paths.Get.People}/${id}`;
 
         export const Seasons: string = `${API_HOST_URL}/${API_PART}/seasons`;
+        
+        export const TeamStats: (id: string) => string = (id) => `${Team(id)}/stats`;
     }
 
     
