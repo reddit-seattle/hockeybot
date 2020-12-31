@@ -1,6 +1,7 @@
 
 import { Client, Guild, Message, TextChannel } from 'discord.js'
 import { createServer } from 'http';
+import { Help } from './commands/HelpCommands';
 import { GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule } from './commands/ScheduleCommands';
 import { GetStandings } from './commands/StandingsCommands';
 import { GetTeamStats } from './commands/TeamCommands';
@@ -17,7 +18,8 @@ const commands = [
     GetLastGamesForTeam,
     GetNextGamesForTeam,
     GetTeamStats,
-    GetStandings
+    GetStandings,
+    Help
 ].reduce((map, obj) => {
         map[obj.name] = obj;
         return map;

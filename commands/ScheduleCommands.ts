@@ -11,6 +11,7 @@ const bot_thumbnail_image = `https://i.imgur.com/xHcfK8Q.jpg`;
 export const GetSchedule: Command = {
 	name: 'schedule',
 	description: 'List of games on a given day',
+	help: 'schedule 2020-01-01',
 	async execute(message: Message, args: string[]) {
 		// check for date
 		const date = args?.[1];
@@ -51,6 +52,7 @@ export const GetSchedule: Command = {
 export const GetNextGamesForTeam: Command = {
 	name: 'next',
 	description: 'Next [x] game results for team [y]',
+	help: 'next 5 PHI',
 	execute: async (message: Message, args: string[]) => {
 		//expect ['next', number, 'PHI']
 		if(args?.[1] && args?.[2]) {
@@ -114,6 +116,7 @@ export const GetNextGamesForTeam: Command = {
 export const GetLastGamesForTeam: Command = {
 	name: 'last',
 	description: 'Last [x] game results for team [y]',
+	help: 'last 10 mtl',
 	execute: async (message: Message, args: string[]) => {
 		//expect ['next', number, 'PHI']
 		if(args?.[1] && args?.[2]) {

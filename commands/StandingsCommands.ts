@@ -7,7 +7,8 @@ const bot_thumbnail_image = `https://i.imgur.com/xHcfK8Q.jpg`;
 
 export const GetStandings: Command = {
 	name: 'standings',
-	description: 'Standings',
+    description: 'Get Standings. Standings type optional (`wildCard`, `divisionLeaders`)',
+    help: 'standings divisionLeaders',
 	async execute(message: Message, args: string[]) {
         const standingsArg = args?.[1];
         const standings = await API.Standings.GetStandings(standingsArg as StandingsTypes);

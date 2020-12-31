@@ -9,6 +9,7 @@ const bot_thumbnail_image = `https://i.imgur.com/xHcfK8Q.jpg`;
 export const GetTeamStats: Command = {
 	name: 'teamstats',
 	description: 'Team regular season statistics',
+	help: 'teamstats PHI',
 	async execute(message: Message, args: string[]) {
 		const team = await API.Teams.GetTeamByAbbreviation(args[1]);
 		if(!team?.id) {
