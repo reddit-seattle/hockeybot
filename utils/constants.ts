@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { StandingsTypes } from '../models/StandingsTypes';
 dotenv.config();
 
 export module Config {
@@ -43,6 +44,9 @@ export module Paths {
         export const Seasons: string = `${API_HOST_URL}/${API_PART}/seasons`;
         
         export const TeamStats: (id: string) => string = (id) => `${Team(id)}/stats`;
+
+        export const Standings: string = `${API_HOST_URL}/${API_PART}/standings`;
+        export const CustomStandings: (type: StandingsTypes) => string = (type) => `${Standings}/${type}`;
     }
 
     

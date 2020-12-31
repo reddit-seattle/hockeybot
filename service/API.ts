@@ -2,6 +2,7 @@ import { Environment, Paths } from "../utils/constants";
 import { Schedule as ScheduleResponse } from "./models/responses/Schedule";
 import { Team as TeamResponse } from "./models/responses/Teams";
 import fetch from 'node-fetch';
+import { StandingsTypes } from "../models/StandingsTypes";
 
 export async function get<T>(
     url: string
@@ -73,6 +74,18 @@ export module API {
             const response = await get<TeamStatsResponse.Response>(Paths.Get.TeamStats(id));
             const statsObj = response?.stats?.filter(stat => stat.type.displayName === 'statsSingleSeason')?.[0];
             return statsObj?.splits?.[0].stat;
+        }
+    }
+
+    export module Standings {
+        export const GetStandings: (type?: StandingsTypes) => Promise<StandingsResponse.Record[]> = async (type) => {
+            const response = await get<StandingsResponse.Response>(
+                type
+                    ? Paths.Get.CustomStandings(type)
+                    : Paths.Get.Standings
+            );
+
+            return response?.records;
         }
     }
 }

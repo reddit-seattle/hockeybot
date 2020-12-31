@@ -15,7 +15,7 @@ export module Schedule {
     }
 
     export interface Team {
-        id: number;
+        id: string;
         name: string;
         link: string;
     }
@@ -38,7 +38,7 @@ export module Schedule {
     }
 
     export interface Venue {
-        id: number;
+        id: string;
         name: string;
         link: string;
     }
