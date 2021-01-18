@@ -92,15 +92,15 @@ export module API {
     }
 
     export module Games {
-        export const GetGameById: (id: string) => Promise<GameFeedResponse.LiveData> = async(id) => {
+        export const GetGameById: (id: string) => Promise<GameFeedResponse.Response> = async(id) => {
             const response = await get<GameFeedResponse.Response>(Paths.Get.GameFeed(id));
-            return response?.liveData;
+            return response;
         }
 
-        export const GetGameDiff: (id: string, since: string) => Promise<GameFeedResponse.LiveData> = async(id, since) => {
+        export const GetGameDiff: (id: string, since: string) => Promise<GameFeedResponse.Response> = async(id, since) => {
             const timecode = format(since, "yyyyMMdd_HHmmss");
             const response = await get<GameFeedResponse.Response>(Paths.Get.GameFeedDiff(id, timecode));
-            return response?.liveData;
+            return response;
         }
     }
 }

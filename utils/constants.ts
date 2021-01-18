@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { Interface } from 'readline';
 import { StandingsTypes } from '../models/StandingsTypes';
 dotenv.config();
 
@@ -11,21 +12,43 @@ export module Environment {
     export const DEBUG = process.env['hockeybotDEBUG'] || undefined;
 }
 
+export enum EventTypes {
+    Goal = 'GOAL'
+}
+export enum GameStates {
+    FINAL = '7',
+    PREVIEW = '1'
+}
+export enum PlayerTypes {
+    Scorer = 'Scorer',
+    Shooter = 'Shooter',
+    Goalie = 'Goalie'
+}
+export module Kraken {
+    export const TeamId: string = Environment.DEBUG ? '4' : '55';
+}
+
+export interface Record {
+    Wins: number;
+    Losses: number;
+    Overtime: number;
+}
+
 export module Paths {
     export const API_HOST_URL: string = `https://statsapi.web.nhl.com`;
     export const API_PART: string = 'api/v1';
     export const API_ENDPOINT = `${API_HOST_URL}/${API_PART}`;
     
     export module Get {
-        export const Schedule: string = `${API_ENDPOINT}/schedule`;
+        export const Schedule: string = `${API_ENDPOINT}/schedule?expand=schedule.linescore`;
         export const ScheduleByDate:(startDate: string, endDate?: string) => string = 
-            (start, end) => `${Paths.Get.Schedule}?startDate=${start}&endDate=${end || start}`;
+            (start, end) => `${Schedule}&startDate=${start}&endDate=${end || start}`;
 
         export const TeamSchedule: (id: string) => string =
-            (id) => `${Schedule}?teamId=${id}`;
+            (id) => `${Schedule}&teamId=${id}`;
     
         export const TeamScheduleByDate :(team: string, startDate: string, endDate?: string) => string =
-            (id, start, end) => `${Schedule}?teamId=${id}&startDate=${start}&endDate=${end || start}`;
+            (id, start, end) => `${Schedule}&teamId=${id}&startDate=${start}&endDate=${end || start}`;
 
         export const Teams: string = `${API_ENDPOINT}/teams`;
         export const Team:(id: string) => string = (id) => `${Paths.Get.Teams}/${id}`;
@@ -44,14 +67,16 @@ export module Paths {
 
         export const Seasons: string = `${API_ENDPOINT}/seasons`;
         
-        export const TeamStats: (id: string) => string = (id) => `${Team(id)}/stats`;
+        export const TeamStats: (id: string) => string =
+            (id) => `${Team(id)}/stats`;
 
         export const Standings: string = `${API_ENDPOINT}/standings`;
-        export const CustomStandings: (type: StandingsTypes) => string = (type) => `${Standings}/${type}`;
+        export const CustomStandings: (type: StandingsTypes) => string =
+            (type) => `${Standings}/${type}`;
 
         export const GameFeed: (id: string) => string = (id) => `${API_ENDPOINT}/game/${id}/feed/live`;
-        export const GameFeedDiff: (id: string, timecode: string) => string = (id, timecode) => `${API_ENDPOINT}/game/${id}/feed/live/diffPatch?startTimecode=${timecode}`;
+        export const GameFeedDiff: (id: string, timecode: string) => string =
+            (id, timecode) => `${API_ENDPOINT}/game/${id}/feed/live/diffPatch?startTimecode=${timecode}`;
     }
 
-    
 }

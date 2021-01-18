@@ -1,7 +1,7 @@
 import { Message, MessageEmbed } from "discord.js";
 import { Command } from "../models/Command";
 import { Config } from "../utils/constants";
-import { GetSchedule, GetLastGamesForTeam, GetNextGamesForTeam } from "./ScheduleCommands";
+import { GetSchedule, GetLastGamesForTeam, GetNextGamesForTeam, GetScores } from "./ScheduleCommands";
 import { GetStandings } from "./StandingsCommands";
 import { GetTeamStats } from "./TeamCommands";
 
@@ -10,18 +10,27 @@ const bot_thumbnail_image = `https://i.imgur.com/xHcfK8Q.jpg`;
 
 //TODO - these are duplicated from command-loading in index, let's put this somewhere consistent.
 const commands = [
+    // schedule, fwd/back
     GetSchedule,
     GetLastGamesForTeam,
     GetNextGamesForTeam,
+    // teamstats (meh atm)
     GetTeamStats,
-    GetStandings
+    // scores
+    GetScores,
+    // standings
+    GetStandings,
+    // Game Updates
+    // StartGameUpdate,
+    // StopGameUpdates,
+    // ListGameUpdates
 ]
 
 
 export const Help: Command = {
-	name: 'help',
-	description: 'Display Hockeybot help',
-	async execute(message: Message, args: string[]) {
+    name: 'help',
+    description: 'Display Hockeybot help',
+    async execute(message: Message, args: string[]) {
         const embed = new MessageEmbed({
             title: `Hockeybot Help`,
             description: 'Commands',
@@ -34,6 +43,6 @@ export const Help: Command = {
                 }
             })
         });
-		message.channel.send(embed);
-	},
+        message.channel.send(embed);
+    },
 }

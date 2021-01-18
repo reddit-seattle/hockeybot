@@ -31,7 +31,7 @@ export module GameFeedResponse {
     }
 
     export interface Venue {
-        id: number;
+        id: string;
         name: string;
         link: string;
         city: string;
@@ -39,25 +39,25 @@ export module GameFeedResponse {
     }
 
     export interface Division {
-        id: number;
+        id: string;
         name: string;
         link: string;
     }
 
     export interface Conference {
-        id: number;
+        id: string;
         name: string;
         link: string;
     }
 
     export interface Franchise {
-        franchiseId: number;
+        franchiseId: string;
         teamName: string;
         link: string;
     }
 
     export interface Away {
-        id: number;
+        id: string;
         name: string;
         link: string;
         venue: Venue;
@@ -71,12 +71,12 @@ export module GameFeedResponse {
         franchise: Franchise;
         shortName: string;
         officialSiteUrl: string;
-        franchiseId: number;
+        franchiseId: string;
         active: boolean;
     }
 
     export interface Home {
-        id: number;
+        id: string;
         name: string;
         link: string;
         venue: Venue;
@@ -90,7 +90,7 @@ export module GameFeedResponse {
         franchise: Franchise;
         shortName: string;
         officialSiteUrl: string;
-        franchiseId: number;
+        franchiseId: string;
         active: boolean;
     }
 
@@ -99,8 +99,20 @@ export module GameFeedResponse {
         home: Home;
     }
 
+    export interface LineScoreTeam {
+        team: CurrentTeam;
+        goals: number;
+        shotsOnGoal: number;
+        numSkaters: number,
+        goaliePulled: boolean;
+        powerPlay: boolean;
+    }
+    export interface LineScoreTeams {
+        away: LineScoreTeam;
+        home: LineScoreTeam;
+    }
     export interface CurrentTeam {
-        id: number;
+        id: string;
         name: string;
         link: string;
         triCode: string;
@@ -114,7 +126,7 @@ export module GameFeedResponse {
     }
 
     export interface PlayerObject {
-        id: number;
+        id: string;
         fullName: string;
         link: string;
         firstName: string;
@@ -176,7 +188,7 @@ export module GameFeedResponse {
 
     export interface About {
         eventIdx: number;
-        eventId: number;
+        eventId: string;
         period: number;
         periodType: string;
         ordinalNum: string;
@@ -198,7 +210,7 @@ export module GameFeedResponse {
     }
 
     export interface Team {
-        id: number;
+        id: string;
         name: string;
         link: string;
         triCode: string;
@@ -259,7 +271,7 @@ export module GameFeedResponse {
         currentPeriodTimeRemaining: string;
         periods: Period[];
         shootoutInfo: ShootoutInfo;
-        teams: Teams;
+        teams: LineScoreTeams;
         powerPlayStrength: string;
         hasShootout: boolean;
         intermissionInfo: IntermissionInfo;
@@ -284,7 +296,7 @@ export module GameFeedResponse {
     }
 
     export interface Person {
-        id: number;
+        id: string;
         fullName: string;
         link: string;
         shootsCatches: string;
@@ -330,7 +342,7 @@ export module GameFeedResponse {
     }
 
     export interface OnIcePlu {
-        playerId: number;
+        playerId: string;
         shiftDuration: number;
         stamina: number;
     }
@@ -350,31 +362,31 @@ export module GameFeedResponse {
     }
 
     export interface Winner {
-        id: number;
+        id: string;
         fullName: string;
         link: string;
     }
 
     export interface Loser {
-        id: number;
+        id: string;
         fullName: string;
         link: string;
     }
 
     export interface FirstStar {
-        id: number;
+        id: string;
         fullName: string;
         link: string;
     }
 
     export interface SecondStar {
-        id: number;
+        id: string;
         fullName: string;
         link: string;
     }
 
     export interface ThirdStar {
-        id: number;
+        id: string;
         fullName: string;
         link: string;
     }
