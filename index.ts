@@ -2,7 +2,7 @@
 import { Client, Guild, Message, TextChannel } from 'discord.js'
 import { createServer } from 'http';
 import { Help } from './commands/HelpCommands';
-import { GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule } from './commands/ScheduleCommands';
+import { GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule, GetScores } from './commands/ScheduleCommands';
 import { GetStandings } from './commands/StandingsCommands';
 import { GetTeamStats } from './commands/TeamCommands';
 import { Command } from './models/Command';
@@ -18,6 +18,7 @@ const commands = [
     GetLastGamesForTeam,
     GetNextGamesForTeam,
     GetTeamStats,
+    GetScores,
     GetStandings,
     Help
 ].reduce((map, obj) => {

@@ -1,9 +1,9 @@
-import { Message, MessageEmbed } from "discord.js";
+import { EmbedField, Message, MessageEmbed } from "discord.js";
 import { format, utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
-import { last, first } from 'underscore';
+import { last, first, values } from 'underscore';
 import { Command } from "../models/Command";
 import { API } from "../service/API";
-import { Config, Environment } from "../utils/constants";
+import { Config, Environment, GameStates, Record } from "../utils/constants";
 
 
 const bot_thumbnail_image = `https://i.imgur.com/xHcfK8Q.jpg`;
@@ -133,7 +133,7 @@ export const GetLastGamesForTeam: Command = {
 				console.log(`start: ${season?.regularSeasonStartDate}`);
 				console.log(`end: ${today}`);
 			}
-			const allGames = await API.Schedule.GetTeamSchedule(team.id, season?.regularSeasonStartDate, today);
+			const allGames = await (await API.Schedule.GetTeamSchedule(team.id, season?.regularSeasonStartDate, today)).filter(x => x.status.codedGameState == GameStates.FINAL);
 
 			if(!allGames?.[0]){
 				message.channel.send(`Could not find any previous games for ${args[2]} this season`);
@@ -141,11 +141,40 @@ export const GetLastGamesForTeam: Command = {
 			}
 			
 			const games = last(allGames, numberGames);
+			const fields: EmbedField[] = [];
+			const record: Record = {
+				Wins: 0,
+				Losses: 0,
+				Overtime: 0
+			}
 
-			//todo - change display from game time and venue to results / box score data
+			for (const game of games) {
+				const gameresult = await API.Games.GetGameById(game.gamePk);
+				const { liveData } = gameresult;
+				const { linescore } = liveData;
+				const isHome = (team.id === linescore.teams.home.team.id);
+				const teamObj = isHome ? linescore.teams.home : linescore.teams.away
+				const opponentObj = isHome ? linescore.teams.away : linescore.teams.home;
+				const win = teamObj.goals > opponentObj.goals;
+				const ot = linescore.currentPeriod > 3;
+				const shootout = liveData.linescore.hasShootout;
+				const result = win ? "W" : (ot ? "OTL" : (shootout ? 'SOL' : 'L'));
+				switch(result) {
+					case 'W': record.Wins++; break;
+					case 'L': record.Losses++; break;
+					case 'OTL':
+					case 'SOL': record.Overtime++;break;
+				}
+				fields.push({
+					name: `${teamObj.team.triCode} ${isHome ? 'VS' : '@'} ${opponentObj.team.triCode} : **${result}**`,
+					value: `${gameresult.gameData.status.detailedState} : ${teamObj.goals} - ${opponentObj.goals}`,
+					inline: false
+				});
+			}
+
 			const embed = new MessageEmbed({
 				title: `Last ${numberGames} games for the ${team.teamName}`,
-				description: 'Games',
+				description: `Record: (${record.Wins} - ${record.Losses} - ${record.Overtime})`,
 				color: 111111,
 				footer: {
 					text: 'Source: NHL API',
@@ -154,13 +183,7 @@ export const GetLastGamesForTeam: Command = {
 				// image: {
 				// 	url: bot_thumbnail_image,
 				// },
-				fields: games.map(game => {
-					return {
-						name: `${game.teams.away.team.name} @ ${game.teams.home.team.name}`,
-						value: `${format(utcToZonedTime(game.gameDate, 'America/Los_Angeles'), 'HH:mm')} - ${game.venue.name}`,
-						inline: false
-					}
-				})
+				fields: fields
 			});
 			message.channel.send(embed);
 			
@@ -171,5 +194,42 @@ export const GetLastGamesForTeam: Command = {
 				 Example: \`${Config.prefix} next 5 PHI\``
 			);
 		}
+	}
+}
+
+export const GetScores: Command = {
+	name: 'scores',
+	description: 'Scores of current games',
+	help: 'scores',
+	async execute(message: Message, args: string[]) {
+
+		const schedule = (await API.Schedule.GetSchedule()).filter(x => x.status.codedGameState == '5' || x.status.codedGameState == '3');
+
+		// sadness, no hockey today :(
+		if(schedule.length == 0) {
+			message.channel.send('Sad, no games today :(');
+			return;
+		}
+
+		const embed = new MessageEmbed({
+			title: `Scores`,
+			description: '',
+			color: 111111,
+			footer: {
+				text: 'Source: NHL API',
+				iconURL: bot_thumbnail_image,
+			},
+			// image: {
+			// 	url: bot_thumbnail_image,
+			// },
+			fields: schedule.map(game => {
+				return {
+					name: `${game.teams.away.team.name}: ${game.teams.away.score} @ ${game.teams.home.team.name}: ${game.teams.home.score}`,
+					value: game.status.codedGameState == GameStates.FINAL ? 'FINAL' : `${game.linescore.currentPeriodTimeRemaining} ${game.linescore.currentPeriodOrdinal} period`,
+					inline: false
+				}
+			})
+		});
+		message.channel.send(embed);
 	}
 }

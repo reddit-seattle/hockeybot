@@ -1,7 +1,9 @@
 import { Environment, Paths } from "../utils/constants";
 import { Schedule as ScheduleResponse } from "./models/responses/Schedule";
+import { GameFeedResponse } from './models/responses/GameFeed';
 import { Team as TeamResponse } from "./models/responses/Teams";
 import fetch from 'node-fetch';
+import { format } from 'date-fns-tz';
 import { StandingsTypes } from "../models/StandingsTypes";
 
 export async function get<T>(
@@ -86,6 +88,19 @@ export module API {
             );
 
             return response?.records;
+        }
+    }
+
+    export module Games {
+        export const GetGameById: (id: string) => Promise<GameFeedResponse.Response> = async(id) => {
+            const response = await get<GameFeedResponse.Response>(Paths.Get.GameFeed(id));
+            return response;
+        }
+
+        export const GetGameDiff: (id: string, since: string) => Promise<GameFeedResponse.Response> = async(id, since) => {
+            const timecode = format(since, "yyyyMMdd_HHmmss");
+            const response = await get<GameFeedResponse.Response>(Paths.Get.GameFeedDiff(id, timecode));
+            return response;
         }
     }
 }
