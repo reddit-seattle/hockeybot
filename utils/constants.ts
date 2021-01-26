@@ -17,6 +17,11 @@ export enum EventTypes {
 }
 export enum GameStates {
     FINAL = '7',
+    FINAL_PENDING = '6',
+    GAME_OVER = '5',
+    IN_PROGRESS_CRIT = '4',
+    IN_PROGRESS = '3',
+    PRE_GAME = '2',
     PREVIEW = '1'
 }
 export enum PlayerTypes {
