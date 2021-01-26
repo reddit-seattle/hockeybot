@@ -239,7 +239,7 @@ export const GetScores: Command = {
 					case GameStates.GAME_OVER: gameStatus = 'Final Score'; break;
 					case GameStates.IN_PROGRESS_CRIT: 
 					case GameStates.IN_PROGRESS: gameStatus = `${game.linescore.currentPeriodTimeRemaining} ${game.linescore.currentPeriodOrdinal} period`; break;
-					case GameStates.PRE_GAME: 'Pre-game'; break;
+					case GameStates.PRE_GAME: gameStatus ='Pre-game'; break;
 					default: gameStatus = game.status.abstractGameState;
 				}
 				return {
