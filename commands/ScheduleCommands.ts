@@ -203,11 +203,18 @@ export const GetScores: Command = {
 	help: 'scores',
 	async execute(message: Message, args: string[]) {
 
-		const schedule = (await API.Schedule.GetSchedule()).filter(x => x.status.codedGameState == '5' || x.status.codedGameState == '3');
+		const allGames = (await API.Schedule.GetSchedule());
 
 		// sadness, no hockey today :(
-		if(schedule.length == 0) {
+		if(allGames.length == 0) {
 			message.channel.send('Sad, no games today :(');
+			return;
+		}
+
+		const nowPlaying = allGames.filter(x => x.status.codedGameState != GameStates.PREVIEW );
+		//
+		if(nowPlaying.length == 0) {
+			message.channel.send('No games have started yet. Check `$nhl schedule` for start times.');
 			return;
 		}
 
@@ -222,10 +229,22 @@ export const GetScores: Command = {
 			// image: {
 			// 	url: bot_thumbnail_image,
 			// },
-			fields: schedule.map(game => {
+			fields: nowPlaying.map(game => {
+
+				const teamScores = `${game.teams.away.team.name}: ${game.teams.away.score} @ ${game.teams.home.team.name}: ${game.teams.home.score}`;
+				let gameStatus = '';
+				switch(game.status.codedGameState) {
+					case GameStates.FINAL:
+					case GameStates.FINAL_PENDING:
+					case GameStates.GAME_OVER: gameStatus = 'Final Score'; break;
+					case GameStates.IN_PROGRESS_CRIT: 
+					case GameStates.IN_PROGRESS: gameStatus = `${game.linescore.currentPeriodTimeRemaining} ${game.linescore.currentPeriodOrdinal} period`; break;
+					case GameStates.PRE_GAME: 'Pre-game'; break;
+					default: gameStatus = game.status.abstractGameState;
+				}
 				return {
-					name: `${game.teams.away.team.name}: ${game.teams.away.score} @ ${game.teams.home.team.name}: ${game.teams.home.score}`,
-					value: game.status.codedGameState == GameStates.FINAL ? 'FINAL' : `${game.linescore.currentPeriodTimeRemaining} ${game.linescore.currentPeriodOrdinal} period`,
+					name: teamScores,
+					value: gameStatus,
 					inline: false
 				}
 			})
