@@ -1,6 +1,8 @@
 import { Message, MessageEmbed } from "discord.js";
+import { extract, partial_ratio } from "fuzzball";
 import { Command } from "../models/Command";
 import { API } from "../service/API";
+import { Roster } from "../service/models/responses/Roster";
 import { getProperty } from "../utils/helpers";
 
 export const GetPlayerStats: Command = {
@@ -23,11 +25,20 @@ export const GetPlayerStats: Command = {
         const playerNum = parseInt(playerArg); // may be NaN
         //let's get weird and try and pull a player out with whatever the second arg is
         //TODO: Fuzzy Match names
-        const playerFilter = players.filter(player => {
-            return (!isNaN(playerNum) && parseInt(player.jerseyNumber) == playerNum) ||
-            player?.person?.fullName?.split(' ')?.[1] == playerArg  
-        })
-        const player = playerFilter?.[0];
+
+        let player: Roster.Player | undefined = undefined;
+        if(isNaN(playerNum)){
+            player = extract(playerArg.toLowerCase(), players, {
+                scorer: partial_ratio,
+                processor: (player: Roster.Player) => player?.person?.fullName.toLowerCase(),
+                limit: 1,
+                cutoff: 50,
+                returnObjects: true
+            })?.[0].choice as Roster.Player;
+        }
+        else {
+            player = players.find(player => parseInt(player.jerseyNumber) == playerNum );
+        }
         if(player) {
             const playerStats = await API.Players.GetPlayerSeasonStats(player.person.id);
             if(playerStats) {
@@ -51,7 +62,7 @@ export const GetPlayerStats: Command = {
                 message.channel.send(embed);
             }
             else {
-                message.channel.send('error finding stats for this current season');
+                message.channel.send(`error finding a match (or statistics) for '${playerArg}'`);
             }
         }
         else { 
