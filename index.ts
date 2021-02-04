@@ -2,6 +2,7 @@
 import { Client, Guild, Message, TextChannel } from 'discord.js'
 import { createServer } from 'http';
 import { Help } from './commands/HelpCommands';
+import { GetPlayerStats } from './commands/PlayerCommands';
 import { GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule, GetScores } from './commands/ScheduleCommands';
 import { GetStandings } from './commands/StandingsCommands';
 import { GetTeamStats } from './commands/TeamCommands';
@@ -17,6 +18,7 @@ const commands = [
     GetSchedule,
     GetLastGamesForTeam,
     GetNextGamesForTeam,
+    GetPlayerStats,
     GetTeamStats,
     GetScores,
     GetStandings,

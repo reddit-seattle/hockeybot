@@ -1,6 +1,7 @@
 import { Message, MessageEmbed } from "discord.js";
 import { Command } from "../models/Command";
 import { Config } from "../utils/constants";
+import { GetPlayerStats } from "./PlayerCommands";
 import { GetSchedule, GetLastGamesForTeam, GetNextGamesForTeam, GetScores } from "./ScheduleCommands";
 import { GetStandings } from "./StandingsCommands";
 import { GetTeamStats } from "./TeamCommands";
@@ -16,6 +17,8 @@ const commands = [
     GetNextGamesForTeam,
     // teamstats (meh atm)
     GetTeamStats,
+    //playerStats
+    GetPlayerStats,
     // scores
     GetScores,
     // standings

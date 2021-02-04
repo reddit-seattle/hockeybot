@@ -29,6 +29,39 @@ export enum PlayerTypes {
     Shooter = 'Shooter',
     Goalie = 'Goalie'
 }
+
+export enum StatsTypes {
+    yearByYear = "yearByYear",
+    yearByYearRank = "yearByYearRank",
+    yearByYearPlayoffs = "yearByYearPlayoffs",
+    yearByYearPlayoffsRank = "yearByYearPlayoffsRank",
+    careerRegularSeason = "careerRegularSeason",
+    careerPlayoffs = "careerPlayoffs",
+    gameLog = "gameLog",
+    playoffGameLog = "playoffGameLog",
+    vsTeam = "vsTeam",
+    vsTeamPlayoffs = "vsTeamPlayoffs",
+    vsDivision = "vsDivision",
+    vsDivisionPlayoffs = "vsDivisionPlayoffs",
+    vsConference = "vsConference",
+    vsConferencePlayoffs = "vsConferencePlayoffs",
+    byMonth = "byMonth",
+    byMonthPlayoffs = "byMonthPlayoffs",
+    byDayOfWeek = "byDayOfWeek",
+    byDayOfWeekPlayoffs = "byDayOfWeekPlayoffs",
+    homeAndAway = "homeAndAway",
+    homeAndAwayPlayoffs = "homeAndAwayPlayoffs",
+    winLoss = "winLoss",
+    winLossPlayoffs = "winLossPlayoffs",
+    onPaceRegularSeason = "onPaceRegularSeason",
+    regularSeasonStatRankings = "regularSeasonStatRankings",
+    playoffStatRankings = "playoffStatRankings",
+    goalsByGameSituation = "goalsByGameSituation",
+    goalsByGameSituationPlayoffs = "goalsByGameSituationPlayoffs",
+    statsSingleSeason = "statsSingleSeason",
+    statsSingleSeasonPlayoffs = "statsSingleSeasonPlayoffs"
+}
+
 export module Kraken {
     export const TeamId: string = Environment.DEBUG ? '4' : '55';
 }
@@ -69,12 +102,16 @@ export module Paths {
         export const People: string = `${API_ENDPOINT}/people`;
         export const Person:(id: string) => string =
             (id) => `${Paths.Get.People}/${id}`;
+        export const PersonSeasonStats:(id: string) => string =
+            (id) => `${Person(id)}/stats?stats=${StatsTypes.statsSingleSeason}`;
 
         export const Seasons: string = `${API_ENDPOINT}/seasons`;
         
         export const TeamStats: (id: string) => string =
             (id) => `${Team(id)}/stats`;
 
+        export const Roster: (id: string) => string =
+            (id) => `${Team(id)}/roster`;
         export const Standings: string = `${API_ENDPOINT}/standings`;
         export const CustomStandings: (type: StandingsTypes) => string =
             (type) => `${Standings}/${type}`;

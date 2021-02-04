@@ -1,10 +1,13 @@
+import fetch from 'node-fetch';
+import { format } from 'date-fns-tz';
 import { Environment, Paths } from "../utils/constants";
 import { Schedule as ScheduleResponse } from "./models/responses/Schedule";
 import { GameFeedResponse } from './models/responses/GameFeed';
 import { Team as TeamResponse } from "./models/responses/Teams";
-import fetch from 'node-fetch';
-import { format } from 'date-fns-tz';
 import { StandingsTypes } from "../models/StandingsTypes";
+import { Roster } from "./models/responses/Roster";
+import { Person } from "./models/responses/Person";
+import { PlayerStats } from "./models/responses/PlayerStats";
 
 export async function get<T>(
     url: string
@@ -57,6 +60,10 @@ export module API {
             const teams = response?.teams?.filter(team => team.abbreviation.toLowerCase() == abbr.toLowerCase())
             return teams?.[0];
         }
+        export const GetRoster: (id: string) => Promise<Roster.Player[]> = async (id) => {
+            const response = await get<Roster.Response>(Paths.Get.Roster(id));
+            return response?.roster;
+        }
 
     }
 
@@ -101,6 +108,17 @@ export module API {
             const timecode = format(since, "yyyyMMdd_HHmmss");
             const response = await get<GameFeedResponse.Response>(Paths.Get.GameFeedDiff(id, timecode));
             return response;
+        }
+    }
+
+    export module Players {
+        export const GetPlayerById: (id: string) => Promise<Person.Person> = async(id) => {
+            const response = await get<Person.Response>(Paths.Get.Person(id));
+            return response?.people?.[0];
+        }
+        export const GetPlayerSeasonStats: (id: string) => Promise<PlayerStats.Stat>  = async(id) => {
+            const response = await get<PlayerStats.Rseponse>(Paths.Get.PersonSeasonStats(id));
+            return response?.stats?.[0]?.splits?.[0]?.stat;
         }
     }
 }
