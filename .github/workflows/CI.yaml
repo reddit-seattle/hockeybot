@@ -31,6 +31,6 @@ jobs:
       - name: install
         run: |
           npm i
-          npm i -g tsc
+          npm i -g typescript
       - name: build
         run: tsc        
