@@ -34,7 +34,7 @@ export const GetPlayerStats: Command = {
                 limit: 1,
                 cutoff: 50,
                 returnObjects: true
-            })?.[0].choice as Roster.Player;
+            })?.[0]?.choice as Roster.Player;
         }
         else {
             player = players.find(player => parseInt(player.jerseyNumber) == playerNum );
