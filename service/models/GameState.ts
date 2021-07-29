@@ -1,4 +1,4 @@
-export enum GameState {
+export const enum GameState {
     FINAL = "7",
     ALMOST_FINAL = "6",
     GAME_OVER = "5",

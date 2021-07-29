@@ -13,6 +13,7 @@ import { GetMessageArgs } from './utils/helpers';
 import { ScheduledTask } from 'node-cron';
 
 import { CronHelper } from './utils/CronHelper';
+import { GameState } from './service/models/GameState';
 
 const client: Client = new Client();
 
@@ -78,88 +79,10 @@ createServer(function (req, res) {
 
 const WatchedGames: { [id: string]: ScheduledTask } = {};
 const initiateCronJobs = () => {
-    CronHelper.Initialize(game => {
-        return true; // all games for now since there are so few
+    const seattle_guild = client.guilds.cache.find(guild => guild.id == "370945003566006272");
+    const game_channel = seattle_guild?.channels.cache.find(chan => chan.id == "389864168926216193") as TextChannel;
+    CronHelper.Initialize(game_channel,
+        game => {
+            return game?.status?.codedGameState != GameState.FINAL; // all non-finished games for now since there are so few
     }, true);
-    // 9:00 every morning, check for kraken games
-   /** Cron.schedule('0 9 * * *', async () => {
-        const today = format(new Date(), 'yyyy-mm-dd');
-        const schedule = await API.Schedule.GetTeamSchedule(Kraken.TeamId, today);
-        const game = schedule?.[0];
-        // if we have a game, check it every 10 seconds
-        if (game) {
-            WatchedGames[game.gamePk]?.destroy();
-             // destroy existing schedule if it exists;
-            // get game feed and timecode info
-            const feed = API.Games.GetGameById(game.gamePk);
-            let timeCode = (await feed).metaData.timeStamp;
-            WatchedGames[game.gamePk] = Cron.schedule('0/10 * * * * *', async () => {
-
-                // get and flatten all diffs (new events since last timecode)
-                const diff = await API.Games.GetGameDiff(game.gamePk, timeCode);
-                const allDiffs = reduce(diff,
-                    (prevDiff: GameDiffResponse.Diff[], currDiff: GameDiffResponse.DiffContainer) =>
-                        prevDiff.concat(currDiff.diff), [] as GameDiffResponse.Diff[]);
-
-                // Get NEW events (assumption is that a goal is an 'ADD' op)
-                const adds = allDiffs.filter(diff => diff.op.toLowerCase() == Operation.ADD.toLowerCase());
-                console.log("New 'ADD' ops");
-                console.dir(adds);
-
-                // Filter only goal events
-                const newGoals = adds.filter(diff => diff?.value?.result?.eventTypeId == "GOAL");
-                console.log("'ADD' ops: Goals");
-                console.dir(newGoals);
-                
-                // Log each goal description (just to see if we're doing this right)
-                console.log('GOALS:')
-                each(newGoals, (goal: GameDiffResponse.Diff) => {
-                    console.dir(goal?.value?.result?.description);
-                    console.dir(goal?.value?.about?.goals);
-                });
-                
-                // line/boxscore updates
-                // NEED - timestamp, current time in period, isIntermission(), which period
-                const feed = await API.Games.GetGameById(game.gamePk);
-                timeCode = feed.metaData.timeStamp;
-                const {linescore} = feed.liveData;
-                const { currentPeriodTimeRemaining } = linescore;
-                const {inIntermission, intermissionTimeRemaining} = linescore.intermissionInfo;
-                const gameState = feed?.gameData?.status?.codedGameState;
-
-                // for debug info, log time in period or intermission
-                if(inIntermission){
-                    console.log(`${intermissionTimeRemaining} remaining in the ${linescore.currentPeriodOrdinal} intermission.`)
-                }
-                else if (gameState in [
-                    GameState.IN_PROGRESS, // general in progress
-                    GameState.CRITICAL // nearing end of period with low goal differential (?)
-                ]){
-                    console.log(`${currentPeriodTimeRemaining} remaining in the ${linescore.currentPeriodOrdinal} period.`);
-                }
-                else if (gameState in [
-                    GameState.ALMOST_FINAL, // finalizing
-                    GameState.FINAL,    // legit final
-                    GameState.GAME_OVER // last period has ended
-                ]) {
-                    // End the game and stop this thing if the game is final
-                    console.log(`GAME OVER`);
-                    const {away, home } = linescore.teams;
-                    console.log(`${away.team.name}: ${away.goals}, ${home.team.name}: ${home.goals}`);
-                    WatchedGames[game.gamePk]?.stop()?.destroy();
-                }
-
-
-                // if period has ended
-                // announce "End of {} period. Score: Kraken: 0, OtherTeam: 0"
-                // elseif goalScored()
-                //  announce "GOAL! {} scored by {}.  Score: Kraken: 0, OtherTeam: 0"
-                // elseif gameEnded()
-                //  announce "FINAL! {} scored by {}.  Score: Kraken: 0, OtherTeam: 0"
-            },
-            {
-                timezone: 'America/Los_Angeles',
-            })
-        }
-    }); */
 };
