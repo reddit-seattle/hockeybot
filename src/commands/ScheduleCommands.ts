@@ -96,7 +96,7 @@ export const GetNextGamesForTeam: Command = {
 				fields: games.map(game => {
 					return {
 						name: `${game.teams.away.team.name} @ ${game.teams.home.team.name}`,
-						value: `${format(utcToZonedTime(game.gameDate, 'America/Los_Angeles'), 'HH:mm')} - ${game.venue.name}`,
+						value: `${format(utcToZonedTime(game.gameDate, 'America/Los_Angeles'), 'PPPPp')}`,
 						inline: false
 					}
 				})
