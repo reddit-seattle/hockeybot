@@ -32,10 +32,10 @@ export const GetStandings: Command = {
                     name: `Conference: ${standing.conference.name}, Division: ${standing.division.name}`,
                     value: standing.teamRecords.map((teamRecord, i) =>
                         `${i+1}: ${teamRecord.team.name} - ${teamRecord.points} points  (${teamRecord.leagueRecord.wins}-${teamRecord.leagueRecord.losses}-${teamRecord.leagueRecord.ot})`
-                    )
+                    ).join(`\n`)
                 }
             })
 		});
-		message.channel.send(embed);
+		message.channel.send({embeds: [embed]});
 	},
 }

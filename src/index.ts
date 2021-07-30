@@ -10,7 +10,7 @@ import { Command } from './models/Command';
 import { Config, Environment } from './utils/constants';
 import { GetMessageArgs } from './utils/helpers';
 
-const client: Client = new Client();
+const client = new Client({ intents: ['GUILDS', 'GUILD_MESSAGES'] });
 
 //load commands
 

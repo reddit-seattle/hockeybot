@@ -59,7 +59,7 @@ export const GetPlayerStats: Command = {
                         }
                     })
                 });
-                message.channel.send(embed);
+                message.channel.send({embeds: [embed]});
             }
             else {
                 message.channel.send(`error finding a match (or statistics) for '${playerArg}'`);
