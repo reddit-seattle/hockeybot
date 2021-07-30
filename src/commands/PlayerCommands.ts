@@ -51,10 +51,10 @@ export const GetPlayerStats: Command = {
                     image: {
                         url: playerImageUrl
                     },
-                    fields: Object.keys(playerStats).map(key => {
+                    fields: Object.keys(playerStats).map((key: any) => {
                         return {
                             name: key,
-                            value: getProperty(playerStats, key as any),
+                            value: `${getProperty(playerStats, key) || 'N/A'}`,
                             inline: true
                         }
                     })
