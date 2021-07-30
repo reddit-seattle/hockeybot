@@ -28,7 +28,7 @@ const commands = [
         return map;
 }, {} as { [id: string]: Command });
 
-client.on("message", async (message: Message) => {
+client.on("messageCreate", async (message: Message) => {
     //bad bot
     if (!message.content.startsWith(Config.prefix) || message.author.bot) return;
 
