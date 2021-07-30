@@ -7,10 +7,10 @@ import { GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule, GetScores } from
 import { GetStandings } from './commands/StandingsCommands';
 import { GetTeamStats } from './commands/TeamCommands';
 import { Command } from './models/Command';
-import { Config, Environment } from './utils/constants';
+import { ChannelIds, Config, Environment } from './utils/constants';
 import { GetMessageArgs } from './utils/helpers';
 
-const client: Client = new Client();
+const client = new Client({ intents: ['GUILDS', 'GUILD_MESSAGES'] });
 
 //load commands
 
@@ -28,7 +28,7 @@ const commands = [
         return map;
 }, {} as { [id: string]: Command });
 
-client.on("message", async (message: Message) => {
+client.on("messageCreate", async (message: Message) => {
     //bad bot
     if (!message.content.startsWith(Config.prefix) || message.author.bot) return;
 
@@ -49,7 +49,7 @@ client.on('ready', async () => {
     if (Environment.DEBUG) {
         //try to announce to servers when you go online
         client.guilds.cache.array().forEach((guild: Guild) => {
-            const debugChannel = guild.channels.cache.find(channel => channel.name == 'debug') as TextChannel;
+            const debugChannel = guild.channels.cache.find(ch => ch.id == ChannelIds.DEBUG) as TextChannel;
             debugChannel?.send("HockeyBot, reporting for duty!");
         });
     }

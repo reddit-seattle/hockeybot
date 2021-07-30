@@ -32,11 +32,11 @@ export const GetTeamStats: Command = {
 			fields: Object.keys(stats).map(key => {
 				return {
 					name: key,
-					value: getProperty(stats, key as any),
+					value: `${getProperty(stats, key as any) || 'N/A'}`,
 					inline: true
 				}
 			})
 		});
-		message.channel.send(embed);
+		message.channel.send({embeds: [embed]});
 	},
 }

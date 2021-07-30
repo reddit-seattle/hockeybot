@@ -1,10 +1,14 @@
 import dotenv from 'dotenv';
-import { Interface } from 'readline';
 import { StandingsTypes } from '../models/StandingsTypes';
 dotenv.config();
 
 export module Config {
     export const prefix: string = '$nhl';
+}
+
+export module ChannelIds {
+    export const DEBUG = '541322708844281867';
+    export const KRAKEN = '389864168926216193';
 }
 
 export module Environment {

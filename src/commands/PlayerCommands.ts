@@ -51,15 +51,15 @@ export const GetPlayerStats: Command = {
                     image: {
                         url: playerImageUrl
                     },
-                    fields: Object.keys(playerStats).map(key => {
+                    fields: Object.keys(playerStats).map((key: any) => {
                         return {
                             name: key,
-                            value: getProperty(playerStats, key as any),
+                            value: `${getProperty(playerStats, key) || 'N/A'}`,
                             inline: true
                         }
                     })
                 });
-                message.channel.send(embed);
+                message.channel.send({embeds: [embed]});
             }
             else {
                 message.channel.send(`error finding a match (or statistics) for '${playerArg}'`);

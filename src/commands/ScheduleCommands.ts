@@ -45,7 +45,7 @@ export const GetSchedule: Command = {
 				}
 			})
 		});
-		message.channel.send(embed);
+		message.channel.send({embeds: [embed]});
 	},
 }
 
@@ -101,7 +101,7 @@ export const GetNextGamesForTeam: Command = {
 					}
 				})
 			});
-			message.channel.send(embed);
+			message.channel.send({embeds: [embed]});
 			
 		}
 		else{
@@ -185,7 +185,7 @@ export const GetLastGamesForTeam: Command = {
 				// },
 				fields: fields
 			});
-			message.channel.send(embed);
+			message.channel.send({embeds: [embed]});
 			
 		}
 		else{
@@ -249,6 +249,6 @@ export const GetScores: Command = {
 				}
 			})
 		});
-		message.channel.send(embed);
+		message.channel.send({embeds: [embed]});
 	}
 }
