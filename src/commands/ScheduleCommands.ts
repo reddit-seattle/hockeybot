@@ -4,6 +4,7 @@ import { last, first, values } from 'underscore';
 import { Command } from "../models/Command";
 import { API } from "../service/API";
 import { Config, Environment, GameStates, Record } from "../utils/constants";
+import { NextGameFieldFormatter, ScheduledGameFieldFormatter } from "../utils/EmbedFormatters";
 
 
 const bot_thumbnail_image = `https://i.imgur.com/xHcfK8Q.jpg`;
@@ -38,11 +39,7 @@ export const GetSchedule: Command = {
 			// 	url: bot_thumbnail_image,
 			// },
 			fields: schedule.map(game => {
-				return {
-					name: `${game.teams.away.team.name} @ ${game.teams.home.team.name}`,
-					value: `${format(utcToZonedTime(game.gameDate, 'America/Los_Angeles'), 'HH:mm')} - ${game.venue.name}`,
-					inline: false
-				}
+				return ScheduledGameFieldFormatter(game);
 			})
 		});
 		message.channel.send({embeds: [embed]});
@@ -68,11 +65,6 @@ export const GetNextGamesForTeam: Command = {
 			const season = await API.Seasons.GetCurrentSeason();
 			//pull last args[1] games for team args[2]
 
-			if(Environment.DEBUG) {
-				console.log(`team: ${team.teamName}`);
-				console.log(`start: ${start}`);
-				console.log(`end: ${season?.seasonEndDate}`);
-			}
 			const allGames = await API.Schedule.GetTeamSchedule(team.id, start, season?.seasonEndDate);
 			
 
@@ -94,11 +86,7 @@ export const GetNextGamesForTeam: Command = {
 				// 	url: bot_thumbnail_image,
 				// },
 				fields: games.map(game => {
-					return {
-						name: `${game.teams.away.team.name} @ ${game.teams.home.team.name}`,
-						value: `${format(utcToZonedTime(game.gameDate, 'America/Los_Angeles'), 'PPPPp')}`,
-						inline: false
-					}
+					return NextGameFieldFormatter(game)
 				})
 			});
 			message.channel.send({embeds: [embed]});

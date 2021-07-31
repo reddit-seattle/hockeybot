@@ -11,6 +11,10 @@ export module ChannelIds {
     export const KRAKEN = '389864168926216193';
 }
 
+export module Strings {
+    export const KRAKEN_GAMEDAY_THREAD_TITLE = 'Kraken Game Day Thread';
+}
+
 export module Environment {
     export const botToken = process.env['bot_token'] || undefined;
     export const DEBUG = process.env['hockeybotDEBUG'] || undefined;
@@ -121,6 +125,7 @@ export module Paths {
             (type) => `${Standings}/${type}`;
 
         export const GameFeed: (id: string) => string = (id) => `${API_ENDPOINT}/game/${id}/feed/live`;
+        export const GameContent: (id: string) => string = (id) => `${API_ENDPOINT}/game/${id}/content`;
         export const GameFeedDiff: (id: string, timecode: string) => string =
             (id, timecode) => `${API_ENDPOINT}/game/${id}/feed/live/diffPatch?startTimecode=${timecode}`;
     }

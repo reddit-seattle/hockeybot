@@ -2,6 +2,7 @@
 import { Client, Guild, Message, TextChannel } from 'discord.js'
 import { createServer } from 'http';
 import { Help } from './commands/HelpCommands';
+import { SetupKrakenGameDayChecker } from './commands/KrakenCommands';
 import { GetPlayerStats } from './commands/PlayerCommands';
 import { GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule, GetScores } from './commands/ScheduleCommands';
 import { GetStandings } from './commands/StandingsCommands';
@@ -53,6 +54,7 @@ client.on('ready', async () => {
             debugChannel?.send("HockeyBot, reporting for duty!");
         });
     }
+    SetupKrakenGameDayChecker(client);
 });
 
 // MAIN
