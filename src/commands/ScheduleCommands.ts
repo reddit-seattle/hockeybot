@@ -223,9 +223,9 @@ export const GetScores: Command = {
 				let gameStatus = '';
 				switch(game.status.codedGameState) {
 					case GameStates.FINAL:
-					case GameStates.FINAL_PENDING:
+					case GameStates.ALMOST_FINAL:
 					case GameStates.GAME_OVER: gameStatus = 'Final Score'; break;
-					case GameStates.IN_PROGRESS_CRIT: 
+					case GameStates.CRITICAL: 
 					case GameStates.IN_PROGRESS: gameStatus = `${game.linescore.currentPeriodTimeRemaining} ${game.linescore.currentPeriodOrdinal} period`; break;
 					case GameStates.PRE_GAME: gameStatus ='Pre-game'; break;
 					default: gameStatus = game.status.abstractGameState;
