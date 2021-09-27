@@ -194,7 +194,7 @@ export module GameFeedResponse {
         ordinalNum: string;
         periodTime: string;
         periodTimeRemaining: string;
-        dateTime: Date;
+        dateTime: string;
         goals: Goals;
     }
 

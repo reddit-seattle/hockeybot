@@ -43,6 +43,7 @@ export const CreateGameDayThreadEmbed = (game: Schedule.Game, gamePreview: GameC
 }
 
 export const CreateGoalEmbed = (play: GameFeedResponse.AllPlay, teams: GameFeedResponse.Teams) => {
+    //TODO: Get more excited about kraken-specific goals (:redlight: / gifs / etc)
     const descriptor = play.result.strength.code === 'PPG' ? play.result.strength.name : (play.result.strength.name + ' Strength');
     const title = `${play.team.name} GOAL - ${descriptor}`;
     const description = `${play.result.description}`;
