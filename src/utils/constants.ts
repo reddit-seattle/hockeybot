@@ -6,6 +6,10 @@ export module Config {
     export const prefix: string = '$nhl';
 }
 
+export module RoleIds {
+    export const MOD = '370946173902520342';
+}
+
 export module ChannelIds {
     export const DEBUG = '541322708844281867';
     export const KRAKEN = '389864168926216193';

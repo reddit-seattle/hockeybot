@@ -2,13 +2,13 @@
 import { Client, Guild, Message, TextChannel } from 'discord.js'
 import { createServer } from 'http';
 import { Help } from './commands/HelpCommands';
-import { SetupKrakenGameDayChecker } from './commands/KrakenCommands';
+import { KillGameCheckerCommand, SetupKrakenGameDayChecker } from './commands/KrakenCommands';
 import { GetPlayerStats } from './commands/PlayerCommands';
 import { GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule, GetScores } from './commands/ScheduleCommands';
 import { GetStandings } from './commands/StandingsCommands';
 import { GetTeamStats } from './commands/TeamCommands';
 import { Command } from './models/Command';
-import { ChannelIds, Config, Environment } from './utils/constants';
+import { ChannelIds, Config, Environment, RoleIds } from './utils/constants';
 import { GetMessageArgs } from './utils/helpers';
 
 const client = new Client({ intents: ['GUILDS', 'GUILD_MESSAGES'] });
@@ -23,6 +23,7 @@ const commands = [
     GetTeamStats,
     GetScores,
     GetStandings,
+    KillGameCheckerCommand,
     Help
 ].reduce((map, obj) => {
         map[obj.name] = obj;
@@ -35,11 +36,18 @@ client.on("messageCreate", async (message: Message) => {
 
     //send it
     const args = GetMessageArgs(message);
-    const command = commands?.[args?.[0]];
-    try{
-        command?.execute(message, args)
+    const command = commands?.[args?.[0]?.toLowerCase()];
+
+    try {
+        if(command?.adminOnly && !message.member?.roles.cache.has(RoleIds.MOD)){
+            message.channel.send('nice try, loser');
+            return;
+        }
+        else {
+            command?.execute(message, args);
+        }
     }
-    catch(e: any) {
+    catch (e: any) {
         console.dir(e);
         message.react('💩');
     }

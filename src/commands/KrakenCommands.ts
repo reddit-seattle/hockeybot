@@ -1,13 +1,16 @@
-import { Client, TextChannel, ThreadChannel } from "discord.js";
+import { zonedTimeToUtc } from "date-fns-tz";
+import { Client, Message, TextChannel, ThreadChannel } from "discord.js";
 import { schedule, ScheduledTask, ScheduleOptions } from "node-cron";
 import { contains } from "underscore";
+import { Command } from "../models/Command";
 import { API } from "../service/API";
 import { GameFeedResponse } from "../service/models/responses/GameFeed";
 import { ChannelIds, Environment, GameStates, Kraken, Strings } from "../utils/constants";
 import { CreateGameDayThreadEmbed, CreateGameResultsEmbed, CreateGoalEmbed } from "../utils/EmbedFormatters";
 
-const dailyCronMinute = '0';
-const dailyCronHour = '9';
+const killSwitchVar = 'killGameChecker';
+const dailyCronMinute = 0;
+const dailyCronHour = 9;
 const dailyCronString = `${dailyCronMinute} ${dailyCronHour} * * *`
 const EVERY_THIRTY_MINUTES = Environment.DEBUG ? `*/1 * * * *` : `*/30 * * * *`;
 const EVERY_MINUTE = `* * * * *`;
@@ -61,11 +64,12 @@ const isInProgress = (gameState: string) => {
 //#endregion
 
 //return a scheduled task that checks every 10 seconds and announces goals for {gamePk} in {channel}
-export const StartGoalChecker = (channel: ThreadChannel | TextChannel, gamePk: string) => {
+const StartGoalChecker = (channel: ThreadChannel | TextChannel, gamePk: string) => {
     let wasIntermission = false;
     let lastGoalAt: Date = new Date();
     channel.send('Game Starting!');
     return schedule(EVERY_TEN_SECONDS, async () => {
+        checkForKillSwitch(channel);
         console.log('Checking for goals / intermissions / etc');
         const feed = await API.Games.GetGameById(gamePk);
         const { linescore } = feed.liveData;
@@ -137,7 +141,7 @@ export const StartGoalChecker = (channel: ThreadChannel | TextChannel, gamePk: s
 
 //return a scheduled task that checks every minute for game start
 //pre-game starts 30 minutes before puck drop (based on a very hearty sample size of 1)
-export const GameStartChecker = (channel: ThreadChannel | TextChannel, gamePk: string) => {
+const GameStartChecker = (channel: ThreadChannel | TextChannel, gamePk: string) => {
     return schedule(EVERY_MINUTE, async () => {
         console.log('Checking for game start');
         const game = await API.Games.GetGameById(gamePk);
@@ -155,8 +159,9 @@ export const GameStartChecker = (channel: ThreadChannel | TextChannel, gamePk: s
 }
 
 //return a scheduled task that checks every 30 mins for pregame
-export const PregameChecker = (channel: ThreadChannel | TextChannel, gamePk: string) => {
+const PregameChecker = (channel: ThreadChannel | TextChannel, gamePk: string) => {
     return schedule(EVERY_THIRTY_MINUTES, async () => {
+        checkForKillSwitch(channel);
         const game = await API.Games.GetGameById(gamePk);
         const state = game?.gameData.status.codedGameState;
         
@@ -180,39 +185,83 @@ export const PregameChecker = (channel: ThreadChannel | TextChannel, gamePk: str
 
 //return a scheduled task that checks for kraken games today, and updates the game day thread.
 export const SetupKrakenGameDayChecker = (client: Client) => {
-    return schedule(dailyCronString, async () => {
-        console.log('Starting to check for todays games');
-        const schedule = await API.Schedule.GetTeamSchedule(Kraken.TeamId);
-        if (schedule?.[0]) {
-            //Get game content
-            const game = schedule[0];
-            const { gamePk } = game;
-            const gameContent = await API.Games.GetGameContent(gamePk);
-            //Announce game in the channel.
-            const gameDayPost = CreateGameDayThreadEmbed(game, gameContent?.editorial?.preview);
-            //Check for game day thread if it exists
-            const krakenChannel = client.channels.cache.get(ChannelIds.KRAKEN);
-            
-            //TODO: Maybe we just make a new thread for each game?
-            //TODO: find a better way to persist the ID of the gameDayThread (env config possibly)
-            let gameDayThread = (krakenChannel as TextChannel)?.threads.cache.find(ch => ch.name == Strings.KRAKEN_GAMEDAY_THREAD_TITLE)
+    const today = new Date();
+    const today_PST = zonedTimeToUtc(today, 'America/Los_Angeles');
+    const hour = today_PST.getHours();
+    const minute = today_PST.getMinutes();
+    const beforeCronCheck = hour <= dailyCronHour && minute < dailyCronMinute;
 
-            // post in gameday thread if it exists, or the kraken channel
-            const toSend = (gameDayThread ?? krakenChannel) as TextChannel;
-            const startMessage = await toSend?.send({ embeds: [gameDayPost] });
+    if(Environment.DEBUG) {
+        console.log(`Today: ${today}`);
+        console.log(`Today (PST): ${today_PST}`);
+        console.log(`Hour: ${hour}, Minute: ${minute}`);
+        console.log(`CronTime: ${dailyCronHour}:${dailyCronMinute}`);
+    }
 
-            // if it's in the kraken channel (aka no gameday thread) - create a new thread.
-            if (!gameDayThread) {
-                gameDayThread = await (krakenChannel as TextChannel).threads.create({
-                    startMessage,
-                    name: Strings.KRAKEN_GAMEDAY_THREAD_TITLE,
-                    reason: 'Creating new Kraken Game Day Thread',
-                    autoArchiveDuration: 4320
-                });
-            }
+    if (!beforeCronCheck) {
+        console.log('Missed the CRON today, or restarted since. Checking for games.');
+        CheckForTodaysGames(client);
+    }
 
-            // start checking goals in gameDayThread
-            setCurrentTask(PregameChecker(gameDayThread!, gamePk));
-        }
+    return schedule(dailyCronString, () => {
+        console.log(`Scheduling CRON scheduled task for ${dailyCronString}`);
+        CheckForTodaysGames(client);
     });
+    
+}
+
+const CheckForTodaysGames = async (client: Client) => {
+    console.log('Starting to check for todays games');
+    const schedule = await API.Schedule.GetTeamSchedule(Kraken.TeamId);
+    if (schedule?.[0]) {
+        //Get game content
+        const game = schedule[0];
+        const { gamePk } = game;
+        const gameContent = await API.Games.GetGameContent(gamePk);
+        //Announce game in the channel.
+        const gameDayPost = CreateGameDayThreadEmbed(game, gameContent?.editorial?.preview);
+        //Check for game day thread if it exists
+        const krakenChannel = client.channels.cache.get(ChannelIds.KRAKEN);
+        
+        //TODO: Maybe we just make a new thread for each game?
+        //TODO: find a better way to persist the ID of the gameDayThread (env config possibly)
+        let gameDayThread = (krakenChannel as TextChannel)?.threads.cache.find(ch => ch.name == Strings.KRAKEN_GAMEDAY_THREAD_TITLE)
+
+        // post in gameday thread if it exists, or the kraken channel
+        const toSend = (gameDayThread ?? krakenChannel) as TextChannel;
+        const startMessage = await toSend?.send({ embeds: [gameDayPost] });
+
+        // if it's in the kraken channel (aka no gameday thread) - create a new thread.
+        if (!gameDayThread) {
+            gameDayThread = await (krakenChannel as TextChannel).threads.create({
+                startMessage,
+                name: Strings.KRAKEN_GAMEDAY_THREAD_TITLE,
+                reason: 'Creating new Kraken Game Day Thread',
+                autoArchiveDuration: 4320
+            });
+        }
+
+        // start checking goals in gameDayThread
+        setCurrentTask(PregameChecker(gameDayThread, gamePk));
+    }
+}
+
+export const KillGameCheckerCommand: Command = {
+    description: 'stop checking for kraken game updates',
+    name: 'stop_kraken_updates',
+    help: 'stop_kraken_updates',
+    adminOnly: true,
+    execute: (message: Message) => {
+        process.env[killSwitchVar] = 'true';
+        message.channel.send('Set killswitch for game update checker.');
+    }
+}
+
+const checkForKillSwitch = (channel: ThreadChannel | TextChannel) => {
+    if(process.env[killSwitchVar])
+    {
+        endCurrentTask();
+        delete process.env[killSwitchVar];
+        channel.send('Game updates stopped.');
+    }
 }

@@ -1,6 +1,7 @@
 import { Message, MessageEmbed } from "discord.js";
 import { Command } from "../models/Command";
-import { Config } from "../utils/constants";
+import { Config, RoleIds } from "../utils/constants";
+import { KillGameCheckerCommand } from "./KrakenCommands";
 import { GetPlayerStats } from "./PlayerCommands";
 import { GetSchedule, GetLastGamesForTeam, GetNextGamesForTeam, GetScores } from "./ScheduleCommands";
 import { GetStandings } from "./StandingsCommands";
@@ -24,9 +25,7 @@ const commands = [
     // standings
     GetStandings,
     // Game Updates
-    // StartGameUpdate,
-    // StopGameUpdates,
-    // ListGameUpdates
+    KillGameCheckerCommand
 ]
 
 
@@ -34,11 +33,18 @@ export const Help: Command = {
     name: 'help',
     description: 'Display Hockeybot help',
     async execute(message: Message, args: string[]) {
+
+        // filter admin commands to only mods
+        const filteredCommands = commands.filter(command =>
+            !command?.adminOnly ||
+            (command?.adminOnly && message.member?.roles.cache.has(RoleIds.MOD))
+        );
+
         const embed = new MessageEmbed({
             title: `Hockeybot Help`,
             description: 'Commands',
             color: 111111,
-            fields: commands.map(command => {
+            fields: filteredCommands.map(command => {
                 return {
                     name: command.name,
                     value: `${command.description}\nExample: ${Config.prefix} ${command.help}`,

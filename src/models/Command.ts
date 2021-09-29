@@ -5,5 +5,6 @@ export interface Command {
     name: string;
     description: string;
     help?: string;
+    adminOnly?: boolean;
     execute: (message: Message, args: string[]) => void;
 }
