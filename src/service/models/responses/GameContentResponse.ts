@@ -96,16 +96,6 @@ export module GameContentResponse {
         items: any[];
     }
 
-    export interface Contributor4 {
-        name: string;
-        twitter: string;
-    }
-
-    export interface Contributor3 {
-        contributors: Contributor4[];
-        source: string;
-    }
-
     export interface Keyword {
         type: string;
         value: string;
