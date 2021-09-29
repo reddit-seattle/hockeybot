@@ -8,6 +8,7 @@ import { StandingsTypes } from "../models/StandingsTypes";
 import { Roster } from "./models/responses/Roster";
 import { Person } from "./models/responses/Person";
 import { PlayerStats } from "./models/responses/PlayerStats";
+import { GameContentResponse } from './models/responses/GameContentResponse';
 
 export async function get<T>(
     url: string
@@ -107,6 +108,11 @@ export module API {
         export const GetGameDiff: (id: string, since: string) => Promise<GameFeedResponse.Response> = async(id, since) => {
             const timecode = format(since, "yyyyMMdd_HHmmss");
             const response = await get<GameFeedResponse.Response>(Paths.Get.GameFeedDiff(id, timecode));
+            return response;
+        }
+
+        export const GetGameContent: (id: string) => Promise<GameContentResponse.Response> = async(id) => {
+            const response = await get<GameContentResponse.Response>(Paths.Get.GameContent(id));
             return response;
         }
     }

@@ -6,27 +6,38 @@ export module Config {
     export const prefix: string = '$nhl';
 }
 
+export module RoleIds {
+    export const MOD = '370946173902520342';
+}
+
 export module ChannelIds {
     export const DEBUG = '541322708844281867';
     export const KRAKEN = '389864168926216193';
 }
 
+export module Strings {
+    export const KRAKEN_GAMEDAY_THREAD_TITLE = 'Kraken Game Day Thread';
+    export const REDLIGHT_EMBED = '<a:redlight:892194335951581247>';
+}
+
 export module Environment {
     export const botToken = process.env['bot_token'] || undefined;
-    export const DEBUG = process.env['hockeybotDEBUG'] || undefined;
+    export const DEBUG = process.env['hockeybotDEBUG'] ? true : false;
 }
 
 export enum EventTypes {
     Goal = 'GOAL'
 }
 export enum GameStates {
-    FINAL = '7',
-    FINAL_PENDING = '6',
-    GAME_OVER = '5',
-    IN_PROGRESS_CRIT = '4',
-    IN_PROGRESS = '3',
-    PRE_GAME = '2',
-    PREVIEW = '1'
+    FINAL = "7",
+    ALMOST_FINAL = "6",
+    GAME_OVER = "5",
+    CRITICAL = "4",
+    IN_PROGRESS = "3",
+    PRE_GAME = "2",
+    POSTPONED = "9",
+    PREVIEW_TBD = "8",
+    PREVIEW = "1"
 }
 export enum PlayerTypes {
     Scorer = 'Scorer',
@@ -121,6 +132,7 @@ export module Paths {
             (type) => `${Standings}/${type}`;
 
         export const GameFeed: (id: string) => string = (id) => `${API_ENDPOINT}/game/${id}/feed/live`;
+        export const GameContent: (id: string) => string = (id) => `${API_ENDPOINT}/game/${id}/content`;
         export const GameFeedDiff: (id: string, timecode: string) => string =
             (id, timecode) => `${API_ENDPOINT}/game/${id}/feed/live/diffPatch?startTimecode=${timecode}`;
     }
