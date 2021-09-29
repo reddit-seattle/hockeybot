@@ -13,6 +13,7 @@ export module ChannelIds {
 
 export module Strings {
     export const KRAKEN_GAMEDAY_THREAD_TITLE = 'Kraken Game Day Thread';
+    export const REDLIGHT_EMBED = '<a:redlight:892194335951581247>';
 }
 
 export module Environment {

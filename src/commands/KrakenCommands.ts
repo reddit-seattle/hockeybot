@@ -1,10 +1,10 @@
-import { Client, MessageEmbed, TextChannel, ThreadChannel } from "discord.js";
+import { Client, TextChannel, ThreadChannel } from "discord.js";
 import { schedule, ScheduledTask, ScheduleOptions } from "node-cron";
-import { chain, contains, filter, max, sortBy } from "underscore";
+import { contains } from "underscore";
 import { API } from "../service/API";
 import { GameFeedResponse } from "../service/models/responses/GameFeed";
 import { ChannelIds, Environment, GameStates, Kraken, Strings } from "../utils/constants";
-import { CreateGameDayThreadEmbed, CreateGoalEmbed } from "../utils/EmbedFormatters";
+import { CreateGameDayThreadEmbed, CreateGameResultsEmbed, CreateGoalEmbed } from "../utils/EmbedFormatters";
 
 const dailyCronMinute = '0';
 const dailyCronHour = '9';
@@ -13,6 +13,17 @@ const EVERY_THIRTY_MINUTES = Environment.DEBUG ? `*/1 * * * *` : `*/30 * * * *`;
 const EVERY_MINUTE = `* * * * *`;
 const EVERY_TEN_SECONDS = `*/10 * * * * *`;
 let currentTask: ScheduledTask;
+
+//#region IDEAS
+/**
+ * Make game day thread only start during pregame?
+ * Determine if we can run the initial scheduled task at the start (when seabot boots up)
+ * and THEN start the timer for the next day.
+ * Double-check timers to ensure we're doing this right
+ * New thread in the channel per game? or one thread for all game-day stuff
+ * Better logging to channel about intermissions / events
+ */
+//#endregion
 
 //#region  utility functions etc
 const DO_NOT_SCHEDULE: ScheduleOptions = {
@@ -86,9 +97,10 @@ export const StartGoalChecker = (channel: ThreadChannel | TextChannel, gamePk: s
             const { plays } = feed.liveData;
             const { allPlays, scoringPlays } = plays;
 
-            //testing something
+            // Get all goals from scoringPlays.
             const allGoals: GameFeedResponse.AllPlay[] = [];
             scoringPlays.forEach((event: number) => {allGoals.push(allPlays[event])});
+            // TODO - figure out how to handle disallowed goals (toronto vs montreal from 9/28 or 9/27 as an example)
             const newGoals = allGoals.filter(play =>  new Date(play.about.dateTime) > lastGoalAt);
 
             //testing something else
@@ -116,8 +128,8 @@ export const StartGoalChecker = (channel: ThreadChannel | TextChannel, gamePk: s
         }
         else if (isOver(gameState)) {
             // End the game and stop this thing if the game is final
-            const { away, home } = linescore.teams;
-            channel.send(`FINAL - ${away.team.name}: ${away.goals}, ${home.team.name}: ${home.goals}`);
+            const gameResultEmbed = await CreateGameResultsEmbed(feed);
+            channel.send({ embeds:[ gameResultEmbed ]})
             endCurrentTask();
         }
     }, DO_NOT_SCHEDULE)

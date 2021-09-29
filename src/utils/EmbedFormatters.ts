@@ -1,10 +1,10 @@
 import { format, utcToZonedTime } from "date-fns-tz"
 import { MessageEmbed } from "discord.js"
+import { API } from "../service/API"
 import { GameContentResponse } from "../service/models/responses/GameContentResponse"
 import { GameFeedResponse } from "../service/models/responses/GameFeed"
 import { Schedule } from "../service/models/responses/Schedule"
-import { Team } from "../service/models/responses/Teams"
-import { Kraken } from "./constants"
+import { Environment, Kraken, Strings } from "./constants"
 
 const PACIFIC_TIME_ZONE = 'America/Los_Angeles';
 
@@ -29,13 +29,14 @@ export const NextGameFieldFormatter = (game: Schedule.Game) => {
     }
 }
 
+//TODO: empty net goals show as even strength
 export const CreateGameDayThreadEmbed = (game: Schedule.Game, gamePreview: GameContentResponse.Preview) => {
     const {away, home} = game.teams;
     const isHomeGame = home.team.id == Kraken.TeamId;
     const description = `${isHomeGame ? `VS ${away.team.name}` : `@ ${home.team.name}`} - ${format(utcToZonedTime(game.gameDate, PACIFIC_TIME_ZONE), 'PPPPp')}`;
     const preview = gamePreview?.items?.filter(item => item.type == 'article')?.[0];
     return new MessageEmbed()
-    .setTitle('Kraken Game Day!')
+    .setTitle(`${Strings.REDLIGHT_EMBED} ${Environment.DEBUG ?  'Testing Game Day Thread' : 'Kraken Game Day!'} ${Strings.REDLIGHT_EMBED}`)
     .setDescription(description)
     .addField(
         preview ? preview.headline : 'Preview',
@@ -45,7 +46,12 @@ export const CreateGameDayThreadEmbed = (game: Schedule.Game, gamePreview: GameC
 export const CreateGoalEmbed = (play: GameFeedResponse.AllPlay, teams: GameFeedResponse.Teams) => {
     //TODO: Get more excited about kraken-specific goals (:redlight: / gifs / etc)
     const descriptor = play.result.strength.code === 'PPG' ? play.result.strength.name : (play.result.strength.name + ' Strength');
-    const title = `${play.team.name} GOAL - ${descriptor}`;
+    let title = `${play.team.name} GOAL - ${descriptor}`;
+    
+    if(play.team.id == Kraken.TeamId) {
+        title = `${Strings.REDLIGHT_EMBED} ${title} ${Strings.REDLIGHT_EMBED}`;
+    }
+
     const description = `${play.result.description}`;
     return new MessageEmbed({
         title,
@@ -53,7 +59,7 @@ export const CreateGoalEmbed = (play: GameFeedResponse.AllPlay, teams: GameFeedR
         fields: [
             {
                 name: 'Current Score',
-                value: `${teams.away}: ${play.about.goals.away} - ${teams.home}: ${play.about.goals.home}`,
+                value: `${teams.away.name}: ${play.about.goals.away} - ${teams.home.name}: ${play.about.goals.home}`,
                 inline: false
             },
             {
@@ -65,3 +71,48 @@ export const CreateGoalEmbed = (play: GameFeedResponse.AllPlay, teams: GameFeedR
 
     })
 }
+
+export const CreateGameResultsEmbed = async (feed: GameFeedResponse.Response) => {
+    const { gameData, liveData } = feed;
+    const { linescore } = liveData;
+    const { away, home } = linescore.teams;
+    const homeWin = away.goals < home.goals;
+    const winner = homeWin ? home : away;
+    const loser = homeWin ? away : home;
+    const teamLogo = `https://www-league.nhlstatic.com/images/logos/teams-current-primary-light/${winner.team.id}.svg`
+    const krakenWin = (winner.team.id == Kraken.TeamId);
+    const title = `${away.team.name} @ ${home.team.name} - ${gameData.status.detailedState}`;
+    let description = `${winner.team.name} win${krakenWin ? '!' : '.'}`;
+
+    if(krakenWin) {
+        description = `${Strings.REDLIGHT_EMBED} ${description} ${Strings.REDLIGHT_EMBED}`;
+    }
+
+    const embed = new MessageEmbed()
+        .setTitle(title)
+        .setDescription(description)
+        .addField(
+            `${winner.team.name}`,
+            `Goals: **${winner.goals}**\n
+            Shots: **${winner.shotsOnGoal}**`,
+            true
+        )
+        .addField(
+            `${loser.team.name}`,
+            `Goals: **${loser.goals}**\n
+            Shots: **${loser.shotsOnGoal}**`,
+            true
+        )
+        .setImage(teamLogo);
+    
+    const start = format(new Date(), "yyyy-MM-dd")
+    const season = await API.Seasons.GetCurrentSeason();
+    const allGames = await API.Schedule.GetTeamSchedule(Kraken.TeamId, start, season?.seasonEndDate);
+    const nextGame = allGames?.[0];
+    if(nextGame) {
+        const { name, value, inline } = ScheduledGameFieldFormatter(nextGame);
+        embed.addField(name, value, inline);
+    }
+
+    return embed;
+};
