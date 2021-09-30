@@ -111,7 +111,7 @@ export const CreateGameResultsEmbed = async (feed: GameFeedResponse.Response) =>
     const nextGame = allGames?.[0];
     if(nextGame) {
         const { name, value, inline } = ScheduledGameFieldFormatter(nextGame);
-        embed.addField(name, value, inline);
+        embed.addField(`**Next Game**: ${name}`, value, inline);
     }
 
     return embed;
