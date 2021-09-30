@@ -103,7 +103,7 @@ export const CreateGameResultsEmbed = async (feed: GameFeedResponse.Response) =>
             Shots: **${loser.shotsOnGoal}**`,
             true
         )
-        .setImage(teamLogo);
+        .setThumbnail(teamLogo);
     
     const start = format(new Date(), "yyyy-MM-dd")
     const season = await API.Seasons.GetCurrentSeason();
