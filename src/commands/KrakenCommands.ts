@@ -5,7 +5,7 @@ import { contains } from "underscore";
 import { Command } from "../models/Command";
 import { API } from "../service/API";
 import { GameFeedResponse } from "../service/models/responses/GameFeed";
-import { ChannelIds, Environment, GameStates, Kraken, Strings } from "../utils/constants";
+import { ChannelIds, Config, Environment, GameStates, Kraken, Strings } from "../utils/constants";
 import { CreateGameDayThreadEmbed, CreateGameResultsEmbed, CreateGoalEmbed } from "../utils/EmbedFormatters";
 
 const killSwitchVar = 'killGameChecker';
@@ -31,7 +31,7 @@ let currentTask: ScheduledTask;
 //#region  utility functions etc
 const DO_NOT_SCHEDULE: ScheduleOptions = {
     scheduled: false,
-    timezone: "America/Los_Angeles"
+    timezone: Config.TIME_ZONE
 };
 
 const endCurrentTask = () => {
@@ -203,10 +203,14 @@ export const SetupKrakenGameDayChecker = (client: Client) => {
         CheckForTodaysGames(client);
     }
 
-    return schedule(dailyCronString, () => {
-        console.log(`Scheduling CRON scheduled task for ${dailyCronString}`);
-        CheckForTodaysGames(client);
-    });
+    return schedule(
+        dailyCronString, 
+        () => {
+            console.log(`Scheduling CRON scheduled task for ${dailyCronString}`);
+            CheckForTodaysGames(client);
+        },
+        { timezone: Config.TIME_ZONE }
+    );
     
 }
 
