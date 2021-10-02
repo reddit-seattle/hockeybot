@@ -173,11 +173,11 @@ export module GameFeedResponse {
         eventCode: string;
         eventTypeId: string;
         description: string;
-        secondaryType: string;
-        strength: Strength;
+        secondaryType?: string;
+        strength?: Strength;
         gameWinningGoal?: boolean;
         emptyNet?: boolean;
-        penaltySeverity: string;
+        penaltySeverity?: string;
         penaltyMinutes?: number;
     }
 
@@ -204,7 +204,7 @@ export module GameFeedResponse {
     }
 
     export interface Player {
-        player: Player;
+        player: PlayerObj;
         playerType: string;
         seasonTotal?: number;
     }
@@ -220,8 +220,8 @@ export module GameFeedResponse {
         result: Result;
         about: About;
         coordinates: Coordinates;
-        players: Player[];
-        team: Team;
+        players?: Player[];
+        team?: Team;
     }
 
     export interface PlaysByPeriod {
@@ -254,9 +254,15 @@ export module GameFeedResponse {
         away: Away;
     }
 
+    export interface TeamShootoutResults {
+        scores: number;
+        attempts: number;
+    }
+
     export interface ShootoutInfo {
-        away: Away;
-        home: Home;
+        away: TeamShootoutResults;
+        home: TeamShootoutResults;
+        startTime?: string;
     }
 
     export interface IntermissionInfo {
@@ -361,18 +367,11 @@ export module GameFeedResponse {
         officials: Official[];
     }
 
-    export interface Winner {
+    export interface PlayerObj {
         id: string;
         fullName: string;
         link: string;
     }
-
-    export interface Loser {
-        id: string;
-        fullName: string;
-        link: string;
-    }
-
     export interface FirstStar {
         id: string;
         fullName: string;
@@ -392,8 +391,8 @@ export module GameFeedResponse {
     }
 
     export interface Decisions {
-        winner: Winner;
-        loser: Loser;
+        winner: PlayerObj;
+        loser: PlayerObj;
         firstStar: FirstStar;
         secondStar: SecondStar;
         thirdStar: ThirdStar;
