@@ -19,6 +19,7 @@ export module ChannelIds {
 export module Strings {
     export const KRAKEN_GAMEDAY_THREAD_TITLE = 'Kraken Game Day Thread';
     export const REDLIGHT_EMBED = '<a:redlight:892194335951581247>';
+    export const ZERO_WIDTH_SPACE = '​';
 }
 
 export module Environment {
@@ -92,6 +93,7 @@ export module Paths {
     export const API_HOST_URL: string = `https://statsapi.web.nhl.com`;
     export const API_PART: string = 'api/v1';
     export const API_ENDPOINT = `${API_HOST_URL}/${API_PART}`;
+    export const TeamLogo = (id: string) => `https://www-league.nhlstatic.com/images/logos/teams-current-primary-light/${id}.svg`;
     
     export module Get {
         export const Schedule: string = `${API_ENDPOINT}/schedule?expand=schedule.linescore`;

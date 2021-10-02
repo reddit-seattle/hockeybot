@@ -1,17 +1,18 @@
 import { format, utcToZonedTime } from "date-fns-tz"
-import { MessageEmbed } from "discord.js"
+import { EmbedFieldData, Message, MessageEmbed } from "discord.js"
+import { first } from "underscore"
 import { API } from "../service/API"
 import { GameContentResponse } from "../service/models/responses/GameContentResponse"
 import { GameFeedResponse } from "../service/models/responses/GameFeed"
 import { Schedule } from "../service/models/responses/Schedule"
-import { Environment, Kraken, Strings } from "./constants"
+import { Environment, Kraken, Paths, Strings } from "./constants"
 
 const PACIFIC_TIME_ZONE = 'America/Los_Angeles';
 
 export const HomeAtAwayStringFormatter = (teams: Schedule.Teams) => {
     const {home, away} = teams;
     return `${away.team.name} @ ${home.team.name}`
-}
+};
 
 export const ScheduledGameFieldFormatter = (game: Schedule.Game) => {
     return {
@@ -19,7 +20,7 @@ export const ScheduledGameFieldFormatter = (game: Schedule.Game) => {
         value: `${format(utcToZonedTime(game.gameDate, PACIFIC_TIME_ZONE), 'HH:mm')} - ${game.venue.name}`,
         inline: false
     }
-}
+};
 
 export const NextGameFieldFormatter = (game: Schedule.Game) => {
     return {
@@ -27,9 +28,8 @@ export const NextGameFieldFormatter = (game: Schedule.Game) => {
         value: `${format(utcToZonedTime(game.gameDate, PACIFIC_TIME_ZONE), 'PPPPp')}`,
         inline: false
     }
-}
+};
 
-//TODO: empty net goals show as even strength
 export const CreateGameDayThreadEmbed = (game: Schedule.Game, gamePreview: GameContentResponse.Preview) => {
     const {away, home} = game.teams;
     const isHomeGame = home.team.id == Kraken.TeamId;
@@ -43,12 +43,13 @@ export const CreateGameDayThreadEmbed = (game: Schedule.Game, gamePreview: GameC
         preview ? `${preview.subhead}\n${preview.seoDescription}` : 'No Preview available')
 }
 
+//TODO: empty net goals show as even strength
 export const CreateGoalEmbed = (play: GameFeedResponse.AllPlay, teams: GameFeedResponse.Teams) => {
     //TODO: Get more excited about kraken-specific goals (:redlight: / gifs / etc)
-    const descriptor = play.result.strength.code === 'PPG' ? play.result.strength.name : (play.result.strength.name + ' Strength');
-    let title = `${play.team.name} GOAL - ${descriptor}`;
+    const descriptor = play?.result?.strength?.code === 'PPG' ? play.result.strength.name : (play?.result?.strength?.name + ' Strength');
+    let title = `${play?.team?.name} GOAL - ${descriptor}`;
     
-    if(play.team.id == Kraken.TeamId) {
+    if(play?.team?.id == Kraken.TeamId) {
         title = `${Strings.REDLIGHT_EMBED} ${title} ${Strings.REDLIGHT_EMBED}`;
     }
 
@@ -70,7 +71,7 @@ export const CreateGoalEmbed = (play: GameFeedResponse.AllPlay, teams: GameFeedR
         ]
 
     })
-}
+};
 
 export const CreateGameResultsEmbed = async (feed: GameFeedResponse.Response) => {
     const { gameData, liveData } = feed;
@@ -79,7 +80,7 @@ export const CreateGameResultsEmbed = async (feed: GameFeedResponse.Response) =>
     const homeWin = away.goals < home.goals;
     const winner = homeWin ? home : away;
     const loser = homeWin ? away : home;
-    const teamLogo = `https://www-league.nhlstatic.com/images/logos/teams-current-primary-light/${winner.team.id}.svg`
+    const teamLogo = Paths.TeamLogo(winner.team.id);
     const krakenWin = (winner.team.id == Kraken.TeamId);
     const title = `${away.team.name} @ ${home.team.name} - ${gameData.status.detailedState}`;
     let description = `${winner.team.name} win${krakenWin ? '!' : '.'}`;
@@ -115,4 +116,81 @@ export const CreateGameResultsEmbed = async (feed: GameFeedResponse.Response) =>
     }
 
     return embed;
+};
+
+export const createShootoutEmbed = (
+  play: GameFeedResponse.AllPlay,
+  shootoutPlays: GameFeedResponse.AllPlay[],
+  teams: GameFeedResponse.LineScoreTeams
+) => {
+    
+    // only grab shootout plays up until this play
+  shootoutPlays = shootoutPlays.filter(
+    x => new Date(x.about.dateTime) <= new Date(play.about.dateTime)
+  );
+
+  const { result, team } = play;
+  const { description, eventTypeId } = result;
+  let title = `${team?.name} - ${eventTypeId}`;
+  const thumbnail = team ? Paths.TeamLogo(team?.id) : undefined;
+  const goal = eventTypeId === "GOAL";
+  const kraken = team?.id === Kraken.TeamId;
+  if (goal && kraken) {
+    title = `${Strings.REDLIGHT_EMBED} ${title} ${Strings.REDLIGHT_EMBED}`;
+  }
+
+  if (!shootoutPlays?.[0]) {
+    return;
+  }
+  const shootFirst = shootoutPlays[0].team?.triCode ?? "N/A";
+  const shootSecond =
+    teams.away.team.triCode == shootFirst
+      ? teams.home.team.triCode
+      : teams.away.team.triCode;
+
+  const shootoutResults: {
+    [abbr: string]: {
+      result: string;
+      player: string;
+    }[];
+  } = {};
+
+  shootoutResults[shootFirst] = [];
+  shootoutResults[shootSecond] = [];
+  shootoutPlays.forEach((soPlay) => {
+    const shooter = soPlay.players?.filter(
+      (p) => p.playerType != "Goalie"
+    )?.[0];
+    shootoutResults[soPlay.team?.triCode ?? "N/A"].push({
+      result: shootoutSymbol(soPlay),
+      player: shooter?.player.fullName ?? "Unknown",
+    });
+  });
+
+  const embed = new MessageEmbed({
+    title,
+    description,
+    thumbnail: { url: thumbnail, width: 50 },
+    fields: [shootFirst, shootSecond].map((item) => {
+      return {
+        name: `**${item}**`,
+        value:
+          shootoutResults[item]
+            .map((obj) => {
+              return `${obj.result} ${obj.player}`;
+            })
+            .join("\n") || Strings.ZERO_WIDTH_SPACE,
+        inline: true,
+      };
+    }),
+  });
+
+  return embed;
+};
+
+const shootoutSymbol = (play: GameFeedResponse.AllPlay | undefined) => {
+  if (!play) {
+    return Strings.ZERO_WIDTH_SPACE;
+  }
+  return play.result.eventTypeId == "GOAL" ? "🚨" : "✖";
 };

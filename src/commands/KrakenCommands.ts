@@ -6,7 +6,7 @@ import { Command } from "../models/Command";
 import { API } from "../service/API";
 import { GameFeedResponse } from "../service/models/responses/GameFeed";
 import { ChannelIds, Config, Environment, GameStates, Kraken, Strings } from "../utils/constants";
-import { CreateGameDayThreadEmbed, CreateGameResultsEmbed, CreateGoalEmbed } from "../utils/EmbedFormatters";
+import { CreateGameDayThreadEmbed, CreateGameResultsEmbed, CreateGoalEmbed, createShootoutEmbed } from "../utils/EmbedFormatters";
 
 const killSwitchVar = 'killGameChecker';
 const dailyCronMinute = 0;
@@ -66,6 +66,8 @@ const isInProgress = (gameState: string) => {
 //return a scheduled task that checks every 10 seconds and announces goals for {gamePk} in {channel}
 const StartGoalChecker = (channel: ThreadChannel | TextChannel, gamePk: string) => {
     let wasIntermission = false;
+    let isOvertime = false;
+    let isShootout = false;
     let lastGoalAt: Date = new Date();
     channel.send('Game Starting!');
     return schedule(EVERY_TEN_SECONDS, async () => {
@@ -77,8 +79,50 @@ const StartGoalChecker = (channel: ThreadChannel | TextChannel, gamePk: string) 
         const { inIntermission, intermissionTimeRemaining } = linescore.intermissionInfo;
         const gameState = feed?.gameData?.status?.codedGameState;
 
+        //playoffs have multiple OT periods
+        isOvertime = linescore.currentPeriod > 3;
+        //only regular season has shootouts
+        isShootout = linescore.currentPeriodOrdinal == 'SO';
+
+        //if the game is over, shut it down
+        if (isOver(gameState)) {
+            // End the game and stop this thing if the game is final
+            const gameResultEmbed = await CreateGameResultsEmbed(feed);
+            channel.send({ embeds:[ gameResultEmbed ]})
+            endCurrentTask();
+        }
+        // Only do shootout checks if we're in a shootout
+        else if(isShootout) {
+            //reuse lastGoalAt since it hasn't changed (or we wouldn't be in a shootout :D)
+            const { teams } = linescore;
+            const { plays } = feed.liveData;
+            const shootoutPlayIds = plays.playsByPeriod[linescore.currentPeriod-1];
+            const { startIndex } = shootoutPlayIds;
+            const { allPlays } = plays;
+            const allShootoutAttempts = allPlays.slice(startIndex).filter((play) => play.result.eventTypeId in ["SHOT", "GOAL"]);
+            const newShootoutItems = allShootoutAttempts.filter(play =>  new Date(play.about.dateTime) > lastGoalAt);
+            if(Environment.DEBUG) {
+                //log shootout stuff
+                console.log('Shootout attempts (all):')
+                console.dir(allShootoutAttempts);
+                console.log('New shootout items:')
+                console.dir(newShootoutItems);
+            }
+            //if we have *new* shootout items
+            if(newShootoutItems?.[0]) {
+                //display shootout items one by one.
+                newShootoutItems.forEach(async (attempt) => {
+                    lastGoalAt = new Date(attempt.about?.dateTime ?? lastGoalAt);
+                    const embed = createShootoutEmbed(attempt, allShootoutAttempts, teams)
+                    if(embed){
+                        channel.send({embeds:[embed]})
+                    }
+                });
+
+            }
+        }
         // don't check scores or updates if we're in intermission
-        if (inIntermission) {
+        else if (inIntermission) {
             //if now intermission, but wasn't before
             if (!wasIntermission) {
                 channel.send(`End of the ${linescore.currentPeriodOrdinal} period.`);
@@ -88,6 +132,7 @@ const StartGoalChecker = (channel: ThreadChannel | TextChannel, gamePk: string) 
             const secs = intermissionTimeRemaining % 60;
             console.log(`${mins}:${secs} remaining in the ${linescore.currentPeriodOrdinal} intermission.`);
         }
+        //otherwise do the thing
         else if (contains([
             GameStates.IN_PROGRESS, // general in progress
             GameStates.CRITICAL // nearing end of period with low goal differential (?)
@@ -129,12 +174,6 @@ const StartGoalChecker = (channel: ThreadChannel | TextChannel, gamePk: string) 
                 });
             }
             console.log(`${currentPeriodTimeRemaining} remaining in the ${linescore.currentPeriodOrdinal} period.`);
-        }
-        else if (isOver(gameState)) {
-            // End the game and stop this thing if the game is final
-            const gameResultEmbed = await CreateGameResultsEmbed(feed);
-            channel.send({ embeds:[ gameResultEmbed ]})
-            endCurrentTask();
         }
     }, DO_NOT_SCHEDULE)
 }
