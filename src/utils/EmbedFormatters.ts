@@ -1,5 +1,6 @@
 import { format, utcToZonedTime } from "date-fns-tz"
-import { MessageEmbed } from "discord.js"
+import { EmbedFieldData, Message, MessageEmbed } from "discord.js"
+import { first } from "underscore"
 import { API } from "../service/API"
 import { GameContentResponse } from "../service/models/responses/GameContentResponse"
 import { GameFeedResponse } from "../service/models/responses/GameFeed"
