@@ -18,13 +18,10 @@
   },
   "devDependencies": {
     "@types/date-fns": "^2.6.0",
-    "@types/jest": "^27.0.2",
     "@types/node": "^14.14.16",
     "@types/node-cron": "^2.0.4",
     "@types/node-fetch": "^2.5.7",
     "@types/underscore": "^1.10.24",
-    "jest": "^27.2.4",
-    "ts-jest": "^27.0.5",
     "typescript": "^4.3.5"
   },
   "scripts": {
