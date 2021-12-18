@@ -1,5 +1,7 @@
 
 import { Client, Guild, Message, TextChannel } from 'discord.js'
+import { REST } from '@discordjs/rest';
+import { RESTPostAPIApplicationCommandsJSONBody, Routes } from 'discord-api-types/v9';
 import { createServer } from 'http';
 import { Help } from './commands/HelpCommands';
 import { KillGameCheckerCommand, SetupKrakenGameDayChecker } from './commands/KrakenCommands';
@@ -7,11 +9,18 @@ import { GetPlayerStats } from './commands/PlayerCommands';
 import { GetLastGameRecap, GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule, GetScores } from './commands/ScheduleCommands';
 import { GetStandings } from './commands/StandingsCommands';
 import { GetTeamStats } from './commands/TeamCommands';
-import { Command } from './models/Command';
+import { Command, CommandDictionary } from './models/Command';
 import { ChannelIds, Config, Environment, RoleIds } from './utils/constants';
-import { GetMessageArgs } from './utils/helpers';
+import { SplitMessageIntoArgs } from './utils/helpers';
+import { exit } from 'process';
 
-const client = new Client({ intents: ['GUILDS', 'GUILD_MESSAGES'] });
+const client = new Client({
+    intents: [
+      "GUILDS",
+      "GUILD_MESSAGES",
+      "GUILD_MESSAGE_REACTIONS",
+    ],
+  });
 
 //load commands
 
@@ -29,15 +38,16 @@ const commands = [
 ].reduce((map, obj) => {
         map[obj.name] = obj;
         return map;
-}, {} as { [id: string]: Command });
+}, {} as CommandDictionary);
 
 client.on("messageCreate", async (message: Message) => {
     //bad bot
     if (!message.content.startsWith(Config.prefix) || message.author.bot) return;
 
-    //send it
-    const args = GetMessageArgs(message);
-    const command = commands?.[args?.[0]?.toLowerCase()];
+    const args = SplitMessageIntoArgs(message);
+    //grab actual command and separate it from args
+    const commandArg = args?.shift()?.toLowerCase() || '';
+    const command = commands?.[commandArg];
 
     try {
         if(command?.adminOnly && !message.member?.roles.cache.has(RoleIds.MOD)){
@@ -64,16 +74,54 @@ client.on('ready', async () => {
         });
     }
    SetupKrakenGameDayChecker(client);
+   registerAllSlashCommands(client);
 });
 
+const { botToken } = Environment;
 // MAIN
-if (!Environment.botToken || Environment.botToken == '') {
+if (!botToken || botToken == '') {
     console.log(`Please set an environment variable "bot_token" with your bot's token`);
+    exit(1);
 }
 else {
     //login and go
     client.login(Environment.botToken);
 }
+
+//hook up api
+const rest = new REST({ version: '9' }).setToken(botToken);
+
+const registerAllSlashCommands = async (client: Client) => {
+    client.guilds.cache.forEach(async guild => {
+        const slashCommands: RESTPostAPIApplicationCommandsJSONBody[] = [];
+        for(const commandName in commands) {
+            const command = commands[commandName];
+            if(command?.slashCommandDescription) {
+                console.log(`adding ${command.name} slash command registration`)
+                slashCommands.push(command.slashCommandDescription().toJSON())
+            }
+        }
+        console.log('all commands: ')
+        console.dir(slashCommands);
+        const result = await rest.put(
+            Routes.applicationGuildCommands(client.user!.id, guild.id),
+            {
+                body: slashCommands
+            }
+        )
+        console.dir(result);
+
+    });
+}
+
+client.on("interactionCreate", async interaction => {
+    if(!interaction.isCommand()) return;
+
+    const command = commands?.[interaction.commandName];
+    if(command) {
+        command.executeSlashCommand?.(interaction);
+    };
+})
 
 //stupid fix for azure app service containers requiring a response to port 8080
 createServer(function (req, res) {

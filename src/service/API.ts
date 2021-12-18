@@ -61,9 +61,9 @@ export module API {
             return response?.teams?.[0]?.previousGameSchedule?.dates?.[0]?.games?.[0];
         }
 
-        export const GetTeamByAbbreviation: (abbr: string) => Promise<TeamResponse.Team | undefined> = async (abbr) => {
+        export const GetTeamByAbbreviation: (abbr: string | undefined) => Promise<TeamResponse.Team | undefined> = async (abbr) => {
             const response = await get<TeamResponse.Response>(Paths.Get.Teams);
-            const teams = response?.teams?.filter(team => team.abbreviation.toLowerCase() == abbr.toLowerCase())
+            const teams = response?.teams?.filter(team => team.abbreviation.toLowerCase() == abbr?.toLowerCase())
             return teams?.[0];
         }
         export const GetRoster: (id: string) => Promise<Roster.Player[]> = async (id) => {

@@ -12,9 +12,9 @@ export const GetSchedule: Command = {
 	name: 'schedule',
 	description: 'List of games on a given day',
 	help: 'schedule 2020-01-01',
-	async execute(message: Message, args: string[]) {
+	async execute(message: Message, args?: string[]) {
 		// check for date
-		const date = args?.[1];
+		const date = args?.[0];
 		const schedule = await API.Schedule.GetSchedule(date);
 
 		// sadness, no hockey today :(
@@ -49,14 +49,14 @@ export const GetNextGamesForTeam: Command = {
 	name: 'next',
 	description: 'Next [x] game results for team [y]',
 	help: 'next 5 PHI',
-	execute: async (message: Message, args: string[]) => {
+	execute: async (message: Message, args?: string[]) => {
 		//expect ['next', number, 'PHI']
-		if(args?.[1] && args?.[2]) {
+		if(args?.[0] && args?.[1]) {
 			//get today's date as start
-			const numberGames = Number.parseInt(args[1]);
-			const team = await API.Teams.GetTeamByAbbreviation(args[2]);
+			const numberGames = Number.parseInt(args[0]);
+			const team = await API.Teams.GetTeamByAbbreviation(args[1]);
 			if(!team?.id){
-				message.channel.send(`No team found for input: ${args[2]}`);
+				message.channel.send(`No team found for input: ${args[1]}`);
 				return;
 			}
 			const start = format(new Date(), "yyyy-MM-dd")
@@ -68,7 +68,7 @@ export const GetNextGamesForTeam: Command = {
 			
 
 			if(!allGames?.[0]){
-				message.channel.send(`Could not find any remaining games for ${args[2]} this season`);
+				message.channel.send(`Could not find any remaining games for ${args[1]} this season`);
 				return;
 			}
 			const games = first(allGames, numberGames);
@@ -104,13 +104,13 @@ export const GetLastGamesForTeam: Command = {
 	name: 'last',
 	description: 'Last [x] game results for team [y]',
 	help: 'last 10 mtl',
-	execute: async (message: Message, args: string[]) => {
+	execute: async (message: Message, args?: string[]) => {
 		//expect ['next', number, 'PHI']
-		if(args?.[1] && args?.[2]) {
-			const numberGames = Number.parseInt(args[1]);
-			const team = await API.Teams.GetTeamByAbbreviation(args[2]);
+		if(args?.[0] && args?.[1]) {
+			const numberGames = Number.parseInt(args[0]);
+			const team = await API.Teams.GetTeamByAbbreviation(args[1]);
 			if(!team?.id){
-				message.channel.send(`No team found for input: ${args[2]}`);
+				message.channel.send(`No team found for input: ${args[1]}`);
 				return;
 			}
 			const today = format(new Date(), "yyyy-MM-dd")
@@ -123,7 +123,7 @@ export const GetLastGamesForTeam: Command = {
 			const allGames = await (await API.Schedule.GetTeamSchedule(team.id, season?.regularSeasonStartDate, today)).filter(x => x.status.codedGameState == GameStates.FINAL);
 
 			if(!allGames?.[0]){
-				message.channel.send(`Could not find any previous games for ${args[2]} this season`);
+				message.channel.send(`Could not find any previous games for ${args[1]} this season`);
 				return;
 			}
 			
@@ -188,7 +188,7 @@ export const GetScores: Command = {
 	name: 'scores',
 	description: 'Scores of current games',
 	help: 'scores',
-	async execute(message: Message, args: string[]) {
+	async execute(message: Message, args?: string[]) {
 
 		const allGames = (await API.Schedule.GetSchedule());
 
@@ -246,14 +246,14 @@ export const GetLastGameRecap: Command = {
 	help: 'recap SEA',
 	execute: async (message, args) => {
 		//expect ['next', number, 'PHI']
-		if(!args?.[1] || args?.[1]?.length != 3) {
+		if(!args?.[0] || args?.[0]?.length != 3) {
 			message.channel.send("No team abbreviation provided");
 			return;
 		}
-		const team = await API.Teams.GetTeamByAbbreviation(args[1]);
+		const team = await API.Teams.GetTeamByAbbreviation(args[0]);
 		const teamId = team?.id;
 		if(!teamId) {
-			message.channel.send(`Invalid team abbreviation: ${args[1]}`);
+			message.channel.send(`Invalid team abbreviation: ${args[0]}`);
 			return;
 		}
 

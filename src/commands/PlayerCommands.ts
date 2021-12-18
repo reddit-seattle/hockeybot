@@ -9,15 +9,18 @@ export const GetPlayerStats: Command = {
 	name: 'playerstats',
 	description: 'PlayerStats',
 	help: 'playerstats PHI [lastName | number]',
-	async execute(message: Message, args: string[]) {
-		const team = await API.Teams.GetTeamByAbbreviation(args[1]);
+	async execute(message: Message, args?: string[]) {
+        if(!args?.[0]) {
+			message.channel.send(`I need a team abbreviation, buddy`);
+		}
+		const team = await API.Teams.GetTeamByAbbreviation(args?.[0]);
 		if(!team?.id) {
-			message.channel.send(`Couldn't find roster for team ${args[1]}`);
+			message.channel.send(`Couldn't find roster for team ${args?.[0]}`);
 			return;
 		}
         const players = await API.Teams.GetRoster(team.id);
 
-        const playerArg = args[2];
+        const playerArg = args?.[1];
         if (!playerArg) {
             message.channel.send('No player search info provided. Please provide the team and either a name or jersey number.');
             return;

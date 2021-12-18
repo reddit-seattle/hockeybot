@@ -10,10 +10,13 @@ export const GetTeamStats: Command = {
 	name: 'teamstats',
 	description: 'Team regular season statistics',
 	help: 'teamstats PHI',
-	async execute(message: Message, args: string[]) {
-		const team = await API.Teams.GetTeamByAbbreviation(args[1]);
+	async execute(message: Message, args?: string[]) {
+		if(!args?.[0]) {
+			message.channel.send(`I need a team abbreviation, buddy`);
+		}
+		const team = await API.Teams.GetTeamByAbbreviation(args?.[0]);
 		if(!team?.id) {
-			message.channel.send(`Couldn't find stats for team ${args[1]}`);
+			message.channel.send(`Couldn't find stats for team ${args?.[0]}`);
 			return;
 		}
 		const stats = await API.Stats.TeamStats(team.id);

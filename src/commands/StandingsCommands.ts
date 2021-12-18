@@ -9,8 +9,8 @@ export const GetStandings: Command = {
 	name: 'standings',
     description: 'Get Standings. Standings type optional (`wildCard`, `divisionLeaders`)',
     help: 'standings divisionLeaders',
-	async execute(message: Message, args: string[]) {
-        const standingsArg = args?.[1];
+	async execute(message: Message, args?: string[]) {
+        const standingsArg = args?.[0];
         const standings = await API.Standings.GetStandings(standingsArg as StandingsTypes);
         
 		if(!standings?.[0]) {
