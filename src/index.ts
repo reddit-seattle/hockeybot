@@ -103,6 +103,7 @@ const registerAllSlashCommands = async (client: Client) => {
         }
         console.log('all commands: ')
         console.dir(slashCommands);
+        try {
         const result = await rest.put(
             Routes.applicationGuildCommands(client.user!.id, guild.id),
             {
@@ -110,6 +111,8 @@ const registerAllSlashCommands = async (client: Client) => {
             }
         )
         console.dir(result);
+        }
+        catch(ex){console.dir(ex)};
 
     });
 }
