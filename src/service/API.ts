@@ -1,9 +1,9 @@
 import fetch from 'node-fetch';
 import { format } from 'date-fns-tz';
 import { Environment, Paths } from "../utils/constants";
-import { Schedule as ScheduleResponse } from "./models/responses/Schedule";
+import { ScheduleResponse } from "./models/responses/Schedule";
 import { GameFeedResponse } from './models/responses/GameFeed';
-import { Team as TeamResponse } from "./models/responses/Teams";
+import { TeamResponse } from "./models/responses/Teams";
 import { StandingsTypes } from "../models/StandingsTypes";
 import { Roster } from "./models/responses/Roster";
 import { Person } from "./models/responses/Person";
@@ -56,9 +56,14 @@ export module API {
             return response?.teams?.[0];
         }
 
-        export const GetTeamByAbbreviation: (abbr: string) => Promise<TeamResponse.Team | undefined> = async (abbr) => {
+        export const GetTeamsLastGame: (id: string) => Promise<ScheduleResponse.Game> = async (id) => {
+            const response = await get<any>(Paths.Get.TeamLastGame(id));
+            return response?.teams?.[0]?.previousGameSchedule?.dates?.[0]?.games?.[0];
+        }
+
+        export const GetTeamByAbbreviation: (abbr: string | undefined) => Promise<TeamResponse.Team | undefined> = async (abbr) => {
             const response = await get<TeamResponse.Response>(Paths.Get.Teams);
-            const teams = response?.teams?.filter(team => team.abbreviation.toLowerCase() == abbr.toLowerCase())
+            const teams = response?.teams?.filter(team => team.abbreviation.toLowerCase() == abbr?.toLowerCase())
             return teams?.[0];
         }
         export const GetRoster: (id: string) => Promise<Roster.Player[]> = async (id) => {

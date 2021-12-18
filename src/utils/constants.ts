@@ -27,6 +27,19 @@ export module Environment {
     export const DEBUG = process.env['hockeybotDEBUG'] ? true : false;
 }
 
+export enum MEDIA_FORMAT {
+    FLASH_192K_320X180 = "FLASH_192K_320X180",
+    FLASH_450K_384x216 = "FLASH_450K_384x216",
+    FLASH_1200K_640X360 = "FLASH_1200K_640X360",
+    FLASH_1800K_896x504 = "FLASH_1800K_896x504",
+    HTTP_CLOUD_MOBILE = "HTTP_CLOUD_MOBILE",
+    HTTP_CLOUD_TABLET = "HTTP_CLOUD_TABLET",
+    HTTP_CLOUD_TABLET_60 = "HTTP_CLOUD_TABLET_60",
+    HTTP_CLOUD_WIRED = "HTTP_CLOUD_WIRED",
+    HTTP_CLOUD_WIRED_60 = "HTTP_CLOUD_WIRED_60",
+    HTTP_CLOUD_WIRED_WEB = "HTTP_CLOUD_WIRED_WEB"
+}
+
 export enum EventTypes {
     Goal = 'GOAL'
 }
@@ -102,6 +115,9 @@ export module Paths {
 
         export const TeamSchedule: (id: string) => string =
             (id) => `${Schedule}&teamId=${id}`;
+
+        export const TeamLastGame: (id: string) => string =
+            (id) => `${Team(id)}?expand=team.schedule.previous&expand=schedule.linescore`;
     
         export const TeamScheduleByDate :(team: string, startDate: string, endDate?: string) => string =
             (id, start, end) => `${Schedule}&teamId=${id}&startDate=${start}&endDate=${end || start}`;

@@ -32,7 +32,7 @@ const commands = [
 export const Help: Command = {
     name: 'help',
     description: 'Display Hockeybot help',
-    async execute(message: Message, args: string[]) {
+    async execute(message: Message, args?: string[]) {
 
         // filter admin commands to only mods
         const filteredCommands = commands.filter(command =>

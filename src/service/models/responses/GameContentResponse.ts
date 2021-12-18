@@ -1,13 +1,32 @@
+import { MEDIA_FORMAT } from "../../../utils/constants";
+
 export module GameContentResponse {
 
     export interface Token {
-        tokenGUID: string;
-        type: string;
         id: string;
         teamId: string;
         position: string;
         name: string;
         seoName: string;
+        tokenGUID: string;
+        type: string;
+        videoId: string;
+        href: string;
+        tags: Tag[];
+        date: Date;
+        headline: string;
+        duration: string;
+        blurb: string;
+        bigBlurb: string;
+        mediaPlaybackId: string;
+        image: Image;
+        mediaURLS: {[resolution: string]: string};
+    }
+
+    export interface Tag {
+        "@type": string;
+        "@value": string;
+        "@displayName": string;
     }
 
     export interface ContributorObj {
@@ -57,8 +76,36 @@ export module GameContentResponse {
         type: string;
         image: Image;
     }
+    export interface GameMedia {
+        epg: Epg[];
+        milestones: Milestones;
+    }
+
+    export interface Milestones {
+        title: string;
+        streamStart: Date;
+        items: Item[];
+    }
+
+    export interface Epg {
+        title: string;
+        platform: string;
+        items: Item[];
+        topicList: string;
+    }
 
     export interface Item {
+        title: string;
+        blurb: string;
+        description: string;
+        duration: string;
+        authFlow: boolean;
+        mediaPlaybackId: string;
+        mediaState: string;
+        keywords: Keyword[];
+        image: Image;
+        playbacks: Playback[];
+        highlight: Item;
         type: string;
         state: string;
         date: Date;
@@ -81,6 +128,7 @@ export module GameContentResponse {
         primaryKeyword: PrimaryKeyword;
         shareImage: string;
         media: Media;
+        statsEventId: string;
         preview: string;
     }
 
@@ -103,7 +151,7 @@ export module GameContentResponse {
     }
 
     export interface Playback {
-        name: string;
+        name: MEDIA_FORMAT;
         width: string;
         height: string;
         url: string;
@@ -125,6 +173,25 @@ export module GameContentResponse {
         copyright: string;
         link: string;
         editorial: Editorial;
+        highlights: Highlights;
+        media: GameMedia;
+    }
+
+    export interface Highlights {
+        scoreboard: Scoreboard;
+        gameCenter: GameCenter;
+    }
+
+    export interface GameCenter {
+        title: string;
+        topicList: string;
+        items: Item[];
+    }
+
+    export interface Scoreboard {
+        title: string;
+        topicList: string;
+        items: Item[];
     }
 
 }

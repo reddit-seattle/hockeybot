@@ -1,4 +1,4 @@
-export module Schedule {
+export module ScheduleResponse {
     export interface Status {
         abstractGameState: string;
         codedGameState: string;
@@ -7,13 +7,36 @@ export module Schedule {
         startTimeTBD: boolean;
     }
 
+    export interface Teams {
+        away: Away;
+        home: Home;
+    }
+
+    export interface LineScoreTeam {
+        team: CurrentTeam;
+        goals: number;
+        shotsOnGoal: number;
+        numSkaters: number,
+        goaliePulled: boolean;
+        powerPlay: boolean;
+    }
+    export interface LineScoreTeams {
+        away: LineScoreTeam;
+        home: LineScoreTeam;
+    }
+    export interface CurrentTeam {
+        id: string;
+        name: string;
+        link: string;
+        triCode: string;
+    }
     export interface Linescore {
         currentPeriod: number;
         currentPeriodOrdinal: string;
         currentPeriodTimeRemaining: string;
         periods: Period[];
         shootoutInfo: ShootoutInfo;
-        teams: Teams;
+        teams: LineScoreTeams;
         powerPlayStrength: string;
         hasShootout: boolean;
         intermissionInfo: IntermissionInfo;
