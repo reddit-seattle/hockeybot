@@ -93,8 +93,7 @@ export const CreateGameResultsEmbed = async (feed: GameFeedResponse.Response) =>
         .setDescription(description)
         .addField(
             `${winner.team.name}`,
-            `Goals: **${winner.goals}**\n
-            Shots: **${winner.shotsOnGoal}**`,
+            `Goals: **${winner.goals}**\nShots: **${winner.shotsOnGoal}**`,
             true
         )
         .addField(
@@ -110,7 +109,11 @@ export const CreateGameResultsEmbed = async (feed: GameFeedResponse.Response) =>
     const nextGame = allGames?.[0];
     if(nextGame) {
         const { name, value, inline } = ScheduledGameFieldFormatter(nextGame);
-        embed.addField(`**Next Game**: ${name}`, value, inline);
+        embed.addField(
+          `**Next Game**: ${HomeAtAwayStringFormatter(nextGame.teams)}`,
+          `${format(utcToZonedTime(nextGame.gameDate, PACIFIC_TIME_ZONE), 'PPPPpppp')} - ${nextGame.venue.name}`,
+          inline
+        );
     }
 
     return embed;
