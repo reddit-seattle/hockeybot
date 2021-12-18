@@ -4,7 +4,7 @@ import { createServer } from 'http';
 import { Help } from './commands/HelpCommands';
 import { KillGameCheckerCommand, SetupKrakenGameDayChecker } from './commands/KrakenCommands';
 import { GetPlayerStats } from './commands/PlayerCommands';
-import { GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule, GetScores } from './commands/ScheduleCommands';
+import { GetLastGameRecap, GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule, GetScores } from './commands/ScheduleCommands';
 import { GetStandings } from './commands/StandingsCommands';
 import { GetTeamStats } from './commands/TeamCommands';
 import { Command } from './models/Command';
@@ -24,6 +24,7 @@ const commands = [
     GetScores,
     GetStandings,
     KillGameCheckerCommand,
+    GetLastGameRecap,
     Help
 ].reduce((map, obj) => {
         map[obj.name] = obj;
@@ -57,12 +58,12 @@ client.on('ready', async () => {
     console.log(`Logged in as ${client?.user?.tag}!`);
     if (Environment.DEBUG) {
         //try to announce to servers when you go online
-        client.guilds.cache.array().forEach((guild: Guild) => {
+        client.guilds.cache.forEach((guild: Guild) => {
             const debugChannel = guild.channels.cache.find(ch => ch.id == ChannelIds.DEBUG) as TextChannel;
             debugChannel?.send("HockeyBot, reporting for duty!");
         });
     }
-    SetupKrakenGameDayChecker(client);
+   SetupKrakenGameDayChecker(client);
 });
 
 // MAIN

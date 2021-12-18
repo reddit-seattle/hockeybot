@@ -1,4 +1,4 @@
-export module Team {
+export module TeamResponse {
     export interface TimeZone {
         id: string;
         offset: number;

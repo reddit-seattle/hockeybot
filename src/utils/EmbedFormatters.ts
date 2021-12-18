@@ -1,20 +1,19 @@
 import { format, utcToZonedTime } from "date-fns-tz"
-import { EmbedFieldData, Message, MessageEmbed } from "discord.js"
-import { first } from "underscore"
+import { MessageEmbed } from "discord.js"
 import { API } from "../service/API"
 import { GameContentResponse } from "../service/models/responses/GameContentResponse"
 import { GameFeedResponse } from "../service/models/responses/GameFeed"
-import { Schedule } from "../service/models/responses/Schedule"
+import { ScheduleResponse } from "../service/models/responses/Schedule"
 import { Environment, Kraken, Paths, Strings } from "./constants"
 
 const PACIFIC_TIME_ZONE = 'America/Los_Angeles';
 
-export const HomeAtAwayStringFormatter = (teams: Schedule.Teams) => {
+export const HomeAtAwayStringFormatter = (teams: ScheduleResponse.Teams) => {
     const {home, away} = teams;
     return `${away.team.name} @ ${home.team.name}`
 };
 
-export const ScheduledGameFieldFormatter = (game: Schedule.Game) => {
+export const ScheduledGameFieldFormatter = (game: ScheduleResponse.Game) => {
     return {
         name: HomeAtAwayStringFormatter(game.teams),
         value: `${format(utcToZonedTime(game.gameDate, PACIFIC_TIME_ZONE), 'HH:mm')} - ${game.venue.name}`,
@@ -22,7 +21,7 @@ export const ScheduledGameFieldFormatter = (game: Schedule.Game) => {
     }
 };
 
-export const NextGameFieldFormatter = (game: Schedule.Game) => {
+export const NextGameFieldFormatter = (game: ScheduleResponse.Game) => {
     return {
         name: HomeAtAwayStringFormatter(game.teams),
         value: `${format(utcToZonedTime(game.gameDate, PACIFIC_TIME_ZONE), 'PPPPp')}`,
@@ -30,7 +29,7 @@ export const NextGameFieldFormatter = (game: Schedule.Game) => {
     }
 };
 
-export const CreateGameDayThreadEmbed = (game: Schedule.Game, gamePreview: GameContentResponse.Preview) => {
+export const CreateGameDayThreadEmbed = (game: ScheduleResponse.Game, gamePreview: GameContentResponse.Preview) => {
     const {away, home} = game.teams;
     const isHomeGame = home.team.id == Kraken.TeamId;
     const description = `${isHomeGame ? `VS ${away.team.name}` : `@ ${home.team.name}`} - ${format(utcToZonedTime(game.gameDate, PACIFIC_TIME_ZONE), 'PPPPp')}`;
@@ -100,8 +99,7 @@ export const CreateGameResultsEmbed = async (feed: GameFeedResponse.Response) =>
         )
         .addField(
             `${loser.team.name}`,
-            `Goals: **${loser.goals}**\n
-            Shots: **${loser.shotsOnGoal}**`,
+            `Goals: **${loser.goals}**\nShots: **${loser.shotsOnGoal}**`,
             true
         )
         .setThumbnail(teamLogo);

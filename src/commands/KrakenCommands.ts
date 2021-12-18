@@ -12,7 +12,7 @@ const killSwitchVar = 'killGameChecker';
 const dailyCronMinute = 0;
 const dailyCronHour = 9;
 const dailyCronString = `${dailyCronMinute} ${dailyCronHour} * * *`
-const EVERY_THIRTY_MINUTES = Environment.DEBUG ? `*/1 * * * *` : `*/30 * * * *`;
+const EVERY_FIFTEEN_MINUTES = Environment.DEBUG ? `*/1 * * * *` : `*/15 * * * *`;
 const EVERY_MINUTE = `* * * * *`;
 const EVERY_TEN_SECONDS = `*/10 * * * * *`;
 let currentTask: ScheduledTask;
@@ -125,7 +125,9 @@ const StartGoalChecker = (channel: ThreadChannel | TextChannel, gamePk: string) 
         else if (inIntermission) {
             //if now intermission, but wasn't before
             if (!wasIntermission) {
-                channel.send(`End of the ${linescore.currentPeriodOrdinal} period.`);
+                const { home, away } = linescore.teams;
+                channel.send(`End of the ${linescore.currentPeriodOrdinal} period.
+                ${away.team.name}: ${away.goals} - ${home.team.name}: ${home.goals}`);
                 wasIntermission = true;
             }
             const mins = Math.floor(intermissionTimeRemaining / 60);
@@ -161,15 +163,13 @@ const StartGoalChecker = (channel: ThreadChannel | TextChannel, gamePk: string) 
                 console.log("New goals:");
                 console.dir(newGoals);
             }
-
             if (newGoals?.[0]) {
                 lastGoalAt = new Date(newGoals?.[newGoals.length-1]?.about?.dateTime ?? lastGoalAt);
                 newGoals.forEach(goal => {
+                    const embed = CreateGoalEmbed(goal, feed.gameData.teams);
                     //announce goal
                     channel.send({
-                        embeds: [
-                            CreateGoalEmbed(goal, feed.gameData.teams)
-                        ]
+                        embeds: [embed]
                     })
                 });
             }
@@ -199,7 +199,7 @@ const GameStartChecker = (channel: ThreadChannel | TextChannel, gamePk: string) 
 
 //return a scheduled task that checks every 30 mins for pregame
 const PregameChecker = (channel: ThreadChannel | TextChannel, gamePk: string) => {
-    return schedule(EVERY_THIRTY_MINUTES, async () => {
+    return schedule(EVERY_FIFTEEN_MINUTES, async () => {
         checkForKillSwitch(channel);
         const game = await API.Games.GetGameById(gamePk);
         const state = game?.gameData.status.codedGameState;

@@ -1,11 +1,10 @@
-import { EmbedField, Message, MessageEmbed } from "discord.js";
-import { format, utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
-import { last, first, values } from 'underscore';
+import { EmbedField, Message, MessageAttachment, MessageEmbed } from "discord.js";
+import { format, zonedTimeToUtc } from 'date-fns-tz';
+import { last, first } from 'underscore';
 import { Command } from "../models/Command";
 import { API } from "../service/API";
-import { Config, Environment, GameStates, Record } from "../utils/constants";
+import { Config, Environment, GameStates, MEDIA_FORMAT, Record } from "../utils/constants";
 import { NextGameFieldFormatter, ScheduledGameFieldFormatter } from "../utils/EmbedFormatters";
-
 
 const bot_thumbnail_image = `https://i.imgur.com/xHcfK8Q.jpg`;
 
@@ -234,6 +233,57 @@ export const GetScores: Command = {
 					name: teamScores,
 					value: gameStatus,
 					inline: false
+				}
+			})
+		});
+		message.channel.send({embeds: [embed]});
+	}
+}
+
+export const GetLastGameRecap: Command = {
+	description: 'Get last game recap for a team',
+	name: 'recap',
+	help: 'recap SEA',
+	execute: async (message, args) => {
+		//expect ['next', number, 'PHI']
+		if(!args?.[1] || args?.[1]?.length != 3) {
+			message.channel.send("No team abbreviation provided");
+			return;
+		}
+		const team = await API.Teams.GetTeamByAbbreviation(args[1]);
+		const teamId = team?.id;
+		if(!teamId) {
+			message.channel.send(`Invalid team abbreviation: ${args[1]}`);
+			return;
+		}
+
+		const lastGame = await API.Teams.GetTeamsLastGame(teamId);
+		const { linescore, gamePk } = lastGame;
+		const { teams } = linescore;
+		const { away, home } = teams;
+		const content = await API.Games.GetGameContent(gamePk);
+
+		const { editorial, media } = content;
+		const title = editorial.preview.items?.[0].headline;
+		const recap = editorial?.recap?.items?.[0];
+		const { headline, subhead } = recap;
+		const extendedHighlights = media.epg.filter(epg => epg.title == "Extended Highlights")?.[0];
+		const { playbacks } = extendedHighlights.items?.[0];
+		const embedPlayback = playbacks?.filter(play => play.name == MEDIA_FORMAT.FLASH_1800K_896x504)?.[0];
+		const embed = new MessageEmbed({
+			title,
+			description: `${headline}\n${subhead}`,
+			footer: {
+				text: recap.contributor.contributors?.[0].name
+			},
+			
+			video: {
+				url: embedPlayback.url
+			},
+			fields: [away, home].map(team => {
+				return {
+					name: team.team.name,
+					value: `Goals: ${team.goals}\nShots${team.shotsOnGoal}`
 				}
 			})
 		});
