@@ -4,12 +4,14 @@
   "description": "",
   "main": "dist/index.js",
   "dependencies": {
+    "@discordjs/builders": "^0.9.0",
+    "@discordjs/rest": "^0.1.0-canary.0",
     "date-fns": "^2.16.1",
     "date-fns-tz": "^1.0.12",
-    "discord.js": "^13.0.0-dev.2675b08.1627646567",
+    "discord-api-types": "^0.25.2",
+    "discord.js": "^13.3.1",
     "dotenv": "^8.2.0",
     "fuzzball": "^1.3.1",
-    "http": "0.0.1-security",
     "node-cron": "^3.0.0",
     "node-fetch": "^2.6.1",
     "underscore": "^1.12.1"
