@@ -40,6 +40,41 @@ const commands = [
         return map;
 }, {} as CommandDictionary);
 
+const { botToken } = Environment;
+// MAIN
+if (!botToken || botToken == '') {
+    console.log(`Please set an environment variable "bot_token" with your bot's token`);
+    exit(1);
+}
+else {
+    //login and go
+    client.login(Environment.botToken);
+}
+
+//hook up api
+const rest = new REST({ version: '9' }).setToken(botToken);
+
+const registerAllSlashCommands = async (client: Client) => {
+    client.guilds.cache.forEach(async guild => {
+        const slashCommands: RESTPostAPIApplicationCommandsJSONBody[] = [];
+        for(const commandName in commands) {
+            const command = commands[commandName];
+            if(command?.slashCommandDescription) {
+                console.log(`adding ${command.name} slash command registration`)
+                const desc = command.slashCommandDescription();
+                slashCommands.push(desc.toJSON());
+            }
+        }
+        const result = await rest.put(
+            Routes.applicationGuildCommands(client.user!.id, guild.id),
+            {
+                body: slashCommands
+            }
+        );
+        console.dir(result);
+    });
+}
+
 client.on("messageCreate", async (message: Message) => {
     //bad bot
     if (!message.content.startsWith(Config.prefix) || message.author.bot) return;
@@ -76,46 +111,6 @@ client.on('ready', async () => {
    SetupKrakenGameDayChecker(client);
    registerAllSlashCommands(client);
 });
-
-const { botToken } = Environment;
-// MAIN
-if (!botToken || botToken == '') {
-    console.log(`Please set an environment variable "bot_token" with your bot's token`);
-    exit(1);
-}
-else {
-    //login and go
-    client.login(Environment.botToken);
-}
-
-//hook up api
-const rest = new REST({ version: '9' }).setToken(botToken);
-
-const registerAllSlashCommands = async (client: Client) => {
-    client.guilds.cache.forEach(async guild => {
-        const slashCommands: RESTPostAPIApplicationCommandsJSONBody[] = [];
-        for(const commandName in commands) {
-            const command = commands[commandName];
-            if(command?.slashCommandDescription) {
-                console.log(`adding ${command.name} slash command registration`)
-                slashCommands.push(command.slashCommandDescription().toJSON())
-            }
-        }
-        console.log('all commands: ')
-        console.dir(slashCommands);
-        try {
-        const result = await rest.put(
-            Routes.applicationGuildCommands(client.user!.id, guild.id),
-            {
-                body: slashCommands
-            }
-        )
-        console.dir(result);
-        }
-        catch(ex){console.dir(ex)};
-
-    });
-}
 
 client.on("interactionCreate", async interaction => {
     if(!interaction.isCommand()) return;
