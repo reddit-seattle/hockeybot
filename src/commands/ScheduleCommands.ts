@@ -544,7 +544,7 @@ export const GetLastGameRecap: Command = {
 		const { playbacks } = extendedHighlights.items?.[0];
 		const embedPlayback = playbacks?.filter(play => play.name == MEDIA_FORMAT.FLASH_1800K_896x504)?.[0];
 		if(embedPlayback?.url) {
-			title = `[${title}](${embedPlayback.url})`;
+			title += `\n${embedPlayback.url}`;
 		}
 		const embed = new MessageEmbed({
 			title,
