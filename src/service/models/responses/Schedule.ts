@@ -111,6 +111,17 @@ export module ScheduleResponse {
         link: string;
     }
 
+    export interface SeriesSummary {
+        gamePk: string; 
+        gameNumber: number; // 6
+        gameLabel: string; // Game 6
+        necessary: boolean; // game is necessary
+        gameCode: number; // 132? idk
+        gameTime: string;
+        seriesStatus: string; // Hurricanes lead 3-2
+        seriesStatusShort: string; // shorter version of above?
+    }
+
     export interface Game {
         gamePk: string;
         link: string;
@@ -122,6 +133,7 @@ export module ScheduleResponse {
         linescore: Linescore;
         venue: Venue;
         content: Content;
+        seriesSummary?: SeriesSummary 
     }
 
     export interface Date {

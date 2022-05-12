@@ -4,8 +4,9 @@ import { first } from "underscore"
 import { API } from "../service/API"
 import { GameContentResponse } from "../service/models/responses/GameContentResponse"
 import { GameFeedResponse } from "../service/models/responses/GameFeed"
+import { PlayoffStandings } from "../service/models/responses/PlayoffStandings"
 import { ScheduleResponse } from "../service/models/responses/Schedule"
-import { Environment, Kraken, Paths, Strings } from "./constants"
+import { Environment, GameTypes, Kraken, Paths, Strings } from "./constants"
 
 const PACIFIC_TIME_ZONE = 'America/Los_Angeles';
 
@@ -15,9 +16,20 @@ export const HomeAtAwayStringFormatter = (teams: ScheduleResponse.Teams) => {
 };
 
 export const ScheduledGameFieldFormatter = (game: ScheduleResponse.Game) => {
-    return {
+  // add playoff info
+  let gameInfo = `${format(utcToZonedTime(game.gameDate, PACIFIC_TIME_ZONE), 'HH:mm')} - ${game.venue.name}`;
+  switch(game.gameType) {
+    case GameTypes.PLAYOFFS:
+      if(game.seriesSummary) {
+        gameInfo += `\n${game.seriesSummary.seriesStatusShort}`
+      }
+      break;
+    default: break;
+  }  
+  
+  return {
         name: HomeAtAwayStringFormatter(game.teams),
-        value: `${format(utcToZonedTime(game.gameDate, PACIFIC_TIME_ZONE), 'HH:mm')} - ${game.venue.name}`,
+        value: gameInfo,
         inline: false
     }
 };
@@ -196,3 +208,16 @@ const shootoutSymbol = (play: GameFeedResponse.AllPlay | undefined) => {
   }
   return play.result.eventTypeId == "GOAL" ? "🚨" : "✖";
 };
+
+export const PlayoffRoundFormatter = (round: PlayoffStandings.Round) => {
+  return {
+    name: `${round.names.name}`,
+    value: round.series?.[0]?.currentGame?.seriesSummary?.seriesStatus ? round.series.map(series => {
+        return PlayoffSeriesFormatter(series);
+    }).join('\n\n') : 'TBD'
+  };
+}
+
+export const PlayoffSeriesFormatter = (series: PlayoffStandings.Series) => {
+  return series?.currentGame?.seriesSummary?.seriesStatus ? `*${series.names.matchupName}*\n**${series.currentGame.seriesSummary.seriesStatus}**` : 'TBD';
+}

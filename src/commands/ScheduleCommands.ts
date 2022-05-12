@@ -4,7 +4,7 @@ import { format, zonedTimeToUtc } from 'date-fns-tz';
 import { last, first } from 'underscore';
 import { Command } from "../models/Command";
 import { API } from "../service/API";
-import { Config, Environment, GameStates, MEDIA_FORMAT, Record } from "../utils/constants";
+import { Config, Environment, GameStates, GameTypes, MEDIA_FORMAT, Record } from "../utils/constants";
 import { NextGameFieldFormatter, ScheduledGameFieldFormatter } from "../utils/EmbedFormatters";
 
 const bot_thumbnail_image = `https://i.imgur.com/xHcfK8Q.jpg`;
@@ -420,6 +420,7 @@ export const GetScores: Command = {
 
 				const teamScores = `${game.teams.away.team.name}: ${game.teams.away.score} @ ${game.teams.home.team.name}: ${game.teams.home.score}`;
 				let gameStatus = '';
+				// set game state, like "17:05 3rd period", "Pre-game", "Final"
 				switch(game.status.codedGameState) {
 					case GameStates.FINAL:
 					case GameStates.ALMOST_FINAL:
@@ -428,6 +429,15 @@ export const GetScores: Command = {
 					case GameStates.IN_PROGRESS: gameStatus = `${game.linescore.currentPeriodTimeRemaining} ${game.linescore.currentPeriodOrdinal} period`; break;
 					case GameStates.PRE_GAME: gameStatus ='Pre-game'; break;
 					default: gameStatus = game.status.abstractGameState;
+				}
+				// add playoff info
+				switch(game.gameType) {
+					case GameTypes.PLAYOFFS:
+						if(game.seriesSummary) {
+							gameStatus+= `\n${game.seriesSummary.seriesStatusShort}`
+						}
+						break;
+					default: break;
 				}
 				return {
 					name: teamScores,
@@ -483,6 +493,15 @@ export const GetScores: Command = {
 					case GameStates.PRE_GAME: gameStatus ='Pre-game'; break;
 					default: gameStatus = game.status.abstractGameState;
 				}
+				// add playoff info
+				switch(game.gameType) {
+					case GameTypes.PLAYOFFS:
+						if(game.seriesSummary) {
+							gameStatus+= `\n${game.seriesSummary.seriesStatusShort}`
+						}
+						break;
+					default: break;
+				}
 				return {
 					name: teamScores,
 					value: gameStatus,
@@ -525,7 +544,7 @@ export const GetLastGameRecap: Command = {
 		const { playbacks } = extendedHighlights.items?.[0];
 		const embedPlayback = playbacks?.filter(play => play.name == MEDIA_FORMAT.FLASH_1800K_896x504)?.[0];
 		if(embedPlayback?.url) {
-			title = `[${title}](${embedPlayback.url})`;
+			title += `\n${embedPlayback.url}`;
 		}
 		const embed = new MessageEmbed({
 			title,
