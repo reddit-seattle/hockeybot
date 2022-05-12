@@ -9,6 +9,7 @@ import { Roster } from "./models/responses/Roster";
 import { Person } from "./models/responses/Person";
 import { PlayerStats } from "./models/responses/PlayerStats";
 import { GameContentResponse } from './models/responses/GameContentResponse';
+import { PlayoffStandings } from './models/responses/PlayoffStandings';
 
 export async function get<T>(
     url: string
@@ -44,7 +45,6 @@ export module API {
             }
 
     }
-
     export module Teams {
         export const GetTeams: () => Promise<TeamResponse.Team[]> = async () => {
             const response = await get<TeamResponse.Response>(Paths.Get.Teams);
@@ -72,7 +72,6 @@ export module API {
         }
 
     }
-
     export module Seasons {
         export const GetSeasons: () => Promise<SeasonsResponse.Season[]> = async () => {
             const response = await get<SeasonsResponse.Response>(Paths.Get.Seasons);
@@ -91,7 +90,6 @@ export module API {
             return statsObj?.splits?.[0].stat;
         }
     }
-
     export module Standings {
         export const GetStandings: (type?: StandingsTypes) => Promise<StandingsResponse.Record[]> = async (type) => {
             const response = await get<StandingsResponse.Response>(
@@ -103,7 +101,6 @@ export module API {
             return response?.records;
         }
     }
-
     export module Games {
         export const GetGameById: (id: string) => Promise<GameFeedResponse.Response> = async(id) => {
             const response = await get<GameFeedResponse.Response>(Paths.Get.GameFeed(id));
@@ -121,7 +118,6 @@ export module API {
             return response;
         }
     }
-
     export module Players {
         export const GetPlayerById: (id: string) => Promise<Person.Person> = async(id) => {
             const response = await get<Person.Response>(Paths.Get.Person(id));
@@ -130,6 +126,12 @@ export module API {
         export const GetPlayerSeasonStats: (id: string) => Promise<PlayerStats.Stat>  = async(id) => {
             const response = await get<PlayerStats.Rseponse>(Paths.Get.PersonSeasonStats(id));
             return response?.stats?.[0]?.splits?.[0]?.stat;
+        }
+    }
+    export module Playoffs {
+        export const GetPlayoffStandings: () => Promise<PlayoffStandings.Round[]> = async() => {
+            const response = await get<PlayoffStandings.Response>(Paths.Get.PlayoffStandings);
+            return response?.rounds;
         }
     }
 }
