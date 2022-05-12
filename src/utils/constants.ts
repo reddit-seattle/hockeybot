@@ -54,6 +54,15 @@ export enum GameStates {
     PREVIEW_TBD = "8",
     PREVIEW = "1"
 }
+export enum GameTypes {
+    PRESEASON = 'PR',
+    REGULAR = 'R',
+    PLAYOFFS = 'P',
+    ALLSTAR = 'A',
+    WOMENSALLSTAR = 'WA',
+    OLYMPIC = 'O'
+}
+
 export enum PlayerTypes {
     Scorer = 'Scorer',
     Shooter = 'Shooter',
@@ -109,7 +118,7 @@ export module Paths {
     export const TeamLogo = (id: string) => `https://www-league.nhlstatic.com/images/logos/teams-current-primary-light/${id}.svg`;
     
     export module Get {
-        export const Schedule: string = `${API_ENDPOINT}/schedule?expand=schedule.linescore`;
+        export const Schedule: string = `${API_ENDPOINT}/schedule?expand=schedule.linescore,schedule.game.seriesSummary`;
         export const ScheduleByDate:(startDate: string, endDate?: string) => string = 
             (start, end) => `${Schedule}&startDate=${start}&endDate=${end || start}`;
 
