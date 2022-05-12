@@ -13,6 +13,7 @@ import { Command, CommandDictionary } from './models/Command';
 import { ChannelIds, Config, Environment, RoleIds } from './utils/constants';
 import { SplitMessageIntoArgs } from './utils/helpers';
 import { exit } from 'process';
+import { GetPlayoffStandings } from './commands/PlayoffCommands';
 
 const client = new Client({
     intents: [
@@ -34,6 +35,7 @@ const commands = [
     GetStandings,
     KillGameCheckerCommand,
     GetLastGameRecap,
+    GetPlayoffStandings,
     Help
 ].reduce((map, obj) => {
         map[obj.name] = obj;

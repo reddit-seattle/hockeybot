@@ -163,6 +163,7 @@ export module Paths {
         export const GameContent: (id: string) => string = (id) => `${API_ENDPOINT}/game/${id}/content`;
         export const GameFeedDiff: (id: string, timecode: string) => string =
             (id, timecode) => `${API_ENDPOINT}/game/${id}/feed/live/diffPatch?startTimecode=${timecode}`;
+        export const PlayoffStandings: string = `${API_ENDPOINT}/tournaments/playoffs?expand=round.series,schedule.game.seriesSummary`;
     }
 
 }
