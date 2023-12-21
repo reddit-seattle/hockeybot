@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { CacheType, CommandInteraction, CommandInteractionOptionResolver, Message, PartialMessage } from "discord.js";
+import { ChatInputCommandInteraction, Message, PartialMessage } from "discord.js";
 
 
 //TODO - expand interface to have a 'canExecute' method to check args and return help message
@@ -10,7 +10,7 @@ export interface Command {
     help?: string;
     execute: (message: Message, args?: string[]) => void;
     slashCommandDescription?:  () => Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">;
-    executeSlashCommand?: (options:  CommandInteraction) => void;
+    executeSlashCommand?: (options:  ChatInputCommandInteraction) => void;
 }
 export interface CommandDictionary { [id: string]: Command }
 

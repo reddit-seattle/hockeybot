@@ -1,5 +1,5 @@
-import { SlashCommandBuilder } from "@discordjs/builders";
-import { Message, MessageEmbed } from "discord.js";
+import { EmbedBuilder, SlashCommandBuilder } from "@discordjs/builders";
+import { Message, } from "discord.js";
 import { Command } from "../models/Command";
 import { API } from "../service/API";
 import { getProperty } from "../utils/helpers";
@@ -22,13 +22,13 @@ export const GetTeamStats: Command = {
 		}
 		const stats = await API.Stats.TeamStats(team.id);
 		// woohoo, hockey!
-		const embed = new MessageEmbed({
+		const embed = new EmbedBuilder({
 			title: `${team.teamName} Regular Season Stats`,
 			description: 'Stats',
 			color: 111111,
 			footer: {
 				text: 'Source: NHL API',
-				iconURL: bot_thumbnail_image,
+				icon_url: bot_thumbnail_image,
 			},
 			// image: {
 			// 	url: bot_thumbnail_image,
@@ -65,13 +65,13 @@ export const GetTeamStats: Command = {
 		}
 		const stats = await API.Stats.TeamStats(team.id);
 		// woohoo, hockey!
-		const embed = new MessageEmbed({
+		const embed = new EmbedBuilder({
 			title: `${team.teamName} Regular Season Stats`,
 			description: 'Stats',
 			color: 111111,
 			footer: {
 				text: 'Source: NHL API',
-				iconURL: bot_thumbnail_image,
+				icon_url: bot_thumbnail_image,
 			},
 			// image: {
 			// 	url: bot_thumbnail_image,

@@ -4,12 +4,12 @@ import { REST } from '@discordjs/rest';
 import { RESTPostAPIApplicationCommandsJSONBody, Routes } from 'discord-api-types/v9';
 import { createServer } from 'http';
 import { Help } from './commands/HelpCommands';
-import { KillGameCheckerCommand, SetupKrakenGameDayChecker } from './commands/KrakenCommands';
+// import { KillGameCheckerCommand, SetupKrakenGameDayChecker } from './commands/KrakenCommands';
 import { GetPlayerStats } from './commands/PlayerCommands';
 import { GetLastGameRecap, GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule, GetScores } from './commands/ScheduleCommands';
 import { GetStandings } from './commands/StandingsCommands';
 import { GetTeamStats } from './commands/TeamCommands';
-import { Command, CommandDictionary } from './models/Command';
+import { CommandDictionary } from './models/Command';
 import { ChannelIds, Config, Environment, RoleIds } from './utils/constants';
 import { SplitMessageIntoArgs } from './utils/helpers';
 import { exit } from 'process';
@@ -17,9 +17,9 @@ import { GetPlayoffStandings } from './commands/PlayoffCommands';
 
 const client = new Client({
     intents: [
-      "GUILDS",
-      "GUILD_MESSAGES",
-      "GUILD_MESSAGE_REACTIONS",
+      "Guilds",
+      "GuildMessages",
+      "GuildMessageReactions",
     ],
   });
 
@@ -33,7 +33,7 @@ const commands = [
     GetTeamStats,
     GetScores,
     GetStandings,
-    KillGameCheckerCommand,
+    // KillGameCheckerCommand,
     GetLastGameRecap,
     GetPlayoffStandings,
     Help
@@ -110,12 +110,12 @@ client.on('ready', async () => {
             debugChannel?.send("HockeyBot, reporting for duty!");
         });
     }
-   SetupKrakenGameDayChecker(client);
+//    SetupKrakenGameDayChecker(client);
    registerAllSlashCommands(client);
 });
 
 client.on("interactionCreate", async interaction => {
-    if(!interaction.isCommand()) return;
+    if(!interaction.isChatInputCommand()) return;
 
     const command = commands?.[interaction.commandName];
     if(command) {

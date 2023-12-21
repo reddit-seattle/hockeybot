@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { Message, MessageEmbed } from "discord.js";
+import { Message, EmbedBuilder } from "discord.js";
 import { Command } from "../models/Command";
 import { API } from "../service/API";
 import { PlayoffRoundFormatter } from "../utils/EmbedFormatters";
@@ -16,7 +16,7 @@ export const GetPlayoffStandings: Command = {
         }
 	
 	    message.channel.send({embeds: [
-            new MessageEmbed({
+            new EmbedBuilder({
                 title: 'Playoff Standings',
                 fields: rounds.map(round => {
                     return PlayoffRoundFormatter(round);
@@ -38,7 +38,7 @@ export const GetPlayoffStandings: Command = {
             return;
         }
         interaction.followUp({embeds: [
-            new MessageEmbed({
+            new EmbedBuilder({
                 title: 'Playoff Standings',
                 fields: rounds.map(round => {
                     return PlayoffRoundFormatter(round);

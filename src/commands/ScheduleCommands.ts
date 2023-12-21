@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { EmbedField, Message, MessageEmbed } from "discord.js";
+import { EmbedField, Message, EmbedBuilder } from "discord.js";
 import { format, zonedTimeToUtc } from 'date-fns-tz';
 import { last, first } from 'underscore';
 import { Command } from "../models/Command";
@@ -27,7 +27,7 @@ export const GetSchedule: Command = {
 		? `Schedule for ${format(zonedTimeToUtc(date,'America/Los_Angeles'), 'PPPP')}`
 		: 'Schedule for today';
 		// woohoo, hockey!
-		const embed = new MessageEmbed({
+		const embed = new EmbedBuilder({
 			title: title,
 			description: 'Games',
 			color: 111111,
@@ -67,7 +67,7 @@ export const GetSchedule: Command = {
 		? `Schedule for ${format(zonedTimeToUtc(date,'America/Los_Angeles'), 'PPPP')}`
 		: 'Schedule for today';
 		// woohoo, hockey!
-		const embed = new MessageEmbed({
+		const embed = new EmbedBuilder({
 			title: title,
 			description: 'Games',
 			color: 111111,
@@ -114,7 +114,7 @@ export const GetNextGamesForTeam: Command = {
 			}
 			const games = first(allGames, numberGames);
 
-			const embed = new MessageEmbed({
+			const embed = new EmbedBuilder({
 				title: `Next ${numberGames} games for the ${team.teamName}`,
 				description: 'Games',
 				color: 111111,
@@ -180,7 +180,7 @@ export const GetNextGamesForTeam: Command = {
 			await interaction.deferReply();
 			const games = first(allGames, numberGames);
 
-			const embed = new MessageEmbed({
+			const embed = new EmbedBuilder({
 				title: `Next ${numberGames} games for the ${team.teamName}`,
 				description: 'Games',
 				color: 111111,
@@ -265,7 +265,7 @@ export const GetLastGamesForTeam: Command = {
 				});
 			}
 
-			const embed = new MessageEmbed({
+			const embed = new EmbedBuilder({
 				title: `Last ${numberGames} games for the ${team.teamName}`,
 				description: `Record: (${record.Wins} - ${record.Losses} - ${record.Overtime})`,
 				color: 111111,
@@ -360,7 +360,7 @@ export const GetLastGamesForTeam: Command = {
 				});
 			}
 
-			const embed = new MessageEmbed({
+			const embed = new EmbedBuilder({
 				title: `Last ${numberGames} games for the ${team.teamName}`,
 				description: `Record: (${record.Wins} - ${record.Losses} - ${record.Overtime})`,
 				color: 111111,
@@ -405,7 +405,7 @@ export const GetScores: Command = {
 			return;
 		}
 
-		const embed = new MessageEmbed({
+		const embed = new EmbedBuilder({
 			title: `Scores`,
 			description: '',
 			color: 111111,
@@ -469,7 +469,7 @@ export const GetScores: Command = {
 			return;
 		}
 		await interaction.deferReply();
-		const embed = new MessageEmbed({
+		const embed = new EmbedBuilder({
 			title: `Scores`,
 			description: '',
 			color: 111111,
@@ -546,7 +546,7 @@ export const GetLastGameRecap: Command = {
 		if(embedPlayback?.url) {
 			title += `\n${embedPlayback.url}`;
 		}
-		const embed = new MessageEmbed({
+		const embed = new EmbedBuilder({
 			title,
 			description: `${headline}\n${subhead}`,
 			footer: {
@@ -606,7 +606,7 @@ export const GetLastGameRecap: Command = {
 		if(embedPlayback?.url) {
 			title = `[${title}](${embedPlayback.url})`;
 		}
-		const embed = new MessageEmbed({
+		const embed = new EmbedBuilder({
 			title,
 			description: `${headline}\n${subhead}`,
 			footer: {

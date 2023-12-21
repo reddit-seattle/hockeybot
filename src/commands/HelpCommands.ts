@@ -1,4 +1,4 @@
-import { Message, MessageEmbed } from "discord.js";
+import { Message, EmbedBuilder } from "discord.js";
 import { Command } from "../models/Command";
 import { Config, RoleIds } from "../utils/constants";
 import { KillGameCheckerCommand } from "./KrakenCommands";
@@ -40,7 +40,7 @@ export const Help: Command = {
             (command?.adminOnly && message.member?.roles.cache.has(RoleIds.MOD))
         );
 
-        const embed = new MessageEmbed({
+        const embed = new EmbedBuilder({
             title: `Hockeybot Help`,
             description: 'Commands',
             color: 111111,

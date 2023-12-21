@@ -1,6 +1,5 @@
 import { format, utcToZonedTime } from "date-fns-tz"
-import { EmbedFieldData, Message, MessageEmbed } from "discord.js"
-import { first } from "underscore"
+import { EmbedBuilder } from "discord.js"
 import { API } from "../service/API"
 import { GameContentResponse } from "../service/models/responses/GameContentResponse"
 import { GameFeedResponse } from "../service/models/responses/GameFeed"
@@ -47,12 +46,17 @@ export const CreateGameDayThreadEmbed = (game: ScheduleResponse.Game, gamePrevie
     const isHomeGame = home.team.id == Kraken.TeamId;
     const description = `${isHomeGame ? `VS ${away.team.name}` : `@ ${home.team.name}`} - ${format(utcToZonedTime(game.gameDate, PACIFIC_TIME_ZONE), 'PPPPp')}`;
     const preview = gamePreview?.items?.filter(item => item.type == 'article')?.[0];
-    return new MessageEmbed()
+    return new EmbedBuilder()
     .setTitle(`${Strings.REDLIGHT_EMBED} ${Environment.DEBUG ?  'Testing Game Day Thread' : 'Kraken Game Day!'} ${Strings.REDLIGHT_EMBED}`)
     .setDescription(description)
-    .addField(
-        preview ? preview.headline : 'Preview',
-        preview ? `${preview.subhead}\n${preview.seoDescription}` : 'No Preview available')
+    .addFields(
+      [
+        {
+          name: preview ? preview.headline : 'Preview',
+          value: preview ? `${preview.subhead}\n${preview.seoDescription}` : 'No Preview available'
+        }
+      ]
+    )
 }
 
 //TODO: empty net goals show as even strength
@@ -66,7 +70,7 @@ export const CreateGoalEmbed = (play: GameFeedResponse.AllPlay, teams: GameFeedR
     }
 
     const description = `${play.result.description}`;
-    return new MessageEmbed({
+    return new EmbedBuilder({
         title,
         description,
         fields: [
@@ -101,19 +105,21 @@ export const CreateGameResultsEmbed = async (feed: GameFeedResponse.Response) =>
         description = `${Strings.REDLIGHT_EMBED} ${description} ${Strings.REDLIGHT_EMBED}`;
     }
 
-    const embed = new MessageEmbed()
+    const embed = new EmbedBuilder()
         .setTitle(title)
         .setDescription(description)
-        .addField(
-            `${winner.team.name}`,
-            `Goals: **${winner.goals}**\nShots: **${winner.shotsOnGoal}**`,
-            true
-        )
-        .addField(
-            `${loser.team.name}`,
-            `Goals: **${loser.goals}**\nShots: **${loser.shotsOnGoal}**`,
-            true
-        )
+        .addFields([
+          {
+            name: `${winner.team.name}`,
+            value: `Goals: **${winner.goals}**\nShots: **${winner.shotsOnGoal}**`,
+            inline: true
+          },
+          {
+            name: `${loser.team.name}`,
+            value: `Goals: **${loser.goals}**\nShots: **${loser.shotsOnGoal}**`,
+            inline: true
+          }
+        ])
         .setThumbnail(teamLogo);
     
     const start = format(new Date(), "yyyy-MM-dd")
@@ -122,11 +128,11 @@ export const CreateGameResultsEmbed = async (feed: GameFeedResponse.Response) =>
     const nextGame = allGames?.[0];
     if(nextGame) {
         const { name, value, inline } = ScheduledGameFieldFormatter(nextGame);
-        embed.addField(
-          `**Next Game**: ${HomeAtAwayStringFormatter(nextGame.teams)}`,
-          `${format(utcToZonedTime(nextGame.gameDate, PACIFIC_TIME_ZONE), 'PPPPpppp')} - ${nextGame.venue.name}`,
-          inline
-        );
+        embed.addFields({
+          name: name,
+          value: value,
+          inline: inline
+        });
     }
 
     return embed;
@@ -146,7 +152,7 @@ export const createShootoutEmbed = (
   const { result, team } = play;
   const { description, eventTypeId } = result;
   let title = `${team?.name} - ${eventTypeId}`;
-  const thumbnail = team ? Paths.TeamLogo(team?.id) : undefined;
+  const thumbnail = team ? Paths.TeamLogo(team?.id) : '';
   const goal = eventTypeId === "GOAL";
   const kraken = team?.id === Kraken.TeamId;
   if (goal && kraken) {
@@ -181,7 +187,7 @@ export const createShootoutEmbed = (
     });
   });
 
-  const embed = new MessageEmbed({
+  const embed = new EmbedBuilder({
     title,
     description,
     thumbnail: { url: thumbnail, width: 50 },

@@ -1,4 +1,4 @@
-import { Message, MessageEmbed } from "discord.js";
+import { Message, EmbedBuilder } from "discord.js";
 import { extract, partial_ratio } from "fuzzball";
 import { Command } from "../models/Command";
 import { API } from "../service/API";
@@ -47,7 +47,7 @@ export const GetPlayerStats: Command = {
             if(playerStats) {
                 //try and get player image
                 const playerImageUrl = `https://cms.nhl.bamgrid.com/images/headshots/current/168x168/${player.person.id}.jpg`
-                const embed = new MessageEmbed({
+                const embed = new EmbedBuilder({
                     title: `${player.person.fullName} - ${team.abbreviation} ${player.jerseyNumber}`,
                     description: 'Season stats',
                     color: 111111,
