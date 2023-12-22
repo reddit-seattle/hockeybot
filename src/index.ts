@@ -1,7 +1,7 @@
 
-import { Client, Guild, Message, TextChannel } from 'discord.js'
+import { Client, Guild, ChatInputCommandInteraction, Channel, TextChannel } from 'discord.js'
 import { REST } from '@discordjs/rest';
-import { RESTPostAPIApplicationCommandsJSONBody, Routes } from 'discord-api-types/v9';
+import { RESTPostAPIApplicationCommandsJSONBody, Routes } from 'discord-api-types/v10';
 import { createServer } from 'http';
 import { Help } from './commands/HelpCommands';
 // import { KillGameCheckerCommand, SetupKrakenGameDayChecker } from './commands/KrakenCommands';
@@ -57,7 +57,7 @@ else {
 const rest = new REST({ version: '9' }).setToken(botToken);
 
 const registerAllSlashCommands = async (client: Client) => {
-    client.guilds.cache.forEach(async guild => {
+    client.guilds.cache.forEach(async (guild: Guild) => {
         const slashCommands: RESTPostAPIApplicationCommandsJSONBody[] = [];
         for(const commandName in commands) {
             const command = commands[commandName];
@@ -106,7 +106,7 @@ client.on('ready', async () => {
     if (Environment.DEBUG) {
         //try to announce to servers when you go online
         client.guilds.cache.forEach((guild: Guild) => {
-            const debugChannel = guild.channels.cache.find(ch => ch.id == ChannelIds.DEBUG) as TextChannel;
+            const debugChannel = guild.channels.cache.find((ch: Channel) => ch.id == ChannelIds.DEBUG) as TextChannel;
             debugChannel?.send("HockeyBot, reporting for duty!");
         });
     }
@@ -114,7 +114,7 @@ client.on('ready', async () => {
    registerAllSlashCommands(client);
 });
 
-client.on("interactionCreate", async interaction => {
+client.on("interactionCreate", async (interaction: ChatInputCommandInteraction) => {
     if(!interaction.isChatInputCommand()) return;
 
     const command = commands?.[interaction.commandName];
