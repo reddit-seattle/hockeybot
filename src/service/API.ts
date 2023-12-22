@@ -10,14 +10,8 @@ import { Person } from "./models/responses/Person";
 import { PlayerStats } from "./models/responses/PlayerStats";
 import { GameContentResponse } from './models/responses/GameContentResponse';
 import { PlayoffStandings } from './models/responses/PlayoffStandings';
+import { get } from '../utils/helpers';
 
-export async function get<T>(
-    url: string
-): Promise<T> {
-    const response = await fetch(url);
-    const body = await response.json();
-    return body;
-}
 export module API {
 
     export module Schedule {

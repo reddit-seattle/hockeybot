@@ -10,39 +10,6 @@ const bot_thumbnail_image = `https://i.imgur.com/xHcfK8Q.jpg`;
 export const GetTeamStats: Command = {
 	name: 'teamstats',
 	description: 'Team regular season statistics',
-	help: 'teamstats PHI',
-	async execute(message: Message, args?: string[]) {
-		if(!args?.[0]) {
-			message.channel.send(`I need a team abbreviation, buddy`);
-		}
-		const team = await API.Teams.GetTeamByAbbreviation(args?.[0]);
-		if(!team?.id) {
-			message.channel.send(`Couldn't find stats for team ${args?.[0]}`);
-			return;
-		}
-		const stats = await API.Stats.TeamStats(team.id);
-		// woohoo, hockey!
-		const embed = new EmbedBuilder({
-			title: `${team.teamName} Regular Season Stats`,
-			description: 'Stats',
-			color: 111111,
-			footer: {
-				text: 'Source: NHL API',
-				icon_url: bot_thumbnail_image,
-			},
-			// image: {
-			// 	url: bot_thumbnail_image,
-			// },
-			fields: Object.keys(stats).map(key => {
-				return {
-					name: key,
-					value: `${getProperty(stats, key as any) || 'N/A'}`,
-					inline: true
-				}
-			})
-		});
-		message.channel.send({embeds: [embed]});
-	},
 	slashCommandDescription: () => {
 		return new SlashCommandBuilder()
 		.setName('teamstats')
@@ -87,3 +54,36 @@ export const GetTeamStats: Command = {
 		interaction.reply({embeds: [embed]});
 	}
 }
+
+const oldCommand = async (message: Message, args?: string[]) => {
+	if(!args?.[0]) {
+		message.channel.send(`I need a team abbreviation, buddy`);
+	}
+	const team = await API.Teams.GetTeamByAbbreviation(args?.[0]);
+	if(!team?.id) {
+		message.channel.send(`Couldn't find stats for team ${args?.[0]}`);
+		return;
+	}
+	const stats = await API.Stats.TeamStats(team.id);
+	// woohoo, hockey!
+	const embed = new EmbedBuilder({
+		title: `${team.teamName} Regular Season Stats`,
+		description: 'Stats',
+		color: 111111,
+		footer: {
+			text: 'Source: NHL API',
+			icon_url: bot_thumbnail_image,
+		},
+		// image: {
+		// 	url: bot_thumbnail_image,
+		// },
+		fields: Object.keys(stats).map(key => {
+			return {
+				name: key,
+				value: `${getProperty(stats, key as any) || 'N/A'}`,
+				inline: true
+			}
+		})
+	});
+	message.channel.send({embeds: [embed]});
+};

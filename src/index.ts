@@ -3,15 +3,13 @@ import { Client, Guild, ChatInputCommandInteraction, Channel, TextChannel } from
 import { REST } from '@discordjs/rest';
 import { RESTPostAPIApplicationCommandsJSONBody, Routes } from 'discord-api-types/v10';
 import { createServer } from 'http';
-import { Help } from './commands/HelpCommands';
 // import { KillGameCheckerCommand, SetupKrakenGameDayChecker } from './commands/KrakenCommands';
 import { GetPlayerStats } from './commands/PlayerCommands';
 import { GetLastGameRecap, GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule, GetScores } from './commands/ScheduleCommands';
 import { GetStandings } from './commands/StandingsCommands';
 import { GetTeamStats } from './commands/TeamCommands';
 import { CommandDictionary } from './models/Command';
-import { ChannelIds, Config, Environment, RoleIds } from './utils/constants';
-import { SplitMessageIntoArgs } from './utils/helpers';
+import { ChannelIds, Environment } from './utils/constants';
 import { exit } from 'process';
 import { GetPlayoffStandings } from './commands/PlayoffCommands';
 
@@ -36,7 +34,6 @@ const commands = [
     // KillGameCheckerCommand,
     GetLastGameRecap,
     GetPlayoffStandings,
-    Help
 ].reduce((map, obj) => {
         map[obj.name] = obj;
         return map;
@@ -77,30 +74,6 @@ const registerAllSlashCommands = async (client: Client) => {
     });
 }
 
-client.on("messageCreate", async (message: Message) => {
-    //bad bot
-    if (!message.content.startsWith(Config.prefix) || message.author.bot) return;
-
-    const args = SplitMessageIntoArgs(message);
-    //grab actual command and separate it from args
-    const commandArg = args?.shift()?.toLowerCase() || '';
-    const command = commands?.[commandArg];
-
-    try {
-        if(command?.adminOnly && !message.member?.roles.cache.has(RoleIds.MOD)){
-            message.channel.send('nice try, loser');
-            return;
-        }
-        else {
-            command?.execute(message, args);
-        }
-    }
-    catch (e: any) {
-        console.dir(e);
-        message.react('💩');
-    }
-});
-
 client.on('ready', async () => {
     console.log(`Logged in as ${client?.user?.tag}!`);
     if (Environment.DEBUG) {
@@ -126,6 +99,6 @@ client.on("interactionCreate", async (interaction: ChatInputCommandInteraction) 
 //stupid fix for azure app service containers requiring a response to port 8080
 createServer(function (req, res) {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.write('yeet');
+    res.write('FERDA');
     res.end();
 }).listen(8080);

@@ -7,8 +7,6 @@ export interface Command {
     name: string;
     adminOnly?: boolean;
     description: string;
-    help?: string;
-    execute: (message: Message, args?: string[]) => void;
     slashCommandDescription?:  () => Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">;
     executeSlashCommand?: (options:  ChatInputCommandInteraction) => void;
 }

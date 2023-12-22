@@ -3,7 +3,6 @@ import { StandingsTypes } from '../models/StandingsTypes';
 dotenv.config();
 
 export module Config {
-    export const prefix: string = '$nhl';
     export const TIME_ZONE = "America/Los_Angeles";
 }
 

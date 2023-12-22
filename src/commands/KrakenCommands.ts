@@ -1,5 +1,5 @@
 import { zonedTimeToUtc } from "date-fns-tz";
-import { Client, Message, TextChannel, ThreadChannel } from "discord.js";
+import { Client, TextChannel, ThreadChannel } from "discord.js";
 import { schedule, ScheduledTask, ScheduleOptions } from "node-cron";
 import { contains } from "underscore";
 import { Command } from "../models/Command";
@@ -292,12 +292,7 @@ const CheckForTodaysGames = async (client: Client) => {
 export const KillGameCheckerCommand: Command = {
     description: 'stop checking for kraken game updates',
     name: 'stop_kraken_updates',
-    help: 'stop_kraken_updates',
     adminOnly: true,
-    execute: (message: Message) => {
-        process.env[killSwitchVar] = 'true';
-        message.channel.send('Set killswitch for game update checker.');
-    }
 }
 
 const checkForKillSwitch = (channel: ThreadChannel | TextChannel) => {
