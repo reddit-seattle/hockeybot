@@ -7,11 +7,9 @@ import { PlayoffRoundFormatter } from "../utils/EmbedFormatters";
 export const GetPlayoffStandings: Command = {
 	name: 'playoffs',
 	description: 'Current playoff standings',
-    slashCommandDescription: () => {
-        return new SlashCommandBuilder()
+    slashCommandDescription: new SlashCommandBuilder()
         .setName('playoffs')
-        .setDescription('Current playoff standings');
-    },
+        .setDescription('Current playoff standings'),
     executeSlashCommand: async (interaction) => {
         interaction.deferReply();
         const rounds = await API.Playoffs.GetPlayoffStandings();

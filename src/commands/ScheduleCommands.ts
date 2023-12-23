@@ -12,16 +12,14 @@ const bot_thumbnail_image = `https://i.imgur.com/xHcfK8Q.jpg`;
 export const GetSchedule: Command = {
 	name: 'schedule',
 	description: 'List of games on a given day',
-	slashCommandDescription: () => {
-		return new SlashCommandBuilder()
+	slashCommandDescription: new SlashCommandBuilder()
 		.setName('schedule')
 		.setDescription('List of games on a given day')
 		.addStringOption(option => {
 			return option.setName('date')
 				.setDescription('Date')
 				.setRequired(false);
-		})
-	},
+		}),
 	executeSlashCommand: async (interaction) => {
 		const date = interaction.options.getString('date') ?? '';
 		const schedule = await API.Schedule.GetSchedule(date);
@@ -57,8 +55,7 @@ export const GetSchedule: Command = {
 export const GetNextGamesForTeam: Command = {
 	name: 'next',
 	description: 'Next [x] game results for team [y]',
-	slashCommandDescription: () => {
-		return new SlashCommandBuilder()
+	slashCommandDescription: new SlashCommandBuilder()
 		.setName('next')
 		.setDescription('Next game results for a team')
 		.addStringOption(option => {
@@ -70,8 +67,7 @@ export const GetNextGamesForTeam: Command = {
 			return option.setName('number')
 				.setDescription('number of games to fetch')
 				.setRequired(false);
-		})
-	},
+		}),
 	executeSlashCommand: async (interaction) => {
 		//expect [number, 'PHI']
 		const teamAbbreviation = interaction.options.getString('team');
@@ -127,8 +123,7 @@ export const GetNextGamesForTeam: Command = {
 export const GetLastGamesForTeam: Command = {
 	name: 'last',
 	description: 'Last [x] game results for team [y]',
-	slashCommandDescription: () => {
-		return new SlashCommandBuilder()
+	slashCommandDescription: new SlashCommandBuilder()
 		.setName('last')
 		.setDescription('Last game results for a team')
 		.addStringOption(option => {
@@ -140,8 +135,7 @@ export const GetLastGamesForTeam: Command = {
 			return option.setName('number')
 				.setDescription('number of games to fetch')
 				.setRequired(false);
-		})
-	},
+		}),
 	executeSlashCommand: async (interaction) => {
 		//expect [number, 'PHI']
 		const teamAbbreviation = interaction.options.getString('team');
@@ -226,11 +220,9 @@ export const GetLastGamesForTeam: Command = {
 export const GetScores: Command = {
 	name: 'scores',
 	description: 'Scores of current games',
-	slashCommandDescription: () => {
-		return new SlashCommandBuilder()
+	slashCommandDescription: new SlashCommandBuilder()
 		.setName('scores')
-		.setDescription('Current game scores')
-	},
+		.setDescription('Current game scores'),
 	executeSlashCommand: async (interaction) => {
 		const allGames = await API.Schedule.GetSchedule();
 
@@ -294,8 +286,7 @@ export const GetScores: Command = {
 export const GetLastGameRecap: Command = {
 	description: 'Get last game recap for a team',
 	name: 'recap',
-	slashCommandDescription: () => {
-		return new SlashCommandBuilder()
+	slashCommandDescription: new SlashCommandBuilder()
 		.setName('recap')
 		.setDescription('last game recap for team by abbreviation')
 		.addStringOption(option => {
@@ -303,8 +294,7 @@ export const GetLastGameRecap: Command = {
 			.setName('team')
 			.setDescription('Team abbreviation')
 			.setRequired(true)
-		})
-	},
+		}),
 	executeSlashCommand: async (interaction) => {
 		//expect ['next', number, 'PHI']
 		const teamAbbreviation = interaction.options.getString('team');

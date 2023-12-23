@@ -1,14 +1,8 @@
 import { Message, EmbedBuilder } from "discord.js";
 import { extract, partial_ratio } from "fuzzball";
-import { Command } from "../models/Command";
 import { API } from "../service/API";
 import { Roster } from "../service/models/responses/Roster";
 import { getProperty } from "../utils/helpers";
-
-export const GetPlayerStats: Command = {
-	name: 'playerstats',
-	description: 'PlayerStats',
-}
 
 const oldCommand = async (message: Message, args?: string[]) => {
     if(!args?.[0]) {

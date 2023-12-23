@@ -1,17 +1,19 @@
 
-import { Client, Guild, ChatInputCommandInteraction, Channel, TextChannel } from 'discord.js'
+import { Client, Guild, Channel, TextChannel, Interaction } from 'discord.js'
 import { REST } from '@discordjs/rest';
 import { RESTPostAPIApplicationCommandsJSONBody, Routes } from 'discord-api-types/v10';
 import { createServer } from 'http';
 // import { KillGameCheckerCommand, SetupKrakenGameDayChecker } from './commands/KrakenCommands';
-import { GetPlayerStats } from './commands/PlayerCommands';
-import { GetLastGameRecap, GetLastGamesForTeam, GetNextGamesForTeam, GetSchedule, GetScores } from './commands/ScheduleCommands';
+// import { GetPlayerStats } from './commands/PlayerCommands';
+import { GetLastGameRecap, GetLastGamesForTeam, GetNextGamesForTeam, GetScores } from './commands/ScheduleCommands';
+import { GetSchedule as GetSchedule_V2} from "./commands_v2/Schedule";
 import { GetStandings } from './commands/StandingsCommands';
 import { GetTeamStats } from './commands/TeamCommands';
 import { CommandDictionary } from './models/Command';
 import { ChannelIds, Environment } from './utils/constants';
 import { exit } from 'process';
 import { GetPlayoffStandings } from './commands/PlayoffCommands';
+import { GetCurrentScores } from './commands_v2/Scores';
 
 const client = new Client({
     intents: [
@@ -24,16 +26,19 @@ const client = new Client({
 //load commands
 
 const commands = [
-    GetSchedule,
+    // GetSchedule,
     GetLastGamesForTeam,
     GetNextGamesForTeam,
-    GetPlayerStats,
+    // GetPlayerStats,
     GetTeamStats,
     GetScores,
     GetStandings,
     // KillGameCheckerCommand,
     GetLastGameRecap,
     GetPlayoffStandings,
+    // V2 Commands
+    GetSchedule_V2,
+    GetCurrentScores
 ].reduce((map, obj) => {
         map[obj.name] = obj;
         return map;
@@ -51,17 +56,26 @@ else {
 }
 
 //hook up api
-const rest = new REST({ version: '9' }).setToken(botToken);
+const rest = new REST({ version: '10' }).setToken(botToken);
 
 const registerAllSlashCommands = async (client: Client) => {
     client.guilds.cache.forEach(async (guild: Guild) => {
         const slashCommands: RESTPostAPIApplicationCommandsJSONBody[] = [];
         for(const commandName in commands) {
             const command = commands[commandName];
-            if(command?.slashCommandDescription) {
-                console.log(`adding ${command.name} slash command registration`)
-                const desc = command.slashCommandDescription();
-                slashCommands.push(desc.toJSON());
+            console.log(`adding ${command.name} slash command registration`)
+            const desc = command.slashCommandDescription
+                .setName(command.name)
+                .setDescription(command.description);
+            if(desc?.toJSON) {
+                try {
+                    const description = desc.toJSON();
+                    slashCommands.push(description);
+                }
+                catch(e: any) {
+                    console.dir(desc);
+                    console.dir(e);
+                }
             }
         }
         const result = await rest.put(
@@ -87,13 +101,20 @@ client.on('ready', async () => {
    registerAllSlashCommands(client);
 });
 
-client.on("interactionCreate", async (interaction: ChatInputCommandInteraction) => {
-    if(!interaction.isChatInputCommand()) return;
-
+client.on("interactionCreate", async (interaction: Interaction) => {
+    if(interaction.isChatInputCommand()) {
     const command = commands?.[interaction.commandName];
     if(command) {
         command.executeSlashCommand?.(interaction);
     };
+    }
+    else if (interaction.isAutocomplete()) {
+        const command = commands?.[interaction.commandName];
+        if(command?.autocomplete) {
+            command.autocomplete(interaction);
+        };
+    }
+
 })
 
 //stupid fix for azure app service containers requiring a response to port 8080

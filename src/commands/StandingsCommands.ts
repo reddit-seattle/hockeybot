@@ -9,12 +9,12 @@ const bot_thumbnail_image = `https://i.imgur.com/xHcfK8Q.jpg`;
 export const GetStandings: Command = {
 	name: 'standings',
     description: 'Get Standings. Standings type optional (`wildCard`, `divisionLeaders`)',
-	slashCommandDescription: () => {
-		return new SlashCommandBuilder()
+	slashCommandDescription: new SlashCommandBuilder()
 		.setName('standings')
 		.setDescription('Get NHL standings')
-		.addStringOption(option => {
-			return option.setName('type')
+		.addStringOption(option => 
+			option
+				.setName('type')
 				.setDescription('Optional standings type')
 				.addChoices(...[
 					{
@@ -26,9 +26,7 @@ export const GetStandings: Command = {
 						value: StandingsTypes.DIVISION_LEADERS
 					}
 				])
-			
-		})
-	},
+		),
 	executeSlashCommand: async (interaction) => {
 		const standingsArg = interaction.options.getString('type')
         const standings = await API.Standings.GetStandings(standingsArg as StandingsTypes);

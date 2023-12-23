@@ -10,16 +10,15 @@ const bot_thumbnail_image = `https://i.imgur.com/xHcfK8Q.jpg`;
 export const GetTeamStats: Command = {
 	name: 'teamstats',
 	description: 'Team regular season statistics',
-	slashCommandDescription: () => {
-		return new SlashCommandBuilder()
+	slashCommandDescription: new SlashCommandBuilder()
 		.setName('teamstats')
 		.setDescription('Team regular season stats (WIP)')
-		.addStringOption(option => {
-			return option.setName('team')
-			.setDescription('team abbreviation')
-			.setRequired(true)
-		})
-	},
+		.addStringOption(option => 
+			option
+				.setName('team')
+				.setDescription('team abbreviation')
+				.setRequired(true)
+		),
 	executeSlashCommand: async (interaction) => {
 		const teamAbbreviation = interaction.options.getString('team') ?? undefined;
 		if(!teamAbbreviation) {

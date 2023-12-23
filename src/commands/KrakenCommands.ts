@@ -7,6 +7,7 @@ import { API } from "../service/API";
 import { GameFeedResponse } from "../service/models/responses/GameFeed";
 import { ChannelIds, Config, Environment, GameStates, Kraken, Strings } from "../utils/constants";
 import { CreateGameDayThreadEmbed, CreateGameResultsEmbed, CreateGoalEmbed, createShootoutEmbed } from "../utils/EmbedFormatters";
+import { SlashCommandBuilder } from "@discordjs/builders";
 
 const killSwitchVar = 'killGameChecker';
 const dailyCronMinute = 0;
@@ -293,7 +294,9 @@ export const KillGameCheckerCommand: Command = {
     description: 'stop checking for kraken game updates',
     name: 'stop_kraken_updates',
     adminOnly: true,
-}
+    slashCommandDescription: new SlashCommandBuilder(),
+    executeSlashCommand: async () => {}
+};
 
 const checkForKillSwitch = (channel: ThreadChannel | TextChannel) => {
     if(process.env[killSwitchVar])
