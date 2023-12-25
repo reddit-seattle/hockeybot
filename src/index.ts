@@ -14,6 +14,7 @@ import { ChannelIds, Environment } from './utils/constants';
 import { exit } from 'process';
 import { GetPlayoffStandings } from './commands/PlayoffCommands';
 import { GetCurrentScores } from './commands_v2/Scores';
+import { GetRecord, GetStandings as GetStandings_V2 } from './commands_v2/Standings';
 
 const client = new Client({
     intents: [
@@ -38,7 +39,9 @@ const commands = [
     GetPlayoffStandings,
     // V2 Commands
     GetSchedule_V2,
-    GetCurrentScores
+    GetCurrentScores,
+    GetRecord,
+    GetStandings_V2
 ].reduce((map, obj) => {
         map[obj.name] = obj;
         return map;

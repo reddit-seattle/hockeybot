@@ -168,7 +168,7 @@ export module Paths_V2 {
 
     // https://api-web.nhle.com/v1/player/8475831/landing
     export const PlayerStatsSummary = (player: string) => `${API_ENDPOINT}/player/${player}/landing`;
-    // https://api-web.nhle.com/v1/player/8475831/landing
+    // https://api-web.nhle.com/v1/player/8475831/game-log/now
     export const PlayerGameLog = (player: string) => `${API_ENDPOINT}/player/${player}/game-log/now`;
   }
   export module Standings {

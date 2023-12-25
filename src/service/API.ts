@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
-import { format } from 'date-fns-tz';
-import { Environment, Paths } from "../utils/constants";
+import { format, utcToZonedTime } from 'date-fns-tz';
+import { Config, Environment, Paths } from "../utils/constants";
 import { ScheduleResponse } from "./models/responses/Schedule";
 import { GameFeedResponse } from './models/responses/GameFeed';
 import { TeamResponse } from "./models/responses/Teams";
@@ -102,7 +102,7 @@ export module API {
         }
 
         export const GetGameDiff: (id: string, since: string) => Promise<GameFeedResponse.Response> = async(id, since) => {
-            const timecode = format(since, "yyyyMMdd_HHmmss");
+            const timecode = format(utcToZonedTime(since, Config.TIME_ZONE), "yyyyMMdd_HHmmss");
             const response = await get<GameFeedResponse.Response>(Paths.Get.GameFeedDiff(id, timecode));
             return response;
         }

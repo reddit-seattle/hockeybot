@@ -60,6 +60,18 @@ export enum GameType {
     allStarGame = 4,
 }
 
+export enum ConferenceAbbrev {
+    western = 'W',
+    eastern = 'E'
+}
+
+export enum DivisionAbbrev {
+    atlantic = 'A',
+    central = 'C',
+    metro = 'M',
+    pacific = 'P',
+}
+
 export enum GameState {
     future = 'FUT',
     pregame = 'PRE',

@@ -12,29 +12,7 @@ import { Game as TeamWeeklyScheduleGame } from "../service/models/responses_v2/T
 import { Game as TeamMonthlyScheduleGame } from "../service/models/responses_v2/TeamMonthlyScheduleResponse";
 import { format, utcToZonedTime } from "date-fns-tz";
 import _ from "underscore";
-
-// TODO - move into helper module
-const teamNameAutocomplete = async (interaction: AutocompleteInteraction) => {
-  const value = interaction.options.getFocused() as string;
-  const choices = Object.keys(TeamTriCode);
-  const filtered = choices.filter((choice) =>
-    choice.toUpperCase().startsWith(value.toUpperCase())
-  );
-  await interaction.respond(
-    _.first(
-      filtered.map((choice) => ({ name: choice, value: choice })),
-      25
-    )
-  );
-};
-
-const validTeamName = (team: string) => {
-  return (
-    Object.keys(TeamTriCode)
-      .map((key) => key.toUpperCase())
-      .indexOf(team.toUpperCase()) > 0
-  );
-};
+import { teamNameAutocomplete, validTeamName } from "../utils/helpers";
 
 const teamScheduleSubgroupCommand = new SlashCommandSubcommandBuilder()
   .setName("team")

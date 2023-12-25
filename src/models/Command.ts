@@ -1,5 +1,4 @@
-import { SlashCommandBuilder, SlashCommandSubcommandsOnlyBuilder } from "@discordjs/builders";
-import { AutocompleteInteraction, CacheType, ChatInputCommandInteraction, Message, PartialMessage } from "discord.js";
+import { AutocompleteInteraction, CacheType, ChatInputCommandInteraction } from "discord.js";
 
 
 //TODO - expand interface to have a 'canExecute' method to check args and return help message

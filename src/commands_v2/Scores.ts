@@ -37,10 +37,15 @@ const isGameOver = (gameState: string) => {
 export const GetCurrentScores: Command = {
     name: 'scoresv2',
     description: 'Get current game scores',
+    // TODO - add date
     slashCommandDescription: new SlashCommandBuilder(),
     executeSlashCommand: async (interaction) => {
         await interaction.deferReply();
         const games = await API.Games.GetGames();
+        if(!games?.length) {
+            await interaction.followUp("No hockey today :(");
+            return;
+        }
         const fields = await Promise.all(games.map(async (game) => {
             const { id, gameState, awayTeam, homeTeam, gameOutcome } = game;
             let gameScoreLine = `${awayTeam.abbrev} - ${awayTeam.score}  @  ${homeTeam.abbrev} - ${homeTeam.score}`
