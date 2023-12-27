@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { Message, EmbedBuilder } from "discord.js";
 import { Command } from "../models/Command";
-import { API } from "../service/API";
+import { API } from "../service/legacy_API";
 import { PlayoffRoundFormatter } from "../utils/EmbedFormatters";
 
 export const GetPlayoffStandings: Command = {

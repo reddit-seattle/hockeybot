@@ -1,11 +1,11 @@
 import { format, utcToZonedTime } from "date-fns-tz"
 import { EmbedBuilder } from "discord.js"
-import { API } from "../service/API"
-import { GameContentResponse } from "../service/models/responses/GameContentResponse"
-import { GameFeedResponse } from "../service/models/responses/GameFeed"
-import { PlayoffStandings } from "../service/models/responses/PlayoffStandings"
-import { ScheduleResponse } from "../service/models/responses/Schedule"
-import { Environment, GameTypes, Kraken, Paths, Strings } from "./constants"
+import { API } from "../service/legacy_API"
+import { GameContentResponse } from "../service/models/legacy_responses/GameContentResponse"
+import { GameFeedResponse } from "../service/models/legacy_responses/GameFeed"
+import { PlayoffStandings } from "../service/models/legacy_responses/PlayoffStandings"
+import { ScheduleResponse } from "../service/models/legacy_responses/Schedule"
+import { Environment, GameTypes, Kraken, Legacy_Paths, Strings } from "./constants"
 
 const PACIFIC_TIME_ZONE = 'America/Los_Angeles';
 
@@ -96,7 +96,7 @@ export const CreateGameResultsEmbed = async (feed: GameFeedResponse.Response) =>
     const homeWin = away.goals < home.goals;
     const winner = homeWin ? home : away;
     const loser = homeWin ? away : home;
-    const teamLogo = Paths.TeamLogo(winner.team.id);
+    const teamLogo = Legacy_Paths.TeamLogo(winner.team.id);
     const krakenWin = (winner.team.id == Kraken.TeamId);
     const title = `${away.team.name} @ ${home.team.name} - ${gameData.status.detailedState}`;
     let description = `${winner.team.name} win${krakenWin ? '!' : '.'}`;
@@ -152,7 +152,7 @@ export const createShootoutEmbed = (
   const { result, team } = play;
   const { description, eventTypeId } = result;
   let title = `${team?.name} - ${eventTypeId}`;
-  const thumbnail = team ? Paths.TeamLogo(team?.id) : '';
+  const thumbnail = team ? Legacy_Paths.TeamLogo(team?.id) : '';
   const goal = eventTypeId === "GOAL";
   const kraken = team?.id === Kraken.TeamId;
   if (goal && kraken) {

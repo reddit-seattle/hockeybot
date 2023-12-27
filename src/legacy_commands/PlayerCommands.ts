@@ -1,7 +1,7 @@
 import { Message, EmbedBuilder } from "discord.js";
 import { extract, partial_ratio } from "fuzzball";
-import { API } from "../service/API";
-import { Roster } from "../service/models/responses/Roster";
+import { API } from "../service/legacy_API";
+import { Roster } from "../service/models/legacy_responses/Roster";
 import { getProperty } from "../utils/helpers";
 
 const oldCommand = async (message: Message, args?: string[]) => {

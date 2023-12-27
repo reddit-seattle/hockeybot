@@ -3,7 +3,7 @@ import { EmbedField, Message, EmbedBuilder } from "discord.js";
 import { format, zonedTimeToUtc } from 'date-fns-tz';
 import { last, first } from 'underscore';
 import { Command } from "../models/Command";
-import { API } from "../service/API";
+import { API } from "../service/legacy_API";
 import { Environment, GameStates, GameTypes, MEDIA_FORMAT, Record } from "../utils/constants";
 import { NextGameFieldFormatter, ScheduledGameFieldFormatter } from "../utils/EmbedFormatters";
 

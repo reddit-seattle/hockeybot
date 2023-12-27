@@ -1,7 +1,7 @@
 import { EmbedBuilder, SlashCommandBuilder } from "@discordjs/builders";
 import { Message } from "discord.js";
 import { Command } from "../models/Command";
-import { API } from "../service/API";
+import { API } from "../service/legacy_API";
 import { getProperty } from "../utils/helpers";
 
 

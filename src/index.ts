@@ -4,17 +4,11 @@ import { REST } from '@discordjs/rest';
 import { RESTPostAPIApplicationCommandsJSONBody, Routes } from 'discord-api-types/v10';
 import { createServer } from 'http';
 // import { KillGameCheckerCommand, SetupKrakenGameDayChecker } from './commands/KrakenCommands';
-// import { GetPlayerStats } from './commands/PlayerCommands';
-import { GetLastGameRecap, GetLastGamesForTeam, GetNextGamesForTeam, GetScores } from './commands/ScheduleCommands';
-import { GetSchedule as GetSchedule_V2} from "./commands_v2/Schedule";
-import { GetStandings } from './commands/StandingsCommands';
-import { GetTeamStats } from './commands/TeamCommands';
 import { CommandDictionary } from './models/Command';
 import { ChannelIds, Environment } from './utils/constants';
 import { exit } from 'process';
-import { GetPlayoffStandings } from './commands/PlayoffCommands';
-import { GetCurrentScores } from './commands_v2/Scores';
-import { GetRecord, GetStandings as GetStandings_V2 } from './commands_v2/Standings';
+
+import { GetStandings, GetScores, GetSchedule, GetStats } from './commands';
 
 const client = new Client({
     intents: [
@@ -27,21 +21,22 @@ const client = new Client({
 //load commands
 
 const commands = [
-    // GetSchedule,
-    GetLastGamesForTeam,
-    GetNextGamesForTeam,
-    // GetPlayerStats,
-    GetTeamStats,
+    /**
+     * Legacy Commands
+     * GetSchedule,
+     * GetLastGamesForTeam,
+     * GetNextGamesForTeam
+     * GetPlayerStats
+     * GetTeamStats
+     * GetScores
+     * GetStandings
+     * GetLastGameRecap
+     * GetPlayoffStandings
+     **/  
+    GetSchedule,
     GetScores,
-    GetStandings,
-    // KillGameCheckerCommand,
-    GetLastGameRecap,
-    GetPlayoffStandings,
-    // V2 Commands
-    GetSchedule_V2,
-    GetCurrentScores,
-    GetRecord,
-    GetStandings_V2
+    GetStats,
+    GetStandings
 ].reduce((map, obj) => {
         map[obj.name] = obj;
         return map;
@@ -100,7 +95,6 @@ client.on('ready', async () => {
             debugChannel?.send("HockeyBot, reporting for duty!");
         });
     }
-//    SetupKrakenGameDayChecker(client);
    registerAllSlashCommands(client);
 });
 

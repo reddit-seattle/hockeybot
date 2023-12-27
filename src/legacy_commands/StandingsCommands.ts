@@ -2,7 +2,7 @@ import { SlashCommandBuilder } from "@discordjs/builders";
 import { Message, EmbedBuilder } from "discord.js";
 import { Command } from "../models/Command";
 import { StandingsTypes } from "../models/StandingsTypes";
-import { API } from "../service/API";
+import { API } from "../service/legacy_API";
 
 const bot_thumbnail_image = `https://i.imgur.com/xHcfK8Q.jpg`;
 
@@ -16,7 +16,7 @@ export const GetStandings: Command = {
 			option
 				.setName('type')
 				.setDescription('Optional standings type')
-				.addChoices(...[
+				.addChoices(
 					{
 						name: 'Wild Card',
 						value: StandingsTypes.WILDCARD
@@ -25,7 +25,7 @@ export const GetStandings: Command = {
 						name: 'Divisional',
 						value: StandingsTypes.DIVISION_LEADERS
 					}
-				])
+				)
 		),
 	executeSlashCommand: async (interaction) => {
 		const standingsArg = interaction.options.getString('type')

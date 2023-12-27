@@ -7,24 +7,61 @@ import { LocalizedString } from "./Common";
     pickInRound: number;
     overallPick: number;
   }
+
+    //featured stats.regularseason.subseason
   export interface SubSeason {
     gamesPlayed: number;
-    wins: number;
-    losses: number;
-    ties: number;
-    otLosses: number;
-    shutouts: number;
-    goalsAgainstAvg: number;
-    savePctg: number;
+    // player stats
+    goals?: number;
+    assists?: number;
+    points?: number;
+    plusMinus?: number;
+    pim: number;
+    gameWinningGoals?: number;
+    otGoals?: number;
+    shots?: number;
+    shootingPctg?: number;
+    powerPlayGoals: number;
+    powerPlayPoints: number;
+    shorthandedGoals: number;
+    shorthandedPoints: number;
+
+    // goalie stats
+    wins?: number;
+    losses?: number;
+    ties?: number;
+    otLosses?: number;
+    shutouts?: number;
+    goalsAgainstAvg?: number;
+    savePctg?: number;
   }
+
+  //featured stats.regularseason.career
   export interface Career {
     gamesPlayed: number;
-    wins: number;
-    losses: number;
-    otLosses: number;
-    shutouts: number;
-    goalsAgainstAvg: number;
-    savePctg: number;
+
+    // player stats
+    goals?: number
+    assists?: number
+    points?: number
+    plusMinus?: number
+    pim?: number
+    gameWinningGoals?: number
+    otGoals?: number
+    shots?: number
+    shootingPctg?: number
+    powerPlayGoals?: number
+    powerPlayPoints?: number
+    shorthandedGoals?: number
+    shorthandedPoints?: number
+
+    // goalie stats
+    wins?: number;
+    losses?: number;
+    otLosses?: number;
+    shutouts?: number;
+    goalsAgainstAvg?: number;
+    savePctg?: number;
   }
   export interface RegularSeason {
     subSeason: SubSeason;
@@ -34,25 +71,44 @@ import { LocalizedString } from "./Common";
     season: number;
     regularSeason: RegularSeason;
   }
-  export interface RegularSeason2 {
+
+  // careerTotals.regularSeason / careerTotals.playoffs
+
+  export interface CareerStats {
     gamesPlayed: number;
     goals: number;
     assists: number;
     pim: number;
-    gamesStarted: number;
-    wins: number;
-    losses: number;
-    otLosses: number;
-    shotsAgainst: number;
-    goalsAgainst: number;
-    goalsAgainstAvg: number;
-    savePctg: number;
-    shutouts: number;
-    timeOnIce: string;
+
+    // player stats
+    points?: number;
+    plusMinus?: number;
+    powerPlayGoals?: number;
+    powerPlayPoints?: number;
+    shorthandedPoints?: number;
+    gameWinningGoals?: number;
+    otGoals?: number;
+    shots?: number;
+    shootingPctg?: number;
+    faceoffWinningPctg?: number;
+    avgToi?: string;
+    shorthandedGoals?: number;
+
+    // goalie stats
+    gamesStarted?: number;
+    wins?: number;
+    losses?: number;
+    otLosses?: number;
+    shotsAgainst?: number;
+    goalsAgainst?: number;
+    goalsAgainstAvg?: number;
+    savePctg?: number;
+    shutouts?: number;
+    timeOnIce?: string;
   }
   export interface CareerTotals {
-    regularSeason: RegularSeason2;
-    playoffs: RegularSeason2;
+    regularSeason: CareerStats;
+    playoffs: CareerStats;
   }
   export interface Last5Game {
     gameId: number;
@@ -60,13 +116,26 @@ import { LocalizedString } from "./Common";
     teamAbbrev: string;
     homeRoadFlag: string;
     gameDate: string;
-    gamesStarted: number;
-    shotsAgainst: number;
-    goalsAgainst: number;
-    savePctg: number;
-    penaltyMins: number;
     opponentAbbrev: string;
     toi: string;
+
+    // player stuff
+    goals?: number;
+    assists?: number;
+    points?: number;
+    plusMinus?: number;
+    powerPlayGoals?: number;
+    shots?: number;
+    shifts?: number;
+    pim?: number;
+    shorthandedGoals?: number;
+
+    // goalie stuff
+    gamesStarted?: number;
+    shotsAgainst?: number;
+    goalsAgainst?: number;
+    savePctg?: number;
+    penaltyMins?: number;
     decision?: string;
   }
 
@@ -78,7 +147,7 @@ import { LocalizedString } from "./Common";
     sequence: number;
     gamesPlayed: number;
     savePctg?: number;
-    goalsAgainstAvg: number;
+    goalsAgainstAvg?: number;
     goalsAgainst?: number;
     timeOnIce?: string;
     wins?: number;
@@ -142,6 +211,7 @@ import { LocalizedString } from "./Common";
     twitterLink: string;
     watchLink: string;
     last5Games: Last5Game[];
+    // may have to add goalie/skater optional fields
     seasonTotals: SeasonTotal[];
     awards: Award[];
     currentTeamRoster: CurrentTeamRoster[];

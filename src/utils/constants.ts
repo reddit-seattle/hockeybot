@@ -109,7 +109,7 @@ export interface Record {
     Overtime: number;
 }
 
-export module Paths_V2 {
+export module Paths {
   /***
    * All games today:               https://api-web.nhle.com/v1/schedule/now
    * Calendar Schedule?:            https://api-web.nhle.com/v1/schedule-calendar/2023-12-21
@@ -160,7 +160,7 @@ export module Paths_V2 {
       `${STATS_URL}/${team}/now`;
 
     // https://api-web.nhle.com/v1/club-stats/sea/20232024/2
-    export const TeamSeasonStats = (
+    export const TeamSeasonPlayerStats = (
       team: string,
       season: string,
       playoffs?: boolean
@@ -201,9 +201,27 @@ export module Paths_V2 {
       };
     }
   }
+  export module Search {
+    const URL = 'https://search.d3.nhle.com/api/v1/search'
+    // https://search.d3.nhle.com/api/v1/search/player?culture=en-us&limit=20&q=gir%2A&active=true
+    export const Player = (player: string) => `${URL}/player?culture=en-us&limit=25&q=${player}%2A&active=true`
+  }
+
+  export module Rest {
+    const URL = `https://api.nhle.com/stats/rest/en`
+    const teamEndpoint = `${URL}/team`;
+    export const TeamInfoByTriCode = (team: string) => `${teamEndpoint}/?cayenneExp=triCode="${team}"`;
+    export const AllTeamSummaries = (season: string) => `${teamEndpoint}/summary?cayenneExp=seasonId=${season}`
+  }
+
+  export module Seasons {
+    const URL = `${API_ENDPOINT}/season`
+    export const All = URL;
+  }
 }
 
-export module Paths {
+// #region old paths
+export module Legacy_Paths {
     export const API_HOST_URL: string = `https://statsapi.web.nhl.com`;
     export const API_PART: string = 'api/v1';
     export const API_ENDPOINT = `${API_HOST_URL}/${API_PART}`;
@@ -224,19 +242,19 @@ export module Paths {
             (id, start, end) => `${Schedule}&teamId=${id}&startDate=${start}&endDate=${end || start}`;
 
         export const Teams: string = `${API_ENDPOINT}/teams`;
-        export const Team:(id: string) => string = (id) => `${Paths.Get.Teams}/${id}`;
+        export const Team:(id: string) => string = (id) => `${Legacy_Paths.Get.Teams}/${id}`;
 
         export const Divisions: string = `${API_ENDPOINT}/divisions`;
         export const Division: (id: string) => string =
-            (id) => `${Paths.Get.Divisions}/${id}`;
+            (id) => `${Legacy_Paths.Get.Divisions}/${id}`;
 
         export const Conferences: string = `${API_ENDPOINT}/conferences`;
         export const Conference: (id: string) => string =
-            (id) => `${Paths.Get.Conferences}/${id}`;
+            (id) => `${Legacy_Paths.Get.Conferences}/${id}`;
         
         export const People: string = `${API_ENDPOINT}/people`;
         export const Person:(id: string) => string =
-            (id) => `${Paths.Get.People}/${id}`;
+            (id) => `${Legacy_Paths.Get.People}/${id}`;
         export const PersonSeasonStats:(id: string) => string =
             (id) => `${Person(id)}/stats?stats=${StatsTypes.statsSingleSeason}`;
 
@@ -259,3 +277,4 @@ export module Paths {
     }
 
 }
+// #endregion

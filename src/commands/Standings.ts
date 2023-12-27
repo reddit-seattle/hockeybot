@@ -1,114 +1,31 @@
 import { SlashCommandBuilder } from "discord.js";
 import { Command } from "../models/Command";
-import { API } from "../service/API_v2";
-import { teamNameAutocomplete, validTeamName } from "../utils/helpers";
-import { ConferenceAbbrev, DivisionAbbrev } from "../utils/enums";
-import { Standing } from "../service/models/responses_v2/DefaultStandingsResponse";
+import { API } from "../service/API";
+import { requiredConferenceOption, requiredDivisionOption, getOrdinal, teamOrPlayerAutocomplete, validTeamName } from "../utils/helpers";
+import { ConferenceAbbrev } from "../utils/enums";
+import { Standing } from "../service/models/responses/DefaultStandingsResponse";
 import { EmbedBuilder } from "@discordjs/builders";
 import _ from "underscore";
 
-export const GetRecord: Command = {
-    name: 'teamrecordv2',
-    description: 'Get Team record info',
-    autocomplete: teamNameAutocomplete,
-    slashCommandDescription: new SlashCommandBuilder()
-        .addStringOption((option) =>
-            option
-            .setName("team")
-            .setDescription("Team abbreviation (SEA)")
-            .setAutocomplete(true)
-            .setRequired(true)
-        ),
-    async executeSlashCommand(interaction) {
-        const team = interaction.options.getString("team", true);
-        if( !validTeamName(team)) {
-            await interaction.reply({ content: "That's not a team, buddy", ephemeral: true });
-            return;
-        }
-        await interaction.deferReply();
-        const standings = await API.Standings.GetStandings();
-        const teamStanding = standings.find(standing => standing.teamAbbrev.default == team);
-        if(!teamStanding) {
-            interaction.followUp(`Couldn't find standings for ${team}`);
-            return;
-        }
-        const {
-            teamLogo,
-            gamesPlayed, points,
-            conferenceSequence, conferenceName, // []st/nd/rd/th in the [] Conference
-            divisionSequence, divisionName, // []st/nd/rd/th in the [] division
-            leagueSequence, // Xth in the League
-            wins, losses, otLosses, // (W-L-OTL)
-            streakCode, streakCount, // W2
-            l10Wins, l10Losses, l10OtLosses, // (L10)
-        } = teamStanding;
-        const recordDescriptor = `Record: (${wins}-${losses}-${otLosses})`;
-        const pointsDescriptor = `Points: ${points} (${gamesPlayed} games)`;
-        const leagueDescriptor = `League standing: ${getOrdinalPlace(leagueSequence)} place`
-        const confDescriptor = `${getOrdinalPlace(conferenceSequence)} in the ${conferenceName} conference`
-        const divDescriptor = `${getOrdinalPlace(divisionSequence)} in the ${divisionName} division`
-        const lastTenDescriptor = `Last 10 games: ${l10Wins}-${l10Losses}-${l10OtLosses} (Streak ${streakCount}${streakCode})`
-
-        // TODO - this isn't quite right/done
-        await interaction.followUp({embeds: [
-            new EmbedBuilder()
-                .setTitle(`${teamStanding.teamCommonName.default} Standings`)
-                .setImage(teamLogo)
-                .setThumbnail(teamLogo)
-                .addFields([
-                    {
-                        name: `${recordDescriptor}`,
-                        value: `
-                            ${pointsDescriptor}
-                            ${leagueDescriptor}
-                            ${confDescriptor}
-                            ${divDescriptor}
-                            ${lastTenDescriptor}
-                        `
-                    }
-                ])
-        ]})
-    }
-}
 /**
  * Standings
  * By League, Conference, Division, wildcard
  */
 export const GetStandings: Command = {
-    name: 'standingsv2',
+    name: 'standings',
     description: 'Get NHL Standings',
     slashCommandDescription: new SlashCommandBuilder()
         .addSubcommand(cmd =>
             cmd
                 .setName('division')
                 .setDescription('Division Standings')
-                .addStringOption(option =>
-                    option
-                        .setName("division")
-                        .setDescription("Which division")
-                        .setRequired(true)
-                        .addChoices(
-                            {name: "Atlantic", value: DivisionAbbrev.atlantic},
-                            {name: "Central", value: DivisionAbbrev.central},
-                            {name: "Metro", value: DivisionAbbrev.metro},
-                            {name: "Pacific", value: DivisionAbbrev.pacific},
-                        )
-                )
+            .addStringOption(requiredDivisionOption)
         )
         .addSubcommand(cmd =>
             cmd
                 .setName('conference')
                 .setDescription('Conference Standings')
-                .addStringOption(option =>
-                    option
-                        .setName("conference")
-                        .setDescription("Which conference")
-                        .setRequired(true)
-                        .addChoices(
-                            {name: "Western", value: ConferenceAbbrev.western},
-                            {name: "Eastern", value: ConferenceAbbrev.eastern},
-                        )
-                ),
+                .addStringOption(requiredConferenceOption)
         )
         // .addSubcommand(cmd =>
         //     cmd
@@ -273,18 +190,4 @@ const buildTeamStandingString = (standing: Standing) => {
     return `${pointsDescriptor} - ${record} - L10: ${l10} - streak ${streak}`;
 }
 
-const getOrdinalPlace = (int: number) => {
-    int = Math.round(int);
-	let numString = int.toString();
 
-	if (Math.floor(int / 10) % 10 === 1) {
-		return `${numString}th`;
-	}
-
-	switch (int % 10) {
-		case 1: return `${numString}st`;
-		case 2: return `${numString}nd`;
-		case 3: return `${numString}rd`;
-		default: return `${numString}th`;
-	}
-}

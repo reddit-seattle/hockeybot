@@ -1,57 +1,36 @@
 import { Command } from "../models/Command";
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js'
-import { API } from "../service/API_v2";
-import { GameScheduleState, GameState, PeriodType } from "../utils/enums";
-import { GameStates } from "../utils/constants";
+import { API } from "../service/API";
+import { hasGameStarted, isGameOver, optionalDateOption, periodToStr } from "../utils/helpers"
 
-const periodToStr = (number: number, periodType: string) => {
-    if(periodType == PeriodType.regulation) {
-        switch (number) {
-            case 1: return '1st';
-            case 2: return '2nd';
-            case 3: return '3rd';
-            default: return number;
-        }
-    }
-    else {
-        switch (number) {
-            case 4: return 'OT'
-            case 5: return periodType == PeriodType.overtime ? '2OT' : 'SO'
-            case 6: return '3OT'
-            case 7: return '4OT'
-            case 8: return '5OT'
-            case 9: return '6OT'
-            default: return number
-        }
-    }
-}
-
-const isGameOver = (gameState: string) => {
-    return ([
-        GameState.hardFinal,
-        GameState.softFinal,
-        GameState.official
-    ] as string[]).includes(gameState);
-}
-
-export const GetCurrentScores: Command = {
-    name: 'scoresv2',
-    description: 'Get current game scores',
+export const GetScores: Command = {
+    name: 'scores',
+    description: 'Get game scores',
     // TODO - add date
-    slashCommandDescription: new SlashCommandBuilder(),
+    slashCommandDescription:
+        new SlashCommandBuilder()
+            .addStringOption(optionalDateOption),
     executeSlashCommand: async (interaction) => {
+
+        const dateInput = interaction.options.getString("date", false) ?? undefined;
+        const date = dateInput ? new Date(dateInput) : undefined;
         await interaction.deferReply();
-        const games = await API.Games.GetGames();
+
+        // get all games for date
+        const games = await API.Games.GetGames(date);
         if(!games?.length) {
-            await interaction.followUp("No hockey today :(");
+            await interaction.followUp(`No hockey ${dateInput ? `on ${dateInput}` :'today'} :(`);
             return;
         }
-        const fields = await Promise.all(games.map(async (game) => {
+
+        // filter games that have already started
+        const liveGames = games.filter(game => hasGameStarted(game.gameState));
+        const fields = await Promise.all(liveGames.map(async (game) => {
+
             const { id, gameState, awayTeam, homeTeam, gameOutcome } = game;
             let gameScoreLine = `${awayTeam.abbrev} - ${awayTeam.score}  @  ${homeTeam.abbrev} - ${homeTeam.score}`
             let detailsLine = `Shots ${game.awayTeam.abbrev}: ${game.awayTeam.sog}, ${game.homeTeam.abbrev}: ${game.homeTeam.sog}`
             detailsLine += `\n[NHL Gamecenter](https://nhl.com${game.gameCenterLink})`;
-            // TODO - filter whether game is live or not and add clock / period info
             if(isGameOver(gameState)){
                 gameScoreLine += ` (${gameOutcome.lastPeriodType})`
                 if(game.threeMinRecap) {

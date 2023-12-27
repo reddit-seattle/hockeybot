@@ -4,26 +4,18 @@ import {
   SlashCommandSubcommandBuilder,
 } from "@discordjs/builders";
 import { Command } from "../models/Command";
-import { AutocompleteInteraction } from "discord.js";
-import { TeamTriCode } from "../utils/enums";
-import { API } from "../service/API_v2";
-import { Game as DayScheduleGame } from "../service/models/responses_v2/DaySchedule";
-import { Game as TeamWeeklyScheduleGame } from "../service/models/responses_v2/TeamWeeklyScheduleResponse";
-import { Game as TeamMonthlyScheduleGame } from "../service/models/responses_v2/TeamMonthlyScheduleResponse";
+import { API } from "../service/API";
+import { Game as DayScheduleGame } from "../service/models/responses/DaySchedule";
+import { Game as TeamWeeklyScheduleGame } from "../service/models/responses/TeamWeeklyScheduleResponse";
+import { Game as TeamMonthlyScheduleGame } from "../service/models/responses/TeamMonthlyScheduleResponse";
 import { format, utcToZonedTime } from "date-fns-tz";
 import _ from "underscore";
-import { teamNameAutocomplete, validTeamName } from "../utils/helpers";
+import { optionalDateOption, requiredTeamOption, teamOrPlayerAutocomplete, validTeamName } from "../utils/helpers";
 
 const teamScheduleSubgroupCommand = new SlashCommandSubcommandBuilder()
   .setName("team")
   .setDescription("look up a team's schedule")
-  .addStringOption((option) =>
-    option
-      .setName("team")
-      .setDescription("Team abbreviation (SEA)")
-      .setAutocomplete(true)
-      .setRequired(true)
-  )
+  .addStringOption(requiredTeamOption)
   .addStringOption((option) =>
     option
       .setName("type")
@@ -36,15 +28,10 @@ const teamScheduleSubgroupCommand = new SlashCommandSubcommandBuilder()
 const leagueScheduleSubgroupCommand = new SlashCommandSubcommandBuilder()
   .setName("all")
   .setDescription("see all games")
-  .addStringOption((option) =>
-    option
-      .setName("date")
-      .setDescription("YYYY-MM-DD please")
-      .setRequired(false)
-  );
+  .addStringOption(optionalDateOption);
 
 export const GetSchedule: Command = {
-  name: "schedulev2",
+  name: "schedule",
   description: "NHL Game Schedule",
   slashCommandDescription: new SlashCommandBuilder()
       .addSubcommand(leagueScheduleSubgroupCommand)
@@ -76,10 +63,10 @@ export const GetSchedule: Command = {
       });
     }
   },
-  autocomplete: teamNameAutocomplete,
+  autocomplete: teamOrPlayerAutocomplete,
 };
 
-
+// TODO - EmbedBuilders module
 const ScheduleEmbedBuilder = (
   schedule: (
     | DayScheduleGame
@@ -89,13 +76,28 @@ const ScheduleEmbedBuilder = (
 ) => {
   return new EmbedBuilder().setTitle("Games").addFields(
     schedule.map((item) => {
+        const {startTimeUTC, venue, awayTeam, homeTeam} = item;
+        const dateStr = `Date: ${format(utcToZonedTime(startTimeUTC, "America/Los_Angeles"), "PPPP")}`
+        const venuStr = `Venue: ${venue.default}`
+        let output = `
+            ${dateStr}
+            ${venuStr}
+        `
+        // only show radio links if available
+        const {radioLink: awayAudio} = awayTeam;
+        const {radioLink: homeAudio} = homeTeam;
+        const homeRadioStr = homeAudio && `[${homeTeam.abbrev}](${homeAudio})`;
+        const awayRadioStr = awayAudio && `[${awayTeam.abbrev}](${awayAudio})`;
+        if(homeRadioStr || awayRadioStr){
+            output+= `
+                ${[homeRadioStr, awayRadioStr].filter(x => x != undefined).join(' - ')}
+            `
+        }
+        
+
       return {
-        name: `${item.awayTeam.abbrev} @ ${item.homeTeam.abbrev}`,
-        value: `
-            Date: ${format(utcToZonedTime(item.startTimeUTC, "America/Los_Angeles"), "PPPP")}
-            Venue: ${item.venue.default}
-        `,
-        // todo - Listen: ${item.homeTeam.radioLink && `[${item.homeTeam.abbrev}]${item.homeTeam.radioLink}`} ${item.awayTeam.radioLink && `[${item.awayTeam.abbrev}]${item.awayTeam.radioLink}`}
+        name: `${awayTeam.abbrev} @ ${homeTeam.abbrev}`,
+        value: output,
         inline: false,
       };
     })
