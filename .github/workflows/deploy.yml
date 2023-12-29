@@ -26,9 +26,13 @@ jobs:
           npm install
           npm run build --if-present
           npm run test --if-present
-
-      - name: pack it up
-        run: npm run pack --if-present
+      
+      # until we work out webpack, let's just upload the whole folder but clean it up first
+      - name: clean local dir
+        run: |
+          rm -rf .git
+      # - name: pack it up
+      #   run: npm run pack --if-present
 
       - name: zip it
         run: zip -r deploy.zip .

@@ -140,7 +140,15 @@ const getPlayerStatsEmbed = async (playerStats: PlayerStatsSummary, career?: boo
     const description = descriptionItems.join("\n");
 
     const { regularSeason: stats } = featuredStats;
-    const seasonStats = stats.subSeason;
+
+    // not sure why, but using a ternary for assignment causes the wrong type inference
+    let seasonStats: SubSeason | Career;
+    if(career) {
+        seasonStats = stats.career;
+    }
+    else {
+        seasonStats = stats.subSeason
+    }
     const fields = getStatsEmbedFields(seasonStats, isGoalie);
 
     return new EmbedBuilder().setTitle(title).setDescription(description).setThumbnail(image).addFields(fields);
@@ -229,7 +237,7 @@ const getPlayerLast5StatsEmbed = async (playerStats: PlayerStatsSummary) => {
         ]);
 };
 
-const getStatsEmbedFields = (stats: Career | SubSeason, goalie?: boolean) => {
+const getStatsEmbedFields = (stats: SubSeason | Career, goalie?: boolean) => {
     if (goalie) {
         const { gamesPlayed, wins, losses, otLosses, shutouts, goalsAgainstAvg, savePctg } = stats;
         return [
