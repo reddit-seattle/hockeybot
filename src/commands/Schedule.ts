@@ -10,7 +10,7 @@ import { Game as TeamWeeklyScheduleGame } from "../service/models/responses/Team
 import { Game as TeamMonthlyScheduleGame } from "../service/models/responses/TeamMonthlyScheduleResponse";
 import { format, utcToZonedTime } from "date-fns-tz";
 import _ from "underscore";
-import { optionalDateOption, relativeDateString, requiredTeamOption, teamOrPlayerAutocomplete, validTeamName } from "../utils/helpers";
+import { optionalDateOption, processLocalizedDateInput, relativeDateString, requiredTeamOption, teamOrPlayerAutocomplete, validTeamName } from "../utils/helpers";
 import { Config } from "../utils/constants";
 
 const teamScheduleSubgroupCommand = new SlashCommandSubcommandBuilder()
@@ -56,12 +56,10 @@ export const GetSchedule: Command = {
     } /*if (subcommand = 'all') */ else {
       await interaction.deferReply();
       const dateInput = interaction.options.getString("date", false);
-      const date = dateInput ? new Date(dateInput) : undefined;
-      const schedule = await API.Schedule.GetDailySchedule(
-        
-      );
+      const adjustedDate = processLocalizedDateInput(dateInput);
+      const schedule = await API.Schedule.GetDailySchedule(adjustedDate);
       await interaction.followUp({
-        embeds: [ScheduleEmbedBuilder(schedule, format(date ?? new Date(), Config.TITLE_DATE_FORMAT))],
+        embeds: [ScheduleEmbedBuilder(schedule, format(adjustedDate ?? new Date(), Config.TITLE_DATE_FORMAT))],
       });
     }
   },

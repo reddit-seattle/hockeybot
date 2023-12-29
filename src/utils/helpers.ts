@@ -1,4 +1,4 @@
-import { format, getUnixTime } from "date-fns";
+import { addHours, format, getUnixTime } from "date-fns";
 import { AutocompleteInteraction, SlashCommandStringOption } from "discord.js";
 import { ConferenceAbbrev, DivisionAbbrev, GameState, PeriodType, TeamTriCode } from "./enums";
 import _ from "underscore";
@@ -156,4 +156,12 @@ export const requiredPlayerOption = (option: SlashCommandStringOption) =>
 export const relativeDateString = (input: string | Date) => {
     const time = getUnixTime(new Date(input))
     return `<t:${time}:R>`
+}
+
+export const processLocalizedDateInput = (input?: string | Date | null) => {
+    if(!input) {
+        return undefined;
+    }
+    // all hail the pacific timezome
+    return addHours(new Date(input), 8);
 }
