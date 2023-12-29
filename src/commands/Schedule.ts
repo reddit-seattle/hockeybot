@@ -10,7 +10,8 @@ import { Game as TeamWeeklyScheduleGame } from "../service/models/responses/Team
 import { Game as TeamMonthlyScheduleGame } from "../service/models/responses/TeamMonthlyScheduleResponse";
 import { format, utcToZonedTime } from "date-fns-tz";
 import _ from "underscore";
-import { optionalDateOption, requiredTeamOption, teamOrPlayerAutocomplete, validTeamName } from "../utils/helpers";
+import { optionalDateOption, relativeDateString, requiredTeamOption, teamOrPlayerAutocomplete, validTeamName } from "../utils/helpers";
+import { Config } from "../utils/constants";
 
 const teamScheduleSubgroupCommand = new SlashCommandSubcommandBuilder()
   .setName("team")
@@ -50,16 +51,17 @@ export const GetSchedule: Command = {
         ? await API.Schedule.GetTeamMonthlySchedule(team)
         : await API.Schedule.GetTeamWeeklySchedule(team);
       await interaction.followUp({
-        embeds: [ScheduleEmbedBuilder(schedule)],
+        embeds: [ScheduleEmbedBuilder(schedule, `${team} ${monthly ? 'Monthly' : 'Weekly'}`)],
       });
     } /*if (subcommand = 'all') */ else {
       await interaction.deferReply();
-      const date = interaction.options.getString("date", false);
+      const dateInput = interaction.options.getString("date", false);
+      const date = dateInput ? new Date(dateInput) : undefined;
       const schedule = await API.Schedule.GetDailySchedule(
-        date ? new Date(date) : undefined
+        
       );
       await interaction.followUp({
-        embeds: [ScheduleEmbedBuilder(schedule)],
+        embeds: [ScheduleEmbedBuilder(schedule, format(date ?? new Date(), Config.TITLE_DATE_FORMAT))],
       });
     }
   },
@@ -72,26 +74,23 @@ const ScheduleEmbedBuilder = (
     | DayScheduleGame
     | TeamWeeklyScheduleGame
     | TeamMonthlyScheduleGame
-  )[]
+  )[],
+  scheduleTypeDisplay: string
 ) => {
-  return new EmbedBuilder().setTitle("Games").addFields(
+  return new EmbedBuilder().setTitle(`${scheduleTypeDisplay} Schedule`).addFields(
     schedule.map((item) => {
         const {startTimeUTC, venue, awayTeam, homeTeam} = item;
-        const dateStr = `Date: ${format(utcToZonedTime(startTimeUTC, "America/Los_Angeles"), "PPPP")}`
+        const dateSlug = relativeDateString(startTimeUTC);
+        const dateStr = `${format(utcToZonedTime(startTimeUTC, Config.TIME_ZONE), Config.BODY_DATE_FORMAT)} (${dateSlug})`;
         const venuStr = `Venue: ${venue.default}`
-        let output = `
-            ${dateStr}
-            ${venuStr}
-        `
+        let output = `${dateStr}\n${venuStr}`
         // only show radio links if available
         const {radioLink: awayAudio} = awayTeam;
         const {radioLink: homeAudio} = homeTeam;
         const homeRadioStr = homeAudio && `[${homeTeam.abbrev}](${homeAudio})`;
         const awayRadioStr = awayAudio && `[${awayTeam.abbrev}](${awayAudio})`;
         if(homeRadioStr || awayRadioStr){
-            output+= `
-                ${[homeRadioStr, awayRadioStr].filter(x => x != undefined).join(' - ')}
-            `
+            output+= `\nListen: ${[homeRadioStr, awayRadioStr].filter(x => x != undefined).join(' - ')}`;
         }
         
 

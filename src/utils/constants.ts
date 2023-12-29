@@ -4,6 +4,8 @@ dotenv.config();
 
 export module Config {
     export const TIME_ZONE = "America/Los_Angeles";
+    export const BODY_DATE_FORMAT = `iii PP @ p`; // "Thu Dec 28, 2023 @ 4:16 PM"
+    export const TITLE_DATE_FORMAT = `iii PP`
 }
 
 export module RoleIds {

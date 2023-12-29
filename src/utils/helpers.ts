@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format, getUnixTime } from "date-fns";
 import { AutocompleteInteraction, SlashCommandStringOption } from "discord.js";
 import { ConferenceAbbrev, DivisionAbbrev, GameState, PeriodType, TeamTriCode } from "./enums";
 import _ from "underscore";
@@ -152,3 +152,8 @@ export const requiredPlayerOption = (option: SlashCommandStringOption) =>
         .setDescription("Player query (Daccord)")
         .setAutocomplete(true)
         .setRequired(true)
+
+export const relativeDateString = (input: string | Date) => {
+    const time = getUnixTime(new Date(input))
+    return `<t:${time}:R>`
+}

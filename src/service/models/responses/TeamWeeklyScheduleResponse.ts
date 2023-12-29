@@ -64,6 +64,8 @@ import { LocalizedString } from "./Common";
     winningGoalScorer?: WinningGoalie;
     gameCenterLink: string;
     ticketsLink?: string;
+    threeMinRecap?: string;
+    threeMinRecapFr?: string;
   }
   export interface TeamWeeklyScheduleResponse {
     previousStartDate: string;

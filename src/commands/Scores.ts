@@ -45,9 +45,11 @@ export const GetScores: Command = {
             }
             else {
                 const { clock, periodDescriptor } = game;
-                const { number, periodType} = periodDescriptor;
+                if(periodDescriptor){
+                    const { number, periodType} = periodDescriptor;
 
-                gameScoreLine += ` (${clock.timeRemaining} ${periodToStr(number, periodType)})`
+                    gameScoreLine += ` (${clock.timeRemaining} ${periodToStr(number, periodType)})`
+                }
             }
 
             return {
