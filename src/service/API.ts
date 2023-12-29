@@ -1,137 +1,157 @@
-import fetch from 'node-fetch';
-import { format } from 'date-fns-tz';
-import { Environment, Paths } from "../utils/constants";
-import { ScheduleResponse } from "./models/responses/Schedule";
-import { GameFeedResponse } from './models/responses/GameFeed';
-import { TeamResponse } from "./models/responses/Teams";
-import { StandingsTypes } from "../models/StandingsTypes";
-import { Roster } from "./models/responses/Roster";
-import { Person } from "./models/responses/Person";
-import { PlayerStats } from "./models/responses/PlayerStats";
-import { GameContentResponse } from './models/responses/GameContentResponse';
-import { PlayoffStandings } from './models/responses/PlayoffStandings';
+import { Paths } from "../utils/constants";
+import { ApiDateString, get } from '../utils/helpers';
+import { DayScheduleResponse, Game as DayScheduleGame } from './models/responses/DaySchedule';
+import { TeamWeeklyScheduleResponse, Game as WeeklyScheduleGame } from './models/responses/TeamWeeklyScheduleResponse';
+import { TeamMonthlyScheduleResponse, Game as MonthlyScheduleGame } from './models/responses/TeamMonthlyScheduleResponse';
+import { DefaultStandingsResponse, Standing } from './models/responses/DefaultStandingsResponse';
+import { ScoresResponse, Game as ScoresGame } from './models/responses/ScoresResponse';
+import { GameBoxScoreResponse } from './models/responses/GameBoxScoreResponse';
+import { PlayByPlayResponse } from './models/responses/PlayByPlayResponse';
+import { Player, TeamRosterResponse } from "./models/responses/TeamRosterResponse";
+import { ScoreboardResponse } from "./models/responses/ScoreboardResponse";
+import { StatsSeason, TeamSeasonStatsResponse } from "./models/responses/StatsResponses";
+import { max } from "underscore";
+import { PlayerStatsSummary } from "./models/responses/PlayerStatsSummaryResponse";
+import { PlayerSearchResult } from "./models/responses/Common";
+import { TeamSummary, TeamSummaryResponse } from "./models/responses/TeamSummaryResponse";
+import { TeamRestResponse } from "./models/responses/TeamRestResponse";
+import _ from "underscore";
 
-export async function get<T>(
-    url: string
-): Promise<T> {
-    const response = await fetch(url);
-    const body = await response.json();
-    return body;
-}
+
+
 export module API {
 
     export module Schedule {
-        export const GetSchedule: (date?: string) => Promise<ScheduleResponse.Game[]> = 
+        export const GetDailySchedule: (date?: Date) => Promise<DayScheduleGame[]> = 
             async (date) => {
-                const response = await
-                    get<ScheduleResponse.Response>(
-                        date
-                            ? Paths.Get.ScheduleByDate(date)
-                            : Paths.Get.Schedule
-                    );
-                return response.dates.reduce((prev, curr) => prev.concat(curr.games), [] as ScheduleResponse.Game[])
+                const dateInput = (date && date instanceof Date) ? ApiDateString(date) : undefined;
+                const response = await get<DayScheduleResponse>(Paths.Schedule.AllGames(dateInput));
+                return response.gameWeek[0].games
             }
-        export const GetTeamSchedule: (teamId: string, start?: string, end?: string) => Promise<ScheduleResponse.Game[]> =
-            async (id, start, end) => {
-                const endpoint = 
-                    start
-                        ? Paths.Get.TeamScheduleByDate(id, start, end)
-                        : Paths.Get.TeamSchedule(id);
-                if(Environment.DEBUG) {
-                    console.log(`GetTeamSchedule: ${endpoint}`);
-                }
-                const response = await get<ScheduleResponse.Response>(endpoint);
-                return response.dates.reduce((prev, curr) => prev.concat(curr.games), [] as ScheduleResponse.Game[])
+        export const GetTeamWeeklySchedule: (team: string) => Promise<WeeklyScheduleGame[]> =
+            async (team) => {
+                const response = await get<TeamWeeklyScheduleResponse>(Paths.Schedule.TeamWeeklySchedule(team));
+                return response.games;
             }
+        export const GetTeamMonthlySchedule: (team: string) => Promise<MonthlyScheduleGame[]> =
+            async (team) => {
+                const response = await get<TeamMonthlyScheduleResponse>(Paths.Schedule.TeamMonthlySchedule(team));
+                return response.games;
+            }
+        export const GetTeamSeasonSchedule: (team: string) => Promise<MonthlyScheduleGame[]> =
+            async (team) => {
+                const response = await get<TeamMonthlyScheduleResponse>(Paths.Schedule.TeamSeasonSchedule(team));
+                return response.games;
+            }
+        
 
     }
     export module Teams {
-        export const GetTeams: () => Promise<TeamResponse.Team[]> = async () => {
-            const response = await get<TeamResponse.Response>(Paths.Get.Teams);
-            return response.teams;
+        export const GetCurrentRosterSeason: (team: string) => Promise<number> =
+            async (team) => {
+                const response = await get<number[]>(Paths.Teams.RosterSeasons(team));
+                return max(response);
+            }
+        export const GetCurrentRoster: (team: string) => Promise<Player[]> =
+            async (team) => {
+                const season = await GetCurrentRosterSeason(team);
+                const response = await get<TeamRosterResponse>(Paths.Teams.Roster(team, season));
+                return [...response.forwards, ...response.defensemen, ...response.goalies];
+            }
+        
+        // https://api.nhle.com/stats/rest/en/team/?cayenneExp=triCode=%22SEA%22
+        export const GetTeamID: (team: string) => Promise<number> = async (team) => {
+            const response = await get<TeamRestResponse>(Paths.Rest.TeamInfoByTriCode(team));
+            return response.data?.[0]?.id;
         }
 
-        export const GetTeam: (id: string) => Promise<TeamResponse.Team | undefined> = async (id) => {
-            const response = await get<TeamResponse.Response>(Paths.Get.Team(id));
-            return response?.teams?.[0];
+        // https://api.nhle.com/stats/rest/en/team/summary?cayenneExp=seasonId=20232024%20and%20teamId=55
+        export const GetTeamSummary: (team: string, season?: string) => Promise<TeamSummary> = async(team, season?) => {
+            const summaries = await GetTeamSummaries(season);
+            const teamId = await GetTeamID(team);
+            return summaries.filter(summary => summary.teamId == teamId)?.[0];
         }
-
-        export const GetTeamsLastGame: (id: string) => Promise<ScheduleResponse.Game> = async (id) => {
-            const response = await get<any>(Paths.Get.TeamLastGame(id));
-            return response?.teams?.[0]?.previousGameSchedule?.dates?.[0]?.games?.[0];
-        }
-
-        export const GetTeamByAbbreviation: (abbr: string | undefined) => Promise<TeamResponse.Team | undefined> = async (abbr) => {
-            const response = await get<TeamResponse.Response>(Paths.Get.Teams);
-            const teams = response?.teams?.filter(team => team.abbreviation.toLowerCase() == abbr?.toLowerCase())
-            return teams?.[0];
-        }
-        export const GetRoster: (id: string) => Promise<Roster.Player[]> = async (id) => {
-            const response = await get<Roster.Response>(Paths.Get.Roster(id));
-            return response?.roster;
+        export const GetTeamSummaries: (season?: string) => Promise<TeamSummary[]> = async(season?) => {
+            if(!season) {
+                season = `${await Seasons.GetLatest()}`;
+            }
+            const summaries = await get<TeamSummaryResponse>(Paths.Rest.AllTeamSummaries(season));
+            return summaries.data;
         }
 
     }
-    export module Seasons {
-        export const GetSeasons: () => Promise<SeasonsResponse.Season[]> = async () => {
-            const response = await get<SeasonsResponse.Response>(Paths.Get.Seasons);
-            return response.seasons;
+    export module Standings {
+        export const GetStandings: () => Promise<Standing[]> = async () => {
+            const response = await get<DefaultStandingsResponse>(Paths.Standings.CurrentStandings);
+            return response?.standings;
         }
-        export const GetCurrentSeason: () => Promise<SeasonsResponse.Season | undefined> = async () => {
-            const seasons = await GetSeasons();
-            return seasons?.reverse().shift();
+    }
+    export module Games {
+        export const GetScoreboard: (team?: string) => Promise<ScoreboardResponse> = async (team?) => {
+            const response = await get<ScoreboardResponse>(Paths.Games.Scoreboard(team));
+            return response;
+            
+        }
+        // https://api-web.nhle.com/v1/score/now
+        export const GetGames: (date?: Date) => Promise<ScoresGame[]> = async (date?) => {
+            const dateInput = (date && date instanceof Date) ? ApiDateString(date) : undefined;
+            const response = await get<ScoresResponse>(Paths.Games.ByDate(dateInput));
+            return response?.games;
+        }
+       export const GetBoxScore: (id: string) => Promise<GameBoxScoreResponse> = async (id) => {
+            const response = await get<GameBoxScoreResponse>(Paths.Games.Live.Game(id).BoxScore)
+            return response;
+        }
+        export const GetPlays: (id: string) => Promise<PlayByPlayResponse> = async (id) => {
+            const response = await get<PlayByPlayResponse>(Paths.Games.Live.Game(id).PlayByPlay)
+            return response;
         }
 
     }
     export module Stats {
-        export const TeamStats: (id: string) => Promise<TeamStatsResponse.Stats> = async (id) => {
-            const response = await get<TeamStatsResponse.Response>(Paths.Get.TeamStats(id));
-            const statsObj = response?.stats?.filter(stat => stat.type.displayName === 'statsSingleSeason')?.[0];
-            return statsObj?.splits?.[0].stat;
-        }
-    }
-    export module Standings {
-        export const GetStandings: (type?: StandingsTypes) => Promise<StandingsResponse.Record[]> = async (type) => {
-            const response = await get<StandingsResponse.Response>(
-                type
-                    ? Paths.Get.CustomStandings(type)
-                    : Paths.Get.Standings
-            );
+        export const GetSeasons: (team: string) => Promise<StatsSeason[]> = async (team) => {
+            const response = await get<StatsSeason[]>(Paths.Stats.StatSeasons(team));
+            return response;
 
-            return response?.records;
         }
-    }
-    export module Games {
-        export const GetGameById: (id: string) => Promise<GameFeedResponse.Response> = async(id) => {
-            const response = await get<GameFeedResponse.Response>(Paths.Get.GameFeed(id));
+        export const GetLatestSeason: (team: string) => Promise<StatsSeason> = async (team) => {
+            const response = await GetSeasons(team);
+            return response?.[0];
+        }
+        export const GetTeamPlayerStatsForSeason: (team: string, season?: string, playoffs?: boolean) => Promise<TeamSeasonStatsResponse> = async (team, season, playoffs) => {
+            if(!season) {
+                season = (await GetLatestSeason(team)).season;
+            }
+            const response = await get<TeamSeasonStatsResponse>(Paths.Stats.TeamSeasonPlayerStats(team, season, playoffs));
             return response;
         }
 
-        export const GetGameDiff: (id: string, since: string) => Promise<GameFeedResponse.Response> = async(id, since) => {
-            const timecode = format(since, "yyyyMMdd_HHmmss");
-            const response = await get<GameFeedResponse.Response>(Paths.Get.GameFeedDiff(id, timecode));
+        export const GetPlayerStatsSummary: (player: string) => Promise<PlayerStatsSummary> = async(player) => {
+            const response = await get<PlayerStatsSummary>(Paths.Stats.PlayerStatsSummary(player));
             return response;
         }
 
-        export const GetGameContent: (id: string) => Promise<GameContentResponse.Response> = async(id) => {
-            const response = await get<GameContentResponse.Response>(Paths.Get.GameContent(id));
+        export const GetPlayerGameLog: (player: string) => Promise<PlayerStatsSummary> = async(player) => {
+            const response = await get<PlayerStatsSummary>(Paths.Stats.PlayerGameLog(player));
             return response;
         }
     }
-    export module Players {
-        export const GetPlayerById: (id: string) => Promise<Person.Person> = async(id) => {
-            const response = await get<Person.Response>(Paths.Get.Person(id));
-            return response?.people?.[0];
-        }
-        export const GetPlayerSeasonStats: (id: string) => Promise<PlayerStats.Stat>  = async(id) => {
-            const response = await get<PlayerStats.Rseponse>(Paths.Get.PersonSeasonStats(id));
-            return response?.stats?.[0]?.splits?.[0]?.stat;
+
+    export module Search {
+        export const Player: (query: string) => Promise<PlayerSearchResult[]> = async (query) => {
+            const response = await get<PlayerSearchResult[]>(Paths.Search.Player(query));
+            return response;
         }
     }
-    export module Playoffs {
-        export const GetPlayoffStandings: () => Promise<PlayoffStandings.Round[]> = async() => {
-            const response = await get<PlayoffStandings.Response>(Paths.Get.PlayoffStandings);
-            return response?.rounds;
+
+    export module Seasons {
+        export const GetAll: () => Promise<number[]> = async () => {
+            const response = await get<number[]>(Paths.Seasons.All);
+            return response;
+        }
+        export const GetLatest: () => Promise<number> = async () => {
+            const seasons = await GetAll();
+            return max(seasons);
         }
     }
 }

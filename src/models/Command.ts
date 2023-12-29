@@ -1,5 +1,4 @@
-import { SlashCommandBuilder } from "@discordjs/builders";
-import { CacheType, CommandInteraction, CommandInteractionOptionResolver, Message, PartialMessage } from "discord.js";
+import { AutocompleteInteraction, CacheType, ChatInputCommandInteraction } from "discord.js";
 
 
 //TODO - expand interface to have a 'canExecute' method to check args and return help message
@@ -7,17 +6,8 @@ export interface Command {
     name: string;
     adminOnly?: boolean;
     description: string;
-    help?: string;
-    execute: (message: Message, args?: string[]) => void;
-    slashCommandDescription?:  () => Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">;
-    executeSlashCommand?: (options:  CommandInteraction) => void;
+    slashCommandDescription: any;
+    executeSlashCommand: (interaction:  ChatInputCommandInteraction) => void;
+    autocomplete?(interaction: AutocompleteInteraction<CacheType>): void;
 }
 export interface CommandDictionary { [id: string]: Command }
-
-export interface ReactionCommand extends Command {
-    emojiId: string;
-    removeReaction?: boolean;
-    execute: (message: Message | PartialMessage) => void;
-}
-
-export interface ReactionCommandDictionary { [id: string]: ReactionCommand }
