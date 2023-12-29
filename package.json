@@ -26,8 +26,9 @@
   },
   "scripts": {
     "tsc": "tsc",
+    "build": "npm run tsc",
     "start": "npm ci && npm run tsc && node dist/index.js",
-    "launch": "npm i --no-optional && npm run tsc && npm start"
+    "launch": "npm i --no-optional && npm run build && npm start"
   },
   "author": "",
   "license": "MIT"
