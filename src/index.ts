@@ -21,18 +21,6 @@ const client = new Client({
 //load commands
 
 const commands = [
-    /**
-     * Legacy Commands
-     * GetSchedule,
-     * GetLastGamesForTeam,
-     * GetNextGamesForTeam
-     * GetPlayerStats
-     * GetTeamStats
-     * GetScores
-     * GetStandings
-     * GetLastGameRecap
-     * GetPlayoffStandings
-     **/  
     GetSchedule,
     GetScores,
     GetStats,
