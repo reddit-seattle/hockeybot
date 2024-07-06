@@ -27,4 +27,4 @@ jobs:
                   base=$(echo "hockeybot/${{inputs.environment}}" | tr '[:upper:]' '[:lower:]')
                   env=$(echo "${{inputs.environment}}" | tr '[:upper:]' '[:lower:]')
                   az acr login --name bpidocker
-                  az acr build -t $base:latest -t ${{ github.sha }} -r bpidocker
+                  az acr build -t $base:latest -t ${{ github.sha }} -r bpidocker .
