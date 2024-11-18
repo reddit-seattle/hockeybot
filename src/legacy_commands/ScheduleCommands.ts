@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { EmbedField, Message, EmbedBuilder } from "discord.js";
+import { EmbedField, Message, EmbedBuilder, TextChannel } from "discord.js";
 import { format, zonedTimeToUtc } from 'date-fns-tz';
 import { last, first } from 'underscore';
 import { Command } from "../models/Command";
@@ -353,7 +353,7 @@ const oldScheduleCommand = 	async (message: Message, args?: string[]) => {
 
 	// sadness, no hockey today :(
 	if(schedule.length == 0) {
-		message.channel.send('Sad, no games today :(');
+		(message.channel as TextChannel).send('Sad, no games today :(');
 		return;
 	}
 	const title = date
@@ -375,19 +375,19 @@ const oldScheduleCommand = 	async (message: Message, args?: string[]) => {
 			return ScheduledGameFieldFormatter(game);
 		})
 	});
-	message.channel.send({embeds: [embed]});
+	(message.channel as TextChannel).send({embeds: [embed]});
 };
 
 const oldRecapCommand = async (message: Message, args: string[]) => {
 	//expect ['next', number, 'PHI']
 	if(!args?.[0] || args?.[0]?.length != 3) {
-		message.channel.send("No team abbreviation provided");
+		(message.channel as TextChannel).send("No team abbreviation provided");
 		return;
 	}
 	const team = await API.Teams.GetTeamByAbbreviation(args[0]);
 	const teamId = team?.id;
 	if(!teamId) {
-		message.channel.send(`Invalid team abbreviation: ${args[0]}`);
+		(message.channel as TextChannel).send(`Invalid team abbreviation: ${args[0]}`);
 		return;
 	}
 
@@ -424,7 +424,7 @@ const oldRecapCommand = async (message: Message, args: string[]) => {
 			}
 		})
 	});
-	message.channel.send({embeds: [embed]});
+	(message.channel as TextChannel).send({embeds: [embed]});
 };
 
 const oldScoresCommand = async (message: Message, args?: string[]) => {
@@ -433,14 +433,14 @@ const oldScoresCommand = async (message: Message, args?: string[]) => {
 
 	// sadness, no hockey today :(
 	if(allGames.length == 0) {
-		message.channel.send('Sad, no games today :(');
+		(message.channel as TextChannel).send('Sad, no games today :(');
 		return;
 	}
 
 	const nowPlaying = allGames.filter(x => x.status.codedGameState != GameStates.PREVIEW );
 	//
 	if(nowPlaying.length == 0) {
-		message.channel.send('No games have started yet. Check `$nhl schedule` for start times.');
+		(message.channel as TextChannel).send('No games have started yet. Check `$nhl schedule` for start times.');
 		return;
 	}
 
@@ -485,7 +485,7 @@ const oldScoresCommand = async (message: Message, args?: string[]) => {
 			}
 		})
 	});
-	message.channel.send({embeds: [embed]});
+	(message.channel as TextChannel).send({embeds: [embed]});
 };
 
 const oldLastaGamesCommand = async (message: Message, args?: string[]) => {
@@ -494,7 +494,7 @@ const oldLastaGamesCommand = async (message: Message, args?: string[]) => {
 		const numberGames = Number.parseInt(args[0]);
 		const team = await API.Teams.GetTeamByAbbreviation(args[1]);
 		if(!team?.id){
-			message.channel.send(`No team found for input: ${args[1]}`);
+			(message.channel as TextChannel).send(`No team found for input: ${args[1]}`);
 			return;
 		}
 		const today = format(new Date(), "yyyy-MM-dd")
@@ -507,7 +507,7 @@ const oldLastaGamesCommand = async (message: Message, args?: string[]) => {
 		const allGames = await (await API.Schedule.GetTeamSchedule(team.id, season?.regularSeasonStartDate, today)).filter(x => x.status.codedGameState == GameStates.FINAL);
 
 		if(!allGames?.[0]){
-			message.channel.send(`Could not find any previous games for ${args[1]} this season`);
+			(message.channel as TextChannel).send(`Could not find any previous games for ${args[1]} this season`);
 			return;
 		}
 		
@@ -556,11 +556,11 @@ const oldLastaGamesCommand = async (message: Message, args?: string[]) => {
 			// },
 			fields: fields
 		});
-		message.channel.send({embeds: [embed]});
+		(message.channel as TextChannel).send({embeds: [embed]});
 		
 	}
 	else{
-		message.channel.send(
+		(message.channel as TextChannel).send(
 			`Usage: next {games: number} {team_abbreviation: string}\n
 			 Example: \`$nhl next 5 PHI\``
 		);
@@ -574,7 +574,7 @@ const oldNextGamesCommand =  async (message: Message, args?: string[]) => {
 		const numberGames = Number.parseInt(args[0]);
 		const team = await API.Teams.GetTeamByAbbreviation(args[1]);
 		if(!team?.id){
-			message.channel.send(`No team found for input: ${args[1]}`);
+			(message.channel as TextChannel).send(`No team found for input: ${args[1]}`);
 			return;
 		}
 		const start = format(new Date(), "yyyy-MM-dd")
@@ -586,7 +586,7 @@ const oldNextGamesCommand =  async (message: Message, args?: string[]) => {
 		
 
 		if(!allGames?.[0]){
-			message.channel.send(`Could not find any remaining games for ${args[1]} this season`);
+			(message.channel as TextChannel).send(`Could not find any remaining games for ${args[1]} this season`);
 			return;
 		}
 		const games = first(allGames, numberGames);
@@ -606,11 +606,11 @@ const oldNextGamesCommand =  async (message: Message, args?: string[]) => {
 				return NextGameFieldFormatter(game)
 			})
 		});
-		message.channel.send({embeds: [embed]});
+		(message.channel as TextChannel).send({embeds: [embed]});
 		
 	}
 	else{
-		message.channel.send(
+		(message.channel as TextChannel).send(
 			`Usage: next {games: number} {team_abbreviation: string}\n
 			 Example: \`$nhl next 5 PHI\``
 		);

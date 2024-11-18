@@ -1,4 +1,4 @@
-import { Message, EmbedBuilder } from "discord.js";
+import { Message, EmbedBuilder, TextChannel } from "discord.js";
 import { extract, partial_ratio } from "fuzzball";
 import { API } from "../service/legacy_API";
 import { Roster } from "../service/models/legacy_responses/Roster";
@@ -6,18 +6,18 @@ import { getProperty } from "../utils/helpers";
 
 const oldCommand = async (message: Message, args?: string[]) => {
     if(!args?.[0]) {
-        message.channel.send(`I need a team abbreviation, buddy`);
+        (message.channel as TextChannel).send(`I need a team abbreviation, buddy`);
     }
     const team = await API.Teams.GetTeamByAbbreviation(args?.[0]);
     if(!team?.id) {
-        message.channel.send(`Couldn't find roster for team ${args?.[0]}`);
+        (message.channel as TextChannel).send(`Couldn't find roster for team ${args?.[0]}`);
         return;
     }
     const players = await API.Teams.GetRoster(team.id);
 
     const playerArg = args?.[1];
     if (!playerArg) {
-        message.channel.send('No player search info provided. Please provide the team and either a name or jersey number.');
+        (message.channel as TextChannel).send('No player search info provided. Please provide the team and either a name or jersey number.');
         return;
     }
     const playerNum = parseInt(playerArg); // may be NaN
@@ -57,15 +57,15 @@ const oldCommand = async (message: Message, args?: string[]) => {
                     }
                 })
             });
-            message.channel.send({embeds: [embed]});
+            (message.channel as TextChannel).send({embeds: [embed]});
         }
         else {
-            message.channel.send(`error finding a match (or statistics) for '${playerArg}'`);
+            (message.channel as TextChannel).send(`error finding a match (or statistics) for '${playerArg}'`);
         }
     }
     else { 
 
-        message.channel.send(`No player found on the ${team.teamName} with name or number matching ${playerArg}`)
+        (message.channel as TextChannel).send(`No player found on the ${team.teamName} with name or number matching ${playerArg}`)
 
     }
 }

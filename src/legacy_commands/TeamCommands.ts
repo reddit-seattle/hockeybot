@@ -1,5 +1,5 @@
 import { EmbedBuilder, SlashCommandBuilder } from "@discordjs/builders";
-import { Message } from "discord.js";
+import { Message, TextChannel } from "discord.js";
 import { Command } from "../models/Command";
 import { API } from "../service/legacy_API";
 import { getProperty } from "../utils/helpers";
@@ -56,11 +56,11 @@ export const GetTeamStats: Command = {
 
 const oldCommand = async (message: Message, args?: string[]) => {
 	if(!args?.[0]) {
-		message.channel.send(`I need a team abbreviation, buddy`);
+		(message.channel as TextChannel).send(`I need a team abbreviation, buddy`);
 	}
 	const team = await API.Teams.GetTeamByAbbreviation(args?.[0]);
 	if(!team?.id) {
-		message.channel.send(`Couldn't find stats for team ${args?.[0]}`);
+		(message.channel as TextChannel).send(`Couldn't find stats for team ${args?.[0]}`);
 		return;
 	}
 	const stats = await API.Stats.TeamStats(team.id);
@@ -84,5 +84,5 @@ const oldCommand = async (message: Message, args?: string[]) => {
 			}
 		})
 	});
-	message.channel.send({embeds: [embed]});
+	(message.channel as TextChannel).send({embeds: [embed]});
 };
