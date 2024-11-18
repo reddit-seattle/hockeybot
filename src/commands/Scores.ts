@@ -11,7 +11,7 @@ import {
 import { addHours, format } from "date-fns";
 import { Config } from "../utils/constants";
 import { Game } from "../service/models/responses/ScoresResponse";
-import { GameState } from "../utils/enums";
+import { GameState, PeriodType } from "../utils/enums";
 
 export const GetScores: Command = {
     name: "scores",
@@ -69,15 +69,12 @@ export const GetScores: Command = {
 
                 // gamestate of 'final, official', etc
                 if (isGameOver(gameState)) {
-                    gameScoreLine += ` (${gameOutcome.lastPeriodType})`;
+                    const { lastPeriodType } = gameOutcome;
+                    if( lastPeriodType != PeriodType.regulation){
+                        gameScoreLine += ` (${lastPeriodType})`;
+                    }
                     if (game.threeMinRecap) {
                         detailsLineItems.push(`[Video Recap](https://nhl.com${game.threeMinRecap})`);
-                    }
-
-                    const { boxscore } = await API.Games.GetBoxScore(`${id}`);
-                    const { gameReports } = boxscore;
-                    if (gameReports.shiftChart) {
-                        detailsLineItems.push(`[Shift Chart](${gameReports.shiftChart})`);
                     }
                 } else {
                     const { clock, periodDescriptor } = game;
