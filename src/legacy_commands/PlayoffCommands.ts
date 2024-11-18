@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { Message, EmbedBuilder } from "discord.js";
+import { Message, EmbedBuilder, TextChannel } from "discord.js";
 import { Command } from "../models/Command";
 import { API } from "../service/legacy_API";
 import { PlayoffRoundFormatter } from "../utils/EmbedFormatters";
@@ -32,11 +32,11 @@ export const GetPlayoffStandings: Command = {
 const oldCommand = async (message: Message, args?: string[]) => {
     const rounds = await API.Playoffs.GetPlayoffStandings();
     if(!rounds?.[0]){
-        message.channel.send('Playoff results not available.')
+        (message.channel as TextChannel).send('Playoff results not available.')
         return;
     }
 
-    message.channel.send({embeds: [
+    (message.channel as TextChannel).send({embeds: [
         new EmbedBuilder({
             title: 'Playoff Standings',
             fields: rounds.map(round => {

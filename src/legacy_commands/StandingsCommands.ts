@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { Message, EmbedBuilder } from "discord.js";
+import { Message, EmbedBuilder, TextChannel } from "discord.js";
 import { Command } from "../models/Command";
 import { StandingsTypes } from "../models/StandingsTypes";
 import { API } from "../service/legacy_API";
@@ -58,7 +58,7 @@ const oldStandingsCommand = async (message: Message, args?: string[]) => {
 	const standings = await API.Standings.GetStandings(standingsArg as StandingsTypes);
 	
 	if(!standings?.[0]) {
-		message.channel.send(`Couldn't find standings${standingsArg ? ` for ${standingsArg}` : '.'}`);
+		(message.channel as TextChannel).send(`Couldn't find standings${standingsArg ? ` for ${standingsArg}` : '.'}`);
 		return;
 	}
 
@@ -82,5 +82,5 @@ const oldStandingsCommand = async (message: Message, args?: string[]) => {
 			}
 		})
 	});
-	message.channel.send({embeds: [embed]});
+	(message.channel as TextChannel).send({embeds: [embed]});
 };
