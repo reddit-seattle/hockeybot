@@ -6,8 +6,8 @@ import { createServer } from "http";
 import { CommandDictionary } from "./models/Command";
 import { ChannelIds, Environment } from "./utils/constants";
 import { exit } from "process";
-
 import { GetStandings, GetScores, GetSchedule, GetStats } from "./commands";
+import GameThreadManager from "./tasks/GameThreadManager";
 
 const client = new Client({
     intents: ["Guilds", "GuildMessages", "GuildMessageReactions"],
@@ -57,6 +57,20 @@ const registerAllSlashCommands = async (client: Client) => {
     });
 };
 
+const startGameDayThreadChecker = async (client: Client) => {
+    const realSeattleGuildId = "370945003566006272";
+    const realKrakenChannelId = ChannelIds.KRAKEN;
+
+    const testSeattleGuildId = "994014272013205554";
+    const testKrakenChannelId = "994014273888063547";// ChannelIds.KRAKEN;
+
+    const seattleGuild = await client.guilds.fetch(realSeattleGuildId);
+    const krakenChannel = await seattleGuild.channels.fetch(realKrakenChannelId) as TextChannel;
+    const threadmanager = new GameThreadManager(client, krakenChannel);
+    await threadmanager.initialize();
+
+}
+
 client.on("ready", async () => {
     console.log(`Logged in as ${client?.user?.tag}!`);
     if (Environment.DEBUG) {
@@ -67,6 +81,7 @@ client.on("ready", async () => {
         });
     }
     registerAllSlashCommands(client);
+    startGameDayThreadChecker(client);
 });
 
 client.on("interactionCreate", async (interaction: Interaction) => {
