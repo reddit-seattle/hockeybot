@@ -2,7 +2,7 @@ import { schedule, ScheduledTask } from "node-cron";
 import { contains, filter } from "underscore";
 import { GameStates, Kraken } from "../utils/constants";
 import { API } from "../service/API";
-import { ApiDateString, isGameOver, periodToStr } from "../utils/helpers";
+import { ApiDateString, isGameOver, periodToStr, relativeDateString } from "../utils/helpers";
 import { Client, TextChannel, ThreadChannel } from "discord.js";
 import { EmbedBuilder } from "@discordjs/builders";
 import { Game } from "../service/models/responses/DaySchedule";
@@ -60,7 +60,10 @@ class GameThreadManager {
             console.log("--------------------------------------------------");
             // spawn a live game feed checker
             this?.liveGameChecker.start();
-            // announce to channel
+            // check if the game start is in the past or future (don't re-announce)
+            if (new Date(gameDate) > new Date()) {
+                await this?.thread?.send(`Game starting soon: ${relativeDateString(gameDate)}`);
+            }
         }
         if (isGameOver(gameState)) { 
             // the game is over
