@@ -15,6 +15,12 @@ export module RoleIds {
 export module ChannelIds {
     export const DEBUG = '541322708844281867';
     export const KRAKEN = '389864168926216193';
+    export const KRAKEN_TEST = '994014273888063547';
+}
+
+export module GuildIds {
+  export const SEATTLE = '370945003566006272';
+  export const TEST = '994014272013205554';
 }
 
 export module Strings {
