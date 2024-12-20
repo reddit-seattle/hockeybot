@@ -1,17 +1,18 @@
 import { schedule, ScheduledTask } from "node-cron";
 import { contains, filter } from "underscore";
-import { GameStates, Kraken } from "../utils/constants";
+import { Kraken } from "../utils/constants";
 import { API } from "../service/API";
 import { ApiDateString, isGameOver, periodToStr, relativeDateString } from "../utils/helpers";
 import { Client, TextChannel, ThreadChannel } from "discord.js";
 import { EmbedBuilder } from "@discordjs/builders";
 import { Game } from "../service/models/responses/DaySchedule";
+import { GameState } from "../utils/enums";
 
-let five_minutes = "*/5 * * * *";
+let every_minute = "*/1 * * * *";
 let every_morning = "0 0 9 * * *";
 let ten_seconds = "*/10 * * * * *";
 
-const startedStates = [GameStates.PRE_GAME, GameStates.IN_PROGRESS, GameStates.CRITICAL];
+const startedStates = [GameState.pregame, GameState.live, GameState.critical];
 
 class GameThreadManager {
     // TODO - do we need this?
@@ -43,7 +44,7 @@ class GameThreadManager {
 
     // #region pregame
     private checkForGameStart = async () => {
-        // log this 
+        // log this
         if (!this.gameId) {
             console.log("--------------------------------------------------");
             console.log("No game id set, skipping pregame checker...");
@@ -56,7 +57,7 @@ class GameThreadManager {
         console.log("--------------------------------------------------");
         //check if the game has started yet
         const game = await API.Games.GetBoxScore(this.gameId);
-        const { gameState, gameDate } = game;
+        const { gameState, gameDate, startTimeUTC } = game;
 
         console.log("--------------------------------------------------");
         console.log("Game " + this.gameId + ", state:" + gameState + ", time:" + gameDate);
@@ -67,14 +68,17 @@ class GameThreadManager {
             // log everything because this shit is exhausting
             const { awayTeam, homeTeam } = game;
             console.log("--------------------------------------------------");
-            console.log(`PREGAME STARTED FOR ID: ${this.gameId}, (${awayTeam.abbrev} at ${homeTeam.abbrev}) @ ${gameDate}`);
+            console.log(
+                `PREGAME STARTED FOR ID: ${this.gameId}, (${awayTeam.abbrev} at ${homeTeam.abbrev}) @ ${gameDate}`
+            );
             console.log("--------------------------------------------------");
             // spawn a live game feed checker
             this?.liveGameChecker.start();
             // check if the game start is in the past or future (don't re-announce)
-            if (new Date(gameDate) > new Date()) {
-                await this?.thread?.send(`Game starting soon: ${relativeDateString(gameDate)}`);
+            if (new Date(startTimeUTC) > new Date()) {
+                this.announceGameStartingSoon(startTimeUTC);
             }
+            this?.pregameChecker.stop();
         }
         if (isGameOver(gameState)) {
             // the game is over
@@ -83,10 +87,14 @@ class GameThreadManager {
         }
     };
 
-    private pregameChecker: ScheduledTask = schedule(five_minutes, this?.checkForGameStart, {
+    private pregameChecker: ScheduledTask = schedule(every_minute, this?.checkForGameStart, {
         scheduled: false,
         timezone: "America/Los_Angeles",
     });
+
+    private announceGameStartingSoon = async (startTimeUTC: string) => {
+        await this?.thread?.send(`Game starting soon: ${relativeDateString(startTimeUTC)}`);
+    }
 
     // #endregion
 
@@ -212,3 +220,4 @@ const generateThreadTitle = (game: Game) => {
 };
 
 export default GameThreadManager;
+
