@@ -61,7 +61,7 @@ const startGameDayThreadChecker = async (client: Client) => {
 
     const seattleGuild = await client.guilds.fetch(GuildIds.SEATTLE);
     const krakenChannel = await seattleGuild.channels.fetch(ChannelIds.KRAKEN) as TextChannel;
-    const threadmanager = new GameThreadManager(client, krakenChannel);
+    const threadmanager = new GameThreadManager(krakenChannel);
     await threadmanager.initialize();
 
 }

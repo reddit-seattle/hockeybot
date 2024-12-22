@@ -72,6 +72,14 @@ export enum DivisionAbbrev {
     pacific = 'P',
 }
 
+export enum EventTypeCode {
+    goal = 505,
+    penalty = 509,
+    periodStart = 520,
+    periodEnd = 521,
+    gameEnd = 524 
+}
+
 export enum GameState {
     future = 'FUT',
     pregame = 'PRE',
