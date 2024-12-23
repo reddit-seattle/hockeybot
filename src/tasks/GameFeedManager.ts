@@ -19,9 +19,7 @@ export class GameFeedManager {
 
     // TODO - on first load, we probably want to pre-load all "previous" goals and penalties without announcing them
     // In case we start in the middle of a game (crash / reboot / etc) we don't want to announce all the goals / penalties again
-    private goalEventIds: Set<string> = new Set<string>();
-    private penaltyEventIds: Set<string> = new Set<string>();
-    private periodEventIds: Set<string> = new Set<string>();
+    private eventIds: Set<string> = new Set<string>();
     private teamsMap: Map<string, Team> = new Map<string, Team>();
     private roster: Map<string, RosterPlayer> = new Map<string, RosterPlayer>();
 
@@ -54,15 +52,6 @@ export class GameFeedManager {
     };
 
     private checkGameStatus = async () => {
-        // TODO - probably don't need this and can remove or perform logic in constructor
-        if (!this.gameId) {
-            console.log("--------------------------------------------------");
-            console.log("No game id set, skipping live game checker...");
-            console.log("--------------------------------------------------");
-            // TODO - try to restart live game checker
-            return;
-        }
-
         const game = await API.Games.GetBoxScore(this.gameId);
         const { gameState, gameDate, awayTeam, homeTeam, periodDescriptor } = game;
 
@@ -92,15 +81,18 @@ export class GameFeedManager {
         console.dir(feed);
         const { plays } = feed;
 
-        // todo - buckets
         const goals = [];
         const penalties = [];
         const clockEvents = [];
 
         // parse plays once into buckets
         for (const play of plays) {
-            // TODO - move eventId-already-processed logic to a here
-            const { typeCode } = play;
+            // skip if we saw this event already
+            const { eventId, typeCode } = play;
+            if (this.eventIds.has(eventId)) {
+                continue;
+            }
+            this.eventIds.add(eventId);
             if (typeCode == EventTypeCode.goal) {
                 goals.push(play);
                 // TODO - add to API (typecode 509 = penalty)
@@ -130,7 +122,15 @@ export class GameFeedManager {
 
     private getFeed = async (force: boolean = false): Promise<PlayByPlayResponse> => {
         if (force || !this.feed) {
-            this.feed = await API.Games.GetPlays(this.gameId);
+            const feed = await API.Games.GetPlays(this.gameId);
+            // first time we're setting feed, mark all plays as "seen"
+            if (!this.feed) {
+                for(const play of feed.plays) {
+                    // TODO - may want to SKIP the first play (game / period start) in order to announce it
+                    this.eventIds.add(play.eventId);
+                }
+            }
+            this.feed = feed;
         }
         return this.feed;
     };
@@ -260,12 +260,8 @@ export class GameFeedManager {
     };
 
     private processGoal = async (goal: Play) => {
-        const { eventId } = goal;
-        if (!this.goalEventIds.has(eventId)) {
-            this.goalEventIds.add(eventId);
-            const embed = await this.createGoalEmbed(goal);
-            await this.thread?.send({ embeds: [embed] });
-        }
+        const embed = await this.createGoalEmbed(goal);
+        await this.thread?.send({ embeds: [embed] });
     };
 
     private processGoals = async (goals: Play[]) => {
@@ -277,12 +273,8 @@ export class GameFeedManager {
     };
 
     private processPenalty = async (penalty: Play) => {
-        const { eventId, details } = penalty;
-        if (!this.penaltyEventIds.has(eventId)) {
-            this.penaltyEventIds.add(eventId);
-            const penaltyEmbed = await this.createPenaltyEmbed(penalty);
-            await this?.thread?.send({ embeds: [penaltyEmbed] });
-        }
+        const penaltyEmbed = await this.createPenaltyEmbed(penalty);
+        await this?.thread?.send({ embeds: [penaltyEmbed] });
     };
 
     private processClockEvents = async (clockEvents: Play[]) => {
@@ -291,60 +283,45 @@ export class GameFeedManager {
         const gameEnds = clockEvents.filter((play) => play.typeCode == EventTypeCode.gameEnd);
 
         const { periodDescriptor } = await this.getFeed();
-
+        // TODO - do we even care whats in these arrays?
         // did a new period start
         for (const periodStart of periodStarts) {
-            const { eventId } = periodStart;
-            if (!this.periodEventIds.has(eventId)) {
-                this.periodEventIds.add(eventId);
-                if (periodDescriptor) {
-                    const scoreEmbed = await this.createScoreEmbed();
-                    const periodStartString = `${periodToStr(
-                        periodDescriptor.number || 1,
-                        periodDescriptor.periodType || "REG"
-                    )} period has started!`;
-                    await this?.thread?.send({
-                        content: periodStartString,
-                        embeds: [scoreEmbed],
-                    });
-                }
+            if (periodDescriptor) {
+                const scoreEmbed = await this.createScoreEmbed();
+                const periodStartString = `${periodToStr(
+                    periodDescriptor.number || 1,
+                    periodDescriptor.periodType || "REG"
+                )} period has started!`;
+                await this?.thread?.send({
+                    content: periodStartString,
+                    embeds: [scoreEmbed],
+                });
             }
         }
         // did a period end
         for (const periodEnd of periodEnds) {
-            const { eventId } = periodEnd;
-            if (!this.periodEventIds.has(eventId)) {
-                this.periodEventIds.add(eventId);
-                if (periodEnd?.details && periodDescriptor) {
-                    const scoreEmbed = await this.createScoreEmbed();
-                    const periodEndString = `${periodToStr(
-                        periodDescriptor.number || 1,
-                        periodDescriptor.periodType || "REG"
-                    )} period has ended!`;
-                    await this?.thread?.send({
-                        content: periodEndString,
-                        embeds: [scoreEmbed],
-                    });
-                }
+            if (periodDescriptor) {
+                const scoreEmbed = await this.createScoreEmbed();
+                const periodEndString = `${periodToStr(
+                    periodDescriptor.number || 1,
+                    periodDescriptor.periodType || "REG"
+                )} period has ended!`;
+                await this?.thread?.send({
+                    content: periodEndString,
+                    embeds: [scoreEmbed],
+                });
             }
         }
-
         // did the game end
         for (const gameEnd of gameEnds) {
-            const { eventId } = gameEnd;
-            if (!this.periodEventIds.has(eventId)) {
-                this.periodEventIds.add(eventId);
-                // TODO - game end function to add teardown code
-                if (gameEnd?.details) {
-                    const scoreEmbed = await this.createScoreEmbed();
-                    await this?.thread?.send({
-                        content: "Game has ended.",
-                        embeds: [scoreEmbed],
-                    });
-                }
-                await this?.thread?.setArchived(true, "game over").catch(console.error);
-                await this.Stop();
-            }
+            // TODO - game end function to add teardown code
+                const scoreEmbed = await this.createScoreEmbed();
+                await this?.thread?.send({
+                    content: "Game has ended.",
+                    embeds: [scoreEmbed],
+                });
+            await this?.thread?.setArchived(true, "game over").catch(console.error);
+            await this.Stop();
         }
     };
 
