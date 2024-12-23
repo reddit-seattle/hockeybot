@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { StandingsTypes } from '../models/StandingsTypes';
-import { PenaltyType } from './enums';
+import { GoalShotType, PenaltyType } from './enums';
 dotenv.config();
 
 export module Config {
@@ -89,6 +89,20 @@ export module Strings {
       [PenaltyType.INSTIGATOR_MISCONDUCT]: "Instigator - Misconduct",
       [PenaltyType.MISCONDUCT]: "Misconduct",
       [PenaltyType.MATCH_PENALTY]: "Match penalty",
+    }
+    export const GOAL_TYPE_STRINGS = {
+    [GoalShotType.WRIST]: "Wrist shot",
+    [GoalShotType.SLAP]: "Slap shot",
+    [GoalShotType.SNAP]: "Snap shot",
+    [GoalShotType.BACKHAND]: "Backhand",
+    [GoalShotType.TIP_IN]: "Tip-in",
+    [GoalShotType.DEFLECTED]: "Deflection",
+    [GoalShotType.WRAP_AROUND]: "Wrap-around",
+    [GoalShotType.POKE]: "Poke",
+    [GoalShotType.BAT]: "Batted in",
+    [GoalShotType.CRADLE]: "Cradled",
+    [GoalShotType.BETWEEN_LEGS]: "Between-the-legs",
+
     }
 }
 export module Environment {

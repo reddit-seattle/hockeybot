@@ -320,6 +320,20 @@ export enum PenaltyType {
     MATCH_PENALTY = "match-penalty"
 }
 
+export enum GoalShotType {
+    WRIST = 'wrist',
+    TIP_IN = 'tip-in',
+    SNAP = 'snap',
+    SLAP = 'slap',
+    POKE = 'poke',
+    BACKHAND = 'backhand',
+    BAT = 'bat',
+    DEFLECTED = 'deflected',
+    WRAP_AROUND = 'wrap-around',
+    BETWEEN_LEGS = 'between-legs',
+    CRADLE = 'cradle'
+}
+
 export enum CookieName {
     SITE_PREFERENCES = 'nhl_site_preferences',
 }
