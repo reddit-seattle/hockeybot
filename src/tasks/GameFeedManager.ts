@@ -3,11 +3,9 @@ import { ScheduleOptions, ScheduledTask, schedule } from "node-cron";
 import { API } from "../service/API";
 import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/models/responses/PlayByPlayResponse";
 import { isGameOver, periodToStr } from "../utils/helpers";
-import { PeriodDescriptor } from "../service/models/responses/DaySchedule";
 import { EventTypeCode } from "../utils/enums";
 import { Kraken } from "../utils/constants";
 import { Strings } from "../utils/constants";
-import { tr } from "date-fns/locale";
 
 export class GameFeedManager {
     private CRON: string = "*/10 * * * * *";
@@ -122,7 +120,6 @@ export class GameFeedManager {
         // TODO - investigate duplicate goals (updated eventid, assists, etc)
         this.processGoals(goals);
         this.processPenalties(penalties);
-        
     };
 
     private processPenalties = async (penalties: Play[]) => {
@@ -132,11 +129,11 @@ export class GameFeedManager {
     };
 
     private getFeed = async (force: boolean = false): Promise<PlayByPlayResponse> => {
-        if(force || !this.feed) {
+        if (force || !this.feed) {
             this.feed = await API.Games.GetPlays(this.gameId);
         }
         return this.feed;
-    }
+    };
 
     private createScoreEmbed = async () => {
         const { awayTeam: away, homeTeam: home, periodDescriptor, clock } = await this.getFeed();
@@ -168,6 +165,45 @@ export class GameFeedManager {
             .setColor(39129);
     };
 
+    private createPenaltyEmbed = async (penalty: Play) => {
+        const { details } = penalty ?? {};
+        // we like the kraken (reverse penalty edition)
+        const excitement = details?.eventOwnerTeamId != Kraken.TeamId;
+        const { committedByPlayerId, drawnByPlayerId, eventOwnerTeamId, descKey, typeCode } = details ?? {};
+        const penaltyPlayer = this.roster.get(committedByPlayerId ?? "");
+        const drawnByPlayer = this.roster.get(drawnByPlayerId ?? "");
+        const penaltyTeam = this.teamsMap.get(eventOwnerTeamId ?? "");
+        // announce penalty
+        let penaltyString = `${excitement ? "## " : ""}`;
+        penaltyString += Strings.PENALTY_STRINGS[descKey as keyof typeof Strings.PENALTY_STRINGS] ?? "Unknown penalty";
+
+        let playerString = ` on ${penaltyPlayer?.firstName.default} ${penaltyPlayer?.lastName.default}`;
+        if (drawnByPlayer) {
+            // , drawn by Jake Guentzel
+            playerString += `, drawn by ${drawnByPlayer?.firstName.default} ${drawnByPlayer?.lastName.default}`;
+        }
+        // Interference on Jake Guentzel
+        // Interference on Jake Guentzel, drawn by Alex Iafallo
+        penaltyString += `${playerString}`;
+
+        // Seattle Kraken penalty
+        const title = `${penaltyTeam?.placeName.default} ${penaltyTeam?.commonName.default} penalty${
+            excitement ? "!" : ""
+        }`;
+        const { periodDescriptor, clock } = await this.getFeed();
+        const { timeRemaining } = clock;
+        const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
+            periodDescriptor.number || 1,
+            periodDescriptor.periodType || "REG"
+        )} period`;
+
+        return new EmbedBuilder()
+            .setTitle(title)
+            .setDescription(penaltyString)
+            .setFooter({ text: timeRemainingString })
+            .setColor(39129);
+    };
+
     private createGoalEmbed = async (goal: Play) => {
         const { scoringPlayerId, assist1PlayerId, assist2PlayerId } = goal.details ?? {};
         const scorer = this.roster.get(scoringPlayerId ?? "");
@@ -185,7 +221,9 @@ export class GameFeedManager {
             title = `${Strings.REDLIGHT_EMBED} ${title} ${Strings.REDLIGHT_EMBED}`;
         }
         const unassisted = !assist1 && !assist2;
-        let description = `${excitement ? '## ' : ''}${scorer?.firstName.default} ${scorer?.lastName.default} (${goal.details?.scoringPlayerTotal})`;
+        let description = `${excitement ? "## " : ""}${scorer?.firstName.default} ${scorer?.lastName.default} (${
+            goal.details?.scoringPlayerTotal
+        })`;
 
         const assists = [];
         if (assist1) {
@@ -242,44 +280,12 @@ export class GameFeedManager {
         const { eventId, details } = penalty;
         if (!this.penaltyEventIds.has(eventId)) {
             this.penaltyEventIds.add(eventId);
-            if (details) {
-                // we like the kraken (reverse penalty edition)
-                const excitement = details?.eventOwnerTeamId != Kraken.TeamId;
-                const { committedByPlayerId, drawnByPlayerId, eventOwnerTeamId, descKey, typeCode } = details;
-                const penaltyPlayer = this.roster.get(committedByPlayerId ?? "");
-                const drawnByPlayer = this.roster.get(drawnByPlayerId ?? "");
-                const penaltyTeam = this.teamsMap.get(eventOwnerTeamId ?? "");
-                // announce penalty
-                // TODO - fancy embed
-                // SEA penalty, tripping (MIN) by Alex Iafallo on Jake Guentzel
-                let penaltyString = `${excitement ? '## ' : ''}${descKey}${typeCode == 'MIN' ? '' : ' [major]'} by ${penaltyPlayer?.firstName.default} ${penaltyPlayer?.lastName.default}`;
-                if (drawnByPlayer) {
-                    penaltyString += ` on ${drawnByPlayer?.firstName.default} ${drawnByPlayer?.lastName.default}`;
-                }
-
-                const title = `${penaltyTeam?.placeName.default} ${penaltyTeam?.commonName.default} penalty`;
-                const { periodDescriptor, clock } = await this.getFeed();
-                const { timeRemaining } = clock;
-                 const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
-                    periodDescriptor.number || 1,
-                    periodDescriptor.periodType || "REG"
-                )} period`;
-
-                const penaltyEmbed = new EmbedBuilder()
-                    .setTitle(title)
-                    .setDescription(penaltyString)
-                    .setFooter({ text: timeRemainingString })
-                    .setColor(39129);
-                await this?.thread?.send({ embeds: [penaltyEmbed] });
-            }
-            return true;
+            const penaltyEmbed = await this.createPenaltyEmbed(penalty);
+            await this?.thread?.send({ embeds: [penaltyEmbed] });
         }
-        return false;
     };
 
-    private processClockEvents = async (
-        clockEvents: Play[],
-    ) => {
+    private processClockEvents = async (clockEvents: Play[]) => {
         const periodStarts = clockEvents.filter((play) => play.typeCode == EventTypeCode.periodStart);
         const periodEnds = clockEvents.filter((play) => play.typeCode == EventTypeCode.periodEnd);
         const gameEnds = clockEvents.filter((play) => play.typeCode == EventTypeCode.gameEnd);
