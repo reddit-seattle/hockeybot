@@ -123,7 +123,7 @@ export class GameFeedManager {
             const feed = await API.Games.GetPlays(this.gameId);
             // first time we're setting feed, mark all plays as "seen"
             if (!this.feed) {
-                for(const play of feed.plays) {
+                for (const play of feed.plays) {
                     // TODO - may want to SKIP the first play (game / period start) in order to announce it
                     this.eventIds.add(play.eventId);
                 }
@@ -167,18 +167,20 @@ export class GameFeedManager {
         const { details } = penalty ?? {};
         // we like the kraken (reverse penalty edition)
         const excitement = details?.eventOwnerTeamId != Kraken.TeamId;
-        const { committedByPlayerId, servedByPlayerId, drawnByPlayerId, eventOwnerTeamId, descKey, typeCode } = details ?? {};
+        const { committedByPlayerId, servedByPlayerId, drawnByPlayerId, eventOwnerTeamId, descKey, typeCode } =
+            details ?? {};
         const penaltyPlayer = this.roster.get(committedByPlayerId ?? servedByPlayerId ?? "");
         const drawnByPlayer = this.roster.get(drawnByPlayerId ?? "");
         const penaltyTeam = this.teamsMap.get(eventOwnerTeamId ?? "");
-        
+
         // Seattle Kraken penalty(!)
         const title = `${penaltyTeam?.placeName.default} ${penaltyTeam?.commonName.default} penalty${
             excitement ? "!" : ""
         }`;
 
         // Penalty Description
-        const penaltyDescription = Strings.PENALTY_STRINGS[descKey as keyof typeof Strings.PENALTY_STRINGS] ?? "Unknown penalty"; 
+        const penaltyDescription =
+            Strings.PENALTY_STRINGS[descKey as keyof typeof Strings.PENALTY_STRINGS] ?? "Unknown penalty";
 
         // Penalty Player (and drawn by player if exists)
         let playerString = `${penaltyPlayer?.firstName.default} ${penaltyPlayer?.lastName.default}`;
@@ -187,7 +189,7 @@ export class GameFeedManager {
             playerString += `, drawn by ${drawnByPlayer?.firstName.default} ${drawnByPlayer?.lastName.default}`;
         }
         // committed or served
-        let servedByString = committedByPlayerId ? 'Committed' : 'Served';
+        let servedByString = committedByPlayerId ? "Committed" : "Served";
 
         const descHeader = `${excitement ? "## " : ""}`;
         // ## Too many men on the ice - Served by Jake Guentzel(, drawn by whoever)
@@ -215,6 +217,7 @@ export class GameFeedManager {
         const scoringTeam = this.teamsMap.get(goal.details?.eventOwnerTeamId ?? "");
 
         // TODO - strings for SH/PP/EN goals / etc
+        // 'shotType' = wrist, tip-in, snap, slap, poke, backhand, bat, deflected, wrap-around, between-legs, cradle
         // we like the kraken
         const excitement = scoringTeam?.id == Kraken.TeamId;
         const goalString = excitement ? "GOAL!" : "goal";
@@ -225,7 +228,13 @@ export class GameFeedManager {
         const unassisted = !assist1 && !assist2;
         let description = `${excitement ? "## " : ""}${scorer?.firstName.default} ${scorer?.lastName.default} (${
             goal.details?.scoringPlayerTotal
-        })`;
+        }) - ${
+            Strings.GOAL_TYPE_STRINGS[goal.details?.shotType as keyof typeof Strings.GOAL_TYPE_STRINGS] ??
+            goal.details?.shotType ?? "Unknown shot type"
+        }`;
+        if (unassisted) {
+            description += " - Unassisted";
+        }
 
         const assists = [];
         if (assist1) {
@@ -317,11 +326,11 @@ export class GameFeedManager {
         // did the game end
         for (const gameEnd of gameEnds) {
             // TODO - game end function to add teardown code
-                const scoreEmbed = await this.createScoreEmbed();
-                await this?.thread?.send({
-                    content: "Game has ended.",
-                    embeds: [scoreEmbed],
-                });
+            const scoreEmbed = await this.createScoreEmbed();
+            await this?.thread?.send({
+                content: "Game has ended.",
+                embeds: [scoreEmbed],
+            });
             await this?.thread?.setArchived(true, "game over").catch(console.error);
             await this.Stop();
         }
