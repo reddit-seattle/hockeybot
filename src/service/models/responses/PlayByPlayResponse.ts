@@ -59,6 +59,7 @@ export interface Details {
   descKey?: string;
   duration?: number;
   committedByPlayerId?: string;
+  servedByPlayerId?: string;
   drawnByPlayerId?: string;
 }
 export interface Play {

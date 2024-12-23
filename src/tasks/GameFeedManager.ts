@@ -95,10 +95,8 @@ export class GameFeedManager {
             this.eventIds.add(eventId);
             if (typeCode == EventTypeCode.goal) {
                 goals.push(play);
-                // TODO - add to API (typecode 509 = penalty)
             } else if (typeCode == EventTypeCode.penalty) {
                 penalties.push(play);
-                // TODO - add to API (typecode 520 = period start, 521 = period end, 524 = game end)
             } else if (
                 typeCode == EventTypeCode.periodStart ||
                 typeCode == EventTypeCode.periodEnd ||
@@ -169,27 +167,31 @@ export class GameFeedManager {
         const { details } = penalty ?? {};
         // we like the kraken (reverse penalty edition)
         const excitement = details?.eventOwnerTeamId != Kraken.TeamId;
-        const { committedByPlayerId, drawnByPlayerId, eventOwnerTeamId, descKey, typeCode } = details ?? {};
-        const penaltyPlayer = this.roster.get(committedByPlayerId ?? "");
+        const { committedByPlayerId, servedByPlayerId, drawnByPlayerId, eventOwnerTeamId, descKey, typeCode } = details ?? {};
+        const penaltyPlayer = this.roster.get(committedByPlayerId ?? servedByPlayerId ?? "");
         const drawnByPlayer = this.roster.get(drawnByPlayerId ?? "");
         const penaltyTeam = this.teamsMap.get(eventOwnerTeamId ?? "");
-        // announce penalty
-        let penaltyString = `${excitement ? "## " : ""}`;
-        penaltyString += Strings.PENALTY_STRINGS[descKey as keyof typeof Strings.PENALTY_STRINGS] ?? "Unknown penalty";
+        
+        // Seattle Kraken penalty(!)
+        const title = `${penaltyTeam?.placeName.default} ${penaltyTeam?.commonName.default} penalty${
+            excitement ? "!" : ""
+        }`;
 
-        let playerString = ` on ${penaltyPlayer?.firstName.default} ${penaltyPlayer?.lastName.default}`;
+        // Penalty Description
+        const penaltyDescription = Strings.PENALTY_STRINGS[descKey as keyof typeof Strings.PENALTY_STRINGS] ?? "Unknown penalty"; 
+
+        // Penalty Player (and drawn by player if exists)
+        let playerString = `${penaltyPlayer?.firstName.default} ${penaltyPlayer?.lastName.default}`;
         if (drawnByPlayer) {
             // , drawn by Jake Guentzel
             playerString += `, drawn by ${drawnByPlayer?.firstName.default} ${drawnByPlayer?.lastName.default}`;
         }
-        // Interference on Jake Guentzel
-        // Interference on Jake Guentzel, drawn by Alex Iafallo
-        penaltyString += `${playerString}`;
+        // committed or served
+        let servedByString = committedByPlayerId ? 'Committed' : 'Served';
 
-        // Seattle Kraken penalty
-        const title = `${penaltyTeam?.placeName.default} ${penaltyTeam?.commonName.default} penalty${
-            excitement ? "!" : ""
-        }`;
+        const descHeader = `${excitement ? "## " : ""}`;
+        // ## Too many men on the ice - Served by Jake Guentzel(, drawn by whoever)
+        const description = `${descHeader}${penaltyDescription} - ${servedByString} by ${playerString}`;
         const { periodDescriptor, clock } = await this.getFeed();
         const { timeRemaining } = clock;
         const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
@@ -199,7 +201,7 @@ export class GameFeedManager {
 
         return new EmbedBuilder()
             .setTitle(title)
-            .setDescription(penaltyString)
+            .setDescription(description)
             .setFooter({ text: timeRemainingString })
             .setColor(39129);
     };
