@@ -1,10 +1,13 @@
 import { ThreadChannel, EmbedBuilder } from "discord.js";
 import { ScheduleOptions, ScheduledTask, schedule } from "node-cron";
 import { API } from "../service/API";
-import { Details, Play, RosterPlayer, Team } from "../service/models/responses/PlayByPlayResponse";
+import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/models/responses/PlayByPlayResponse";
 import { isGameOver, periodToStr } from "../utils/helpers";
 import { PeriodDescriptor } from "../service/models/responses/DaySchedule";
 import { EventTypeCode } from "../utils/enums";
+import { Kraken } from "../utils/constants";
+import { Strings } from "../utils/constants";
+import { tr } from "date-fns/locale";
 
 export class GameFeedManager {
     private CRON: string = "*/10 * * * * *";
@@ -14,6 +17,7 @@ export class GameFeedManager {
     private task: ScheduledTask;
     private thread: ThreadChannel;
     private gameId: string;
+    private feed?: PlayByPlayResponse;
 
     // TODO - on first load, we probably want to pre-load all "previous" goals and penalties without announcing them
     // In case we start in the middle of a game (crash / reboot / etc) we don't want to announce all the goals / penalties again
@@ -26,6 +30,8 @@ export class GameFeedManager {
     constructor(thread: ThreadChannel, gameId: string, taskOptions?: ScheduleOptions, cron?: string) {
         this.thread = thread;
         this.gameId = gameId;
+        // force update feed
+        this.getFeed(true);
         if (taskOptions) {
             this.taskOptions = taskOptions;
         }
@@ -64,10 +70,6 @@ export class GameFeedManager {
 
         // Check for game end state on box score
         if (isGameOver(gameState)) {
-            await this.thread?.send("The game is over!");
-            await this.thread?.send(
-                `Score: ${awayTeam.commonName.default} ${awayTeam.score}, ${homeTeam.commonName.default} ${homeTeam.score}`
-            );
             await this.thread?.setArchived(true, "game over").catch(console.error);
             await this.task.stop();
             return;
@@ -88,9 +90,9 @@ export class GameFeedManager {
         // #endregion
 
         // game feed
-        const feed = await API.Games.GetPlays(this.gameId);
+        const feed = await this.getFeed(true);
         console.dir(feed);
-        const { awayTeam: away, homeTeam: home, plays } = feed;
+        const { plays } = feed;
 
         // todo - buckets
         const goals = [];
@@ -116,76 +118,123 @@ export class GameFeedManager {
             }
         }
 
-        this.processClockEvents(clockEvents, periodDescriptor, away, home);
-        this.processGoals(goals, away, home);
-        // process penalties
+        this.processClockEvents(clockEvents);
+        // TODO - investigate duplicate goals (updated eventid, assists, etc)
+        this.processGoals(goals);
+        this.processPenalties(penalties);
+        
+    };
+
+    private processPenalties = async (penalties: Play[]) => {
         for (const penalty of penalties) {
             await this.processPenalty(penalty);
         }
     };
 
-    private createScoreString = (details: Details, away: Team, home: Team) => {
-        const { awayScore, homeScore, awaySOG, homeSOG } = details;
-        const homeScoreString = `${home.commonName.default} ${homeScore ?? home?.score ?? 0} (${homeSOG ?? home?.sog ?? 0})`;
-        const awayScoreString = `${away.commonName.default} ${awayScore ?? away?.score ?? 0} (${awaySOG ?? away?.sog ?? 0})`;
-        return `Score: ${awayScoreString}, ${homeScoreString}`;
-
+    private getFeed = async (force: boolean = false): Promise<PlayByPlayResponse> => {
+        if(force || !this.feed) {
+            this.feed = await API.Games.GetPlays(this.gameId);
+        }
+        return this.feed;
     }
+
+    private createScoreEmbed = async () => {
+        const { awayTeam: away, homeTeam: home, periodDescriptor, clock } = await this.getFeed();
+        const { timeRemaining } = clock;
+        const { score: homeScore, sog: homeSOG } = home;
+        const { score: awayScore, sog: awaySOG } = away;
+        const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
+            periodDescriptor.number || 1,
+            periodDescriptor.periodType || "REG"
+        )} period`;
+        // TODO - parse empty details / figure out what to do
+
+        const title = `${away.commonName.default} at ${home.commonName.default}`;
+        return new EmbedBuilder()
+            .setTitle(title)
+            .addFields([
+                {
+                    name: `**${away.commonName.default}**`,
+                    value: `Goals: **${awayScore}**\nShots: ${awaySOG}`,
+                    inline: true,
+                },
+                {
+                    name: `**${home.commonName.default}**`,
+                    value: `Goals: **${homeScore}**\nShots: ${homeSOG}`,
+                    inline: true,
+                },
+            ])
+            .setFooter({ text: timeRemainingString })
+            .setColor(39129);
+    };
+
+    private createGoalEmbed = async (goal: Play) => {
+        const { scoringPlayerId, assist1PlayerId, assist2PlayerId } = goal.details ?? {};
+        const scorer = this.roster.get(scoringPlayerId ?? "");
+        const assist1 = this.roster.get(assist1PlayerId ?? "");
+        const assist2 = this.roster.get(assist2PlayerId ?? "");
+
+        const scoringTeam = this.teamsMap.get(goal.details?.eventOwnerTeamId ?? "");
+
+        // TODO - strings for SH/PP/EN goals / etc
+        // we like the kraken
+        const excitement = scoringTeam?.id == Kraken.TeamId;
+        const goalString = excitement ? "GOAL!" : "goal";
+        let title = `${scoringTeam?.placeName.default} ${scoringTeam?.commonName.default} ${goalString}`;
+        if (excitement) {
+            title = `${Strings.REDLIGHT_EMBED} ${title} ${Strings.REDLIGHT_EMBED}`;
+        }
+        const unassisted = !assist1 && !assist2;
+        let description = `${excitement ? '## ' : ''}${scorer?.firstName.default} ${scorer?.lastName.default} (${goal.details?.scoringPlayerTotal})`;
+
+        const assists = [];
+        if (assist1) {
+            assists.push({
+                name: "1st Assist:",
+                value: `${assist1?.firstName.default} ${assist1?.lastName.default} (${goal.details?.assist1PlayerTotal})`,
+            });
+        }
+        if (assist2) {
+            assists.push({
+                name: "2nd Assist:",
+                value: `${assist2?.firstName.default} ${assist2?.lastName.default} (${goal.details?.assist2PlayerTotal})`,
+            });
+        }
+        const { awayTeam: away, homeTeam: home } = await this.getFeed();
+        return new EmbedBuilder()
+            .setTitle(title)
+            .setThumbnail(scorer?.headshot ?? "")
+            .setDescription(description)
+            .addFields([
+                ...assists,
+                {
+                    name: `**${away.commonName.default}**`,
+                    value: `Goals: **${away.score}**\nShots: ${away.sog}`,
+                    inline: true,
+                },
+                {
+                    name: `**${home.commonName.default}**`,
+                    value: `Goals: **${home.score}**\nShots: ${home.sog}`,
+                    inline: true,
+                },
+            ])
+            .setColor(39129);
+    };
 
     private processGoal = async (goal: Play) => {
         const { eventId } = goal;
         if (!this.goalEventIds.has(eventId)) {
             this.goalEventIds.add(eventId);
-            if (goal.details) {
-                const { scoringPlayerId, assist1PlayerId, assist2PlayerId, goalieInNetId } = goal.details;
-                const scorer = this.roster.get(scoringPlayerId ?? "");
-                const assist1 = this.roster.get(assist1PlayerId ?? "");
-                const assist2 = this.roster.get(assist2PlayerId ?? "");
-                const goalie = this.roster.get(goalieInNetId ?? "");
-
-                const scoringTeam = this.teamsMap.get(goal.details?.eventOwnerTeamId ?? "");
-
-                // TODO - krakenize if we scored
-                // TODO - fancy embed
-                // TODO - strings for SH/PP/EN goals / etc
-                let response = `${scoringTeam?.placeName.default} ${scoringTeam?.commonName.default} goal scored by ${scorer?.firstName.default} ${scorer?.lastName.default} (${goal.details?.scoringPlayerTotal})`;
-                let assistsString = `Unassisted.`;
-                if (assist1) {
-                    assistsString = `Assists: ${assist1?.firstName.default} ${assist1?.lastName.default} (${goal.details?.assist1PlayerTotal})`;
-                    if (assist2) {
-                        assistsString += `, ${assist2?.firstName.default} ${assist2?.lastName.default} (${goal.details?.assist2PlayerTotal})`;
-                    }
-                }
-                response += `\n${assistsString}`;
-                await this?.thread?.send(response);
-            }
-            return true;
+            const embed = await this.createGoalEmbed(goal);
+            await this.thread?.send({ embeds: [embed] });
         }
-        return false;
     };
 
-    private processGoals = async (goals: Play[], away: Team, home: Team) => {
+    private processGoals = async (goals: Play[]) => {
         // process goals
-        let newGoal = false;
-        let awayScore, homeScore, awaySOG, homeSOG;
         // track new goals and announce
         for (const goal of goals) {
-            newGoal = newGoal || (await this.processGoal(goal));
-            const { details } = goal;
-            if (details) {
-                awayScore = details.awayScore;
-                homeScore = details.homeScore;
-                awaySOG = details.awaySOG;
-                homeSOG = details.homeSOG;
-            }
-        }
-        // if we have at least one new goal, announce the score
-        if (newGoal) {
-            const homeScoreString = `${home.commonName.default} ${homeScore ?? home?.score ?? 0} (${homeSOG ?? home?.sog ?? 0})`
-            const awayScoreString = `${away.commonName.default} ${awayScore ?? away?.score ?? 0} (${awaySOG ?? away?.sog ?? 0})`
-            await this?.thread?.send(
-                `Score: ${awayScoreString}, ${homeScoreString}`
-            );
+            await this.processGoal(goal);
         }
     };
 
@@ -194,6 +243,8 @@ export class GameFeedManager {
         if (!this.penaltyEventIds.has(eventId)) {
             this.penaltyEventIds.add(eventId);
             if (details) {
+                // we like the kraken (reverse penalty edition)
+                const excitement = details?.eventOwnerTeamId != Kraken.TeamId;
                 const { committedByPlayerId, drawnByPlayerId, eventOwnerTeamId, descKey, typeCode } = details;
                 const penaltyPlayer = this.roster.get(committedByPlayerId ?? "");
                 const drawnByPlayer = this.roster.get(drawnByPlayerId ?? "");
@@ -201,11 +252,25 @@ export class GameFeedManager {
                 // announce penalty
                 // TODO - fancy embed
                 // SEA penalty, tripping (MIN) by Alex Iafallo on Jake Guentzel
-                let penaltyString = `${penaltyTeam?.abbrev} penalty, ${descKey} (${typeCode}) by ${penaltyPlayer?.firstName.default} ${penaltyPlayer?.lastName.default}`;
+                let penaltyString = `${excitement ? '## ' : ''}${descKey}${typeCode == 'MIN' ? '' : ' [major]'} by ${penaltyPlayer?.firstName.default} ${penaltyPlayer?.lastName.default}`;
                 if (drawnByPlayer) {
                     penaltyString += ` on ${drawnByPlayer?.firstName.default} ${drawnByPlayer?.lastName.default}`;
                 }
-                await this?.thread?.send(penaltyString);
+
+                const title = `${penaltyTeam?.placeName.default} ${penaltyTeam?.commonName.default} penalty`;
+                const { periodDescriptor, clock } = await this.getFeed();
+                const { timeRemaining } = clock;
+                 const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
+                    periodDescriptor.number || 1,
+                    periodDescriptor.periodType || "REG"
+                )} period`;
+
+                const penaltyEmbed = new EmbedBuilder()
+                    .setTitle(title)
+                    .setDescription(penaltyString)
+                    .setFooter({ text: timeRemainingString })
+                    .setColor(39129);
+                await this?.thread?.send({ embeds: [penaltyEmbed] });
             }
             return true;
         }
@@ -214,25 +279,28 @@ export class GameFeedManager {
 
     private processClockEvents = async (
         clockEvents: Play[],
-        periodDescriptor: PeriodDescriptor,
-        away: Team,
-        home: Team
     ) => {
         const periodStarts = clockEvents.filter((play) => play.typeCode == EventTypeCode.periodStart);
         const periodEnds = clockEvents.filter((play) => play.typeCode == EventTypeCode.periodEnd);
         const gameEnds = clockEvents.filter((play) => play.typeCode == EventTypeCode.gameEnd);
+
+        const { periodDescriptor } = await this.getFeed();
 
         // did a new period start
         for (const periodStart of periodStarts) {
             const { eventId } = periodStart;
             if (!this.periodEventIds.has(eventId)) {
                 this.periodEventIds.add(eventId);
-                if (periodStart?.details && periodDescriptor) {
-                    const scoreString = this.createScoreString(periodStart?.details, away, home);
-                    const periodStartString = `${periodToStr(periodDescriptor.number || 1, periodDescriptor.periodType || "REG")} period has started!`
-                    await this?.thread?.send(
-                        `${periodStartString}\n${scoreString}`
-                    );
+                if (periodDescriptor) {
+                    const scoreEmbed = await this.createScoreEmbed();
+                    const periodStartString = `${periodToStr(
+                        periodDescriptor.number || 1,
+                        periodDescriptor.periodType || "REG"
+                    )} period has started!`;
+                    await this?.thread?.send({
+                        content: periodStartString,
+                        embeds: [scoreEmbed],
+                    });
                 }
             }
         }
@@ -242,11 +310,15 @@ export class GameFeedManager {
             if (!this.periodEventIds.has(eventId)) {
                 this.periodEventIds.add(eventId);
                 if (periodEnd?.details && periodDescriptor) {
-                    const scoreString = this.createScoreString(periodEnd?.details, away, home);
-                    const periodEndString = `${periodToStr(periodDescriptor.number || 1, periodDescriptor.periodType || "REG")} period has ended!`
-                    await this?.thread?.send(
-                        `${periodEndString}\n${scoreString}`
-                    );
+                    const scoreEmbed = await this.createScoreEmbed();
+                    const periodEndString = `${periodToStr(
+                        periodDescriptor.number || 1,
+                        periodDescriptor.periodType || "REG"
+                    )} period has ended!`;
+                    await this?.thread?.send({
+                        content: periodEndString,
+                        embeds: [scoreEmbed],
+                    });
                 }
             }
         }
@@ -257,10 +329,12 @@ export class GameFeedManager {
             if (!this.periodEventIds.has(eventId)) {
                 this.periodEventIds.add(eventId);
                 // TODO - game end function to add teardown code
-                await this?.thread?.send("The game has ended!");
                 if (gameEnd?.details) {
-                    const scoreString = this.createScoreString(gameEnd?.details, away, home);
-                    await this?.thread?.send(`Final ${scoreString}`);
+                    const scoreEmbed = await this.createScoreEmbed();
+                    await this?.thread?.send({
+                        content: "Game has ended.",
+                        embeds: [scoreEmbed],
+                    });
                 }
                 await this?.thread?.setArchived(true, "game over").catch(console.error);
                 await this.Stop();
