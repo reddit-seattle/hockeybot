@@ -41,8 +41,12 @@ class GameThreadManager {
      */
     private createKrakenGameDayThread = async () => {
         console.log("--------------------------------------------------");
-        console.log("Checking for kraken game today...");
+        console.log("Checking for kraken game today (stopping existing checkers)...");
         console.log("--------------------------------------------------");
+
+        // stop existing checkers
+        this?.pregameCheckerTask?.stop();
+        this?.gameFeedManager?.Stop();
 
         const games = await API.Schedule.GetDailySchedule();
         const krakenGames = games?.filter(
@@ -51,15 +55,19 @@ class GameThreadManager {
         if (krakenGames.length > 0) {
             const game = krakenGames[0];
             this.gameId = game.id;
-            const { awayTeam, homeTeam, startTimeUTC, id } = game;
+            const { awayTeam, homeTeam, startTimeUTC, id, gameState } = game;
+
+            // if the game is over
+            if (isGameOver(gameState)) {
+                console.log("--------------------------------------------------");
+                console.log("Game over, skipping pregame checker...");
+                console.log("--------------------------------------------------");
+                return;
+            }
 
             console.log("--------------------------------------------------");
             console.log(`KRAKEN GAME TODAY: ${id}, (${awayTeam.abbrev} at ${homeTeam.abbrev}) @ ${startTimeUTC}`);
             console.log("--------------------------------------------------");
-
-            // stop existing checkers
-            this?.pregameCheckerTask?.stop();
-            this?.gameFeedManager?.Stop();
 
             // Create game day embed
             const embed = new EmbedBuilder().setTitle("Kraken Game Day").addFields([
