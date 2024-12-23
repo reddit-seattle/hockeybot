@@ -1,12 +1,12 @@
+import { EmbedBuilder } from "@discordjs/builders";
+import { TextChannel, ThreadChannel } from "discord.js";
 import { schedule, ScheduledTask } from "node-cron";
 import { contains } from "underscore";
-import { Kraken } from "../utils/constants";
 import { API } from "../service/API";
-import { ApiDateString, isGameOver, relativeDateString } from "../utils/helpers";
-import { TextChannel, ThreadChannel } from "discord.js";
-import { EmbedBuilder } from "@discordjs/builders";
 import { Game } from "../service/models/responses/DaySchedule";
+import { Kraken } from "../utils/constants";
 import { GameState } from "../utils/enums";
+import { ApiDateString, isGameOver, relativeDateString } from "../utils/helpers";
 import { GameFeedManager } from "./GameFeedManager";
 
 let every_minute = "*/1 * * * *";
@@ -39,11 +39,11 @@ class GameThreadManager {
      * If there's no game, does nothing
      * @returns {Promise<boolean>} - true if there is a kraken game today and the thread is created, false otherwise
      */
-    private createKrakenGameDayThread: () => Promise<boolean> = async () => {
+    private createKrakenGameDayThread = async () => {
         console.log("--------------------------------------------------");
         console.log("Checking for kraken game today...");
         console.log("--------------------------------------------------");
-        
+
         const games = await API.Schedule.GetDailySchedule();
         const krakenGames = games?.filter(
             (game) => game.homeTeam.id == Kraken.TeamId || game.awayTeam.id == Kraken.TeamId
@@ -57,6 +57,10 @@ class GameThreadManager {
             console.log(`KRAKEN GAME TODAY: ${id}, (${awayTeam.abbrev} at ${homeTeam.abbrev}) @ ${startTimeUTC}`);
             console.log("--------------------------------------------------");
 
+            // stop existing checkers
+            this?.pregameCheckerTask?.stop();
+            this?.gameFeedManager?.Stop();
+
             // Create game day embed
             const embed = new EmbedBuilder().setTitle("Kraken Game Day").addFields([
                 {
@@ -65,11 +69,11 @@ class GameThreadManager {
                 },
             ]);
             const threadTitle = generateThreadTitle(game);
-            
+
             // check for existing game day thread (in case we had an oopsies)
             const { threads } = await this.channel.threads.fetch();
             this.thread = threads.filter((thread) => thread.name == threadTitle).first();
-            
+
             // create thread if it doesn't exist
             if (!this.thread) {
                 // announce to channel
@@ -81,23 +85,31 @@ class GameThreadManager {
                     reason: "Creating Kraken Game Day Thread",
                     startMessage: message,
                 });
-                
+
                 console.log("--------------------------------------------------");
                 console.log(`CREATED THREAD: ${this.thread.id}`);
                 console.log("--------------------------------------------------");
 
                 // announce in thread when the game starts
                 // TODO - friendly datetime string
-                await this.thread.send(`Kraken game scheduled today: ${new Date(startTimeUTC)} (${relativeDateString(startTimeUTC)})`);
+                await this.thread.send(
+                    `Kraken game scheduled today: ${new Date(startTimeUTC)} (${relativeDateString(startTimeUTC)})`
+                );
             }
-            
+
             console.log("--------------------------------------------------");
             console.log(`USING THREAD: ${this.thread.id}`);
             console.log("--------------------------------------------------");
-            
-            return true;
+
+            // Start the pregame checker
+            console.log("--------------------------------------------------");
+            console.log("There's hockey today, starting pregame task...");
+            console.log("--------------------------------------------------");
+            this.pregameCheckerTask = schedule(every_minute, this.checkForGameStart, {
+                scheduled: true,
+                timezone: "America/Los_Angeles",
+            });
         }
-        return false;
     };
 
     /**
@@ -108,24 +120,14 @@ class GameThreadManager {
         console.log("--------------------------------------------------");
         console.log("Game THREAD manager initialize...");
         console.log("--------------------------------------------------");
-        // check if the game is on today and create a thread if it is
-        if (!(await this?.createKrakenGameDayThread())) {
-            // if not, start the daily checker
-            console.log("--------------------------------------------------");
-            console.log("There's no hockey today, starting scheduled task...");
-            console.log("--------------------------------------------------");
+        // check if the game is on today and create / attach to a thread if it is
+        await this?.createKrakenGameDayThread();
 
-            this.dailyScheduleCheckTask = schedule(every_morning, this?.createKrakenGameDayThread, {
-                scheduled: true,
-                timezone: "America/Los_Angeles",
-            });
-        }
-        else {
-            this.pregameCheckerTask = schedule(every_minute, this.checkForGameStart, {
-                scheduled: true,
-                timezone: "America/Los_Angeles",
-            });
-        }
+        // then, start the daily checker (for the next games)
+        this.dailyScheduleCheckTask = schedule(every_morning, this.createKrakenGameDayThread, {
+            scheduled: true,
+            timezone: "America/Los_Angeles",
+        });
     }
 
     /**
@@ -141,17 +143,16 @@ class GameThreadManager {
         this.channel = channel;
     }
 
-    // #region pregame
     /**
      * Checks for pregame status and starts the live game checker if the game has started (game feed manager)
      */
     private checkForGameStart = async () => {
-        // log this
         if (!this.gameId || !this.thread) {
             console.log("--------------------------------------------------");
             console.log("No game id or thread set, , skipping pregame checker...");
             console.log("--------------------------------------------------");
-            // TODO - try to restart pregame checker
+            this.pregameCheckerTask?.stop();
+            this?.gameFeedManager?.Stop();
             return;
         }
         console.log("--------------------------------------------------");
@@ -192,9 +193,6 @@ class GameThreadManager {
     private announceGameStartingSoon = async (startTimeUTC: string) => {
         await this?.thread?.send(`Game starting soon: ${relativeDateString(startTimeUTC)}`);
     };
-
-    // #endregion
-
 }
 
 const generateThreadTitle = (game: Game) => {
@@ -204,6 +202,5 @@ const generateThreadTitle = (game: Game) => {
     const dateStr = ApiDateString(date);
     return `${teamSegment} - ${dateStr}`;
 };
-
 
 export default GameThreadManager;
