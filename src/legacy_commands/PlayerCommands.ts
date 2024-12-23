@@ -22,7 +22,6 @@ const oldCommand = async (message: Message, args?: string[]) => {
     }
     const playerNum = parseInt(playerArg); // may be NaN
     //let's get weird and try and pull a player out with whatever the second arg is
-    //TODO: Fuzzy Match names
 
     let player: Roster.Player | undefined = undefined;
     if(isNaN(playerNum)){

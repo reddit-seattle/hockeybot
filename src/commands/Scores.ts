@@ -16,7 +16,6 @@ import { GameState, PeriodType } from "../utils/enums";
 export const GetScores: Command = {
     name: "scores",
     description: "Get game scores",
-    // TODO - add date
     slashCommandDescription: new SlashCommandBuilder().addStringOption(optionalDateOption),
     executeSlashCommand: async (interaction) => {
         await interaction.deferReply();
