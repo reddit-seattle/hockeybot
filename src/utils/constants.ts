@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { StandingsTypes } from '../models/StandingsTypes';
+import { PenaltyType } from './enums';
 dotenv.config();
 
 export module Config {
@@ -27,9 +28,71 @@ export module Strings {
     export const KRAKEN_GAMEDAY_THREAD_TITLE = 'Kraken Game Day Thread';
     export const REDLIGHT_EMBED = '<a:redlight:892194335951581247>';
     export const ZERO_WIDTH_SPACE = '​';
+    export const PENALTY_STRINGS = {
+      [PenaltyType.PS_COVERING_PUCK_IN_CREASE]: "Penalty Shot - Covering puck in crease",
+      [PenaltyType.PS_GOALKEEPER_DISPLACED_NET]: "Penalty Shot - Goalkeeper displaced net",
+      [PenaltyType.PS_HOLDING_ON_BREAKAWAY]: "Penalty Shot - Holding on breakaway",
+      [PenaltyType.PS_HOOKING_ON_BREAKAWAY]: "Penalty Shot - Hooking on breakaway",
+      [PenaltyType.PS_NET_DISPLACED]: "Penalty Shot - Net displaced",
+      [PenaltyType.PS_SLASH_ON_BREAKAWAY]: "Penalty Shot - Slashing on breakaway",
+      [PenaltyType.PS_THROWING_OBJECT_AT_PUCK]: "Penalty Shot - Throwing object at puck",
+      [PenaltyType.PS_TRIPPING_ON_BREAKAWAY]: "Penalty Shot - Tripping on breakaway",
+      [PenaltyType.ABUSE_OF_OFFICIALS]: "Abuse of officials",
+      [PenaltyType.BENCH]: "Bench penalty",
+      [PenaltyType.BOARDING]: "Boarding",
+      [PenaltyType.BROKEN_STICK]: "Playing with broken stick",
+      [PenaltyType.CHARGING]: "Charging",
+      [PenaltyType.CLIPPING]: "Clipping",
+      [PenaltyType.CLOSING_HAND_ON_PUCK]: "Closing hand on puck",
+      [PenaltyType.CROSS_CHECKING]: "Cross-checking",
+      [PenaltyType.DELAYING_GAME]: "Delay of game",
+      [PenaltyType.DELAYING_GAME_BENCH]: "Delay of game: bench",
+      [PenaltyType.DELAYING_GAME_BENCH_FACE_OFF_VIOLATION]: "Delay of game: bench face-off violation",
+      [PenaltyType.DELAYING_GAME_EQUIPMENT]: "Delay of game: equipment",
+      [PenaltyType.DELAYING_GAME_FACE_OFF_VIOLATION]: "Delay of game: face-off violation",
+      [PenaltyType.DELAYING_GAME_PUCK_OVER_GLASS]: "Delay of game: puck over glass",
+      [PenaltyType.DELAYING_GAME_SMOTHERING_PUCK]: "Delay of game: mothering puck",
+      [PenaltyType.DELAYING_GAME_UNSUCCESSFUL_CHALLENGE]: "Unsuccessful challenge",
+      [PenaltyType.ELBOWING]: "Elbowing",
+      [PenaltyType.EMBELLISHMENT]: "Embellishment",
+      [PenaltyType.GOALIE_LEAVE_CREASE]: "Goalie left crease",
+      [PenaltyType.GOALIE_PARTICIPATION_BEYOND_CENTER]: "Goalie beyond center",
+      [PenaltyType.HIGH_STICKING]: "High-sticking",
+      [PenaltyType.HOLDING]: "Holding",
+      [PenaltyType.HOLDING_THE_STICK]: "Holding the stick",
+      [PenaltyType.HOOKING]: "Hooking",
+      [PenaltyType.ILLEGAL_CHECK_TO_HEAD]: "Illegal check to head",
+      [PenaltyType.ILLEGAL_STICK]: "Illegal stick",
+      [PenaltyType.INSTIGATOR]: "Instigator",
+      [PenaltyType.INTERFERENCE]: "Interference",
+      [PenaltyType.INTERFERENCE_BENCH]: "Bench interference",
+      [PenaltyType.INTERFERENCE_GOALKEEPER]: "Goalkeeper interference",
+      [PenaltyType.KNEEING]: "Kneeing",
+      [PenaltyType.PLAYING_WITHOUT_A_HELMET]: "Playing without helmet",
+      [PenaltyType.PUCK_THROWN_FORWARD_GOALKEEPER]: "Goalie threw puck forward",
+      [PenaltyType.ROUGHING]: "Roughing",
+      [PenaltyType.ROUGHING_REMOVING_OPPONENTS_HELMET]: "Roughing: removing opponent's helmet",
+      [PenaltyType.SLASHING]: "Slashing",
+      [PenaltyType.THROWING_EQUIPMENT]: "Throwing equipment",
+      [PenaltyType.TOO_MANY_MEN_ON_THE_ICE]: "Too many men on ice",
+      [PenaltyType.TRIPPING]: "Tripping",
+      [PenaltyType.UNSPORTSMANLIKE_CONDUCT]: "Unsportsmanlike conduct",
+      [PenaltyType.UNSPORTSMANLIKE_CONDUCT_BENCH]: "Bench unsportsmanlike conduct",
+      [PenaltyType.HIGH_STICKING_DOUBLE_MINOR]: "High-sticking double minor",
+      [PenaltyType.SPEARING_DOUBLE_MINOR]: "Spearing double minor",
+      [PenaltyType.CHECKING_FROM_BEHIND]: "Checking from behind",
+      [PenaltyType.FIGHTING]: "Fighting",
+      [PenaltyType.SPEARING]: "Spearing",
+      [PenaltyType.ABUSIVE_LANGUAGE]: "Abusive language",
+      [PenaltyType.AGGRESSOR]: "Aggressor",
+      [PenaltyType.GAME_MISCONDUCT]: "Game misconduct",
+      [PenaltyType.INSTIGATOR_MISCONDUCT]: "Instigator - Misconduct",
+      [PenaltyType.MISCONDUCT]: "Misconduct",
+      [PenaltyType.MATCH_PENALTY]: "Match penalty",
+    }
 }
 export module Environment {
-    export const botToken = process.env['bot_token'] || undefined;
+    export const botToken = process.env['dev_token'] || undefined;
     export const DEBUG = process.env['hockeybotDEBUG'] ? true : false;
 }
 
