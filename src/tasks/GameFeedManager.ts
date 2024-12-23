@@ -2,7 +2,7 @@ import { ThreadChannel, EmbedBuilder } from "discord.js";
 import { ScheduleOptions, ScheduledTask, schedule } from "node-cron";
 import { API } from "../service/API";
 import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/models/responses/PlayByPlayResponse";
-import { isGameOver, periodToStr } from "../utils/helpers";
+import { getSituationCodeString, isGameOver, periodToStr } from "../utils/helpers";
 import { EventTypeCode } from "../utils/enums";
 import { Kraken } from "../utils/constants";
 import { Strings } from "../utils/constants";
@@ -215,12 +215,23 @@ export class GameFeedManager {
         const assist2 = this.roster.get(assist2PlayerId ?? "");
 
         const scoringTeam = this.teamsMap.get(goal.details?.eventOwnerTeamId ?? "");
-
-        // TODO - strings for SH/PP/EN goals / etc
-        // 'shotType' = wrist, tip-in, snap, slap, poke, backhand, bat, deflected, wrap-around, between-legs, cradle
+        const { id: scoringTeamId } = scoringTeam ?? {};
         // we like the kraken
-        const excitement = scoringTeam?.id == Kraken.TeamId;
-        const goalString = excitement ? "GOAL!" : "goal";
+        const excitement = scoringTeamId == Kraken.TeamId;
+        const goalString = `${excitement ? "GOAL!" : "goal"}`;
+
+        // Strings for SH/PP/EN goals / etc
+        // this is absolutely the worst way to do this
+        // do not look at this code
+        const { situationCode, homeTeamDefendingSide } = goal;
+        const homeLeft = homeTeamDefendingSide == "left";
+        const { homeTeam } = await this.getFeed();
+        const { id: homeTeamId } = homeTeam;
+
+        const homeScored = homeTeamId == scoringTeamId;
+        const leftScored = homeScored ? homeLeft : !homeLeft;
+        const goalphrase = getSituationCodeString(situationCode, leftScored);
+
         let title = `${scoringTeam?.placeName.default} ${scoringTeam?.commonName.default} ${goalString}`;
         if (excitement) {
             title = `${Strings.REDLIGHT_EMBED} ${title} ${Strings.REDLIGHT_EMBED}`;
@@ -230,43 +241,47 @@ export class GameFeedManager {
             goal.details?.scoringPlayerTotal
         }) - ${
             Strings.GOAL_TYPE_STRINGS[goal.details?.shotType as keyof typeof Strings.GOAL_TYPE_STRINGS] ??
-            goal.details?.shotType ?? "Unknown shot type"
+            goal.details?.shotType ??
+            "Unknown shot type"
         }`;
         if (unassisted) {
             description += " - Unassisted";
         }
+        if (goalphrase) {
+            description += `\n\`${goalphrase}\``;
+        }
 
-        const assists = [];
+        const fields = [];
         if (assist1) {
-            assists.push({
+            fields.push({
                 name: "1st Assist:",
                 value: `${assist1?.firstName.default} ${assist1?.lastName.default} (${goal.details?.assist1PlayerTotal})`,
             });
         }
         if (assist2) {
-            assists.push({
+            fields.push({
                 name: "2nd Assist:",
                 value: `${assist2?.firstName.default} ${assist2?.lastName.default} (${goal.details?.assist2PlayerTotal})`,
             });
         }
         const { awayTeam: away, homeTeam: home } = await this.getFeed();
+        fields.push(
+            {
+                name: `**${away.commonName.default}**`,
+                value: `Goals: **${away.score}**\nShots: ${away.sog}`,
+                inline: true,
+            },
+            {
+                name: `**${home.commonName.default}**`,
+                value: `Goals: **${home.score}**\nShots: ${home.sog}`,
+                inline: true,
+            }
+        );
         return new EmbedBuilder()
             .setTitle(title)
             .setThumbnail(scorer?.headshot ?? "")
             .setDescription(description)
-            .addFields([
-                ...assists,
-                {
-                    name: `**${away.commonName.default}**`,
-                    value: `Goals: **${away.score}**\nShots: ${away.sog}`,
-                    inline: true,
-                },
-                {
-                    name: `**${home.commonName.default}**`,
-                    value: `Goals: **${home.score}**\nShots: ${home.sog}`,
-                    inline: true,
-                },
-            ])
+            .addFields(fields)
             .setColor(39129);
     };
 
