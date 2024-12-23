@@ -178,22 +178,31 @@ export class GameFeedManager {
             excitement ? "!" : ""
         }`;
 
+        const fields = [];
         // Penalty Description
         const penaltyDescription =
             Strings.PENALTY_STRINGS[descKey as keyof typeof Strings.PENALTY_STRINGS] ?? "Unknown penalty";
 
-        // Penalty Player (and drawn by player if exists)
-        let playerString = `${penaltyPlayer?.firstName.default} ${penaltyPlayer?.lastName.default}`;
-        if (drawnByPlayer) {
-            // , drawn by Jake Guentzel
-            playerString += `, drawn by ${drawnByPlayer?.firstName.default} ${drawnByPlayer?.lastName.default}`;
-        }
-        // committed or served
-        let servedByString = committedByPlayerId ? "Committed" : "Served";
+        fields.push({
+            name: "Infraction:",
+            value: penaltyDescription,
+        });
 
-        const descHeader = `${excitement ? "## " : ""}`;
-        // ## Too many men on the ice - Served by Jake Guentzel(, drawn by whoever)
-        const description = `${descHeader}${penaltyDescription} - ${servedByString} by ${playerString}`;
+        // committed or served
+        const servedByString = `${committedByPlayerId ? "Committed" : "Served"} by`;
+        if (penaltyPlayer) {
+            fields.push({
+                name: servedByString,
+                value: `${penaltyPlayer?.firstName.default} ${penaltyPlayer?.lastName.default}`,
+            });
+        }
+        if (drawnByPlayer) {
+            fields.push({
+                name: "Drawn by:",
+                value: `${drawnByPlayer?.firstName.default} ${drawnByPlayer?.lastName.default}`,
+            });
+        }
+
         const { periodDescriptor, clock } = await this.getFeed();
         const { timeRemaining } = clock;
         const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
@@ -203,7 +212,8 @@ export class GameFeedManager {
 
         return new EmbedBuilder()
             .setTitle(title)
-            .setDescription(description)
+            .setThumbnail(penaltyPlayer?.headshot ?? "")
+            .addFields(fields)
             .setFooter({ text: timeRemainingString })
             .setColor(39129);
     };
@@ -237,19 +247,18 @@ export class GameFeedManager {
             title = `${Strings.REDLIGHT_EMBED} ${title} ${Strings.REDLIGHT_EMBED}`;
         }
         const unassisted = !assist1 && !assist2;
-        let description = `${excitement ? "## " : ""}${scorer?.firstName.default} ${scorer?.lastName.default} (${
+        const description = `${excitement ? "## " : ""}${scorer?.firstName.default} ${scorer?.lastName.default} (${
             goal.details?.scoringPlayerTotal
-        }) - ${
+        })`;
+
+        const shotType = `${
             Strings.GOAL_TYPE_STRINGS[goal.details?.shotType as keyof typeof Strings.GOAL_TYPE_STRINGS] ??
             goal.details?.shotType ??
             "Unknown shot type"
         }`;
-        if (unassisted) {
-            description += " - Unassisted";
-        }
-        if (goalphrase) {
-            description += `\n\`${goalphrase}\``;
-        }
+        const secondaryDescription = `${shotType}${unassisted ? ` - Unassisted` : ""}${
+            goalphrase ? ` - ${goalphrase}` : ""
+        }`;
 
         const fields = [];
         if (assist1) {
@@ -280,7 +289,7 @@ export class GameFeedManager {
         return new EmbedBuilder()
             .setTitle(title)
             .setThumbnail(scorer?.headshot ?? "")
-            .setDescription(description)
+            .setDescription(`${description}\n${secondaryDescription}`)
             .addFields(fields)
             .setColor(39129);
     };

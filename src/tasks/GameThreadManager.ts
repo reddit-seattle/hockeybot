@@ -4,10 +4,11 @@ import { schedule, ScheduledTask } from "node-cron";
 import { contains } from "underscore";
 import { API } from "../service/API";
 import { Game } from "../service/models/responses/DaySchedule";
-import { Kraken } from "../utils/constants";
+import { Config, Kraken } from "../utils/constants";
 import { GameState } from "../utils/enums";
 import { ApiDateString, isGameOver, relativeDateString } from "../utils/helpers";
 import { GameFeedManager } from "./GameFeedManager";
+import { format } from "date-fns-tz";
 
 let every_minute = "*/1 * * * *";
 let every_morning = "0 0 9 * * *";
@@ -99,10 +100,17 @@ class GameThreadManager {
                 console.log("--------------------------------------------------");
 
                 // announce in thread when the game starts
-                // TODO - friendly datetime string
-                await this.thread.send(
-                    `Kraken game scheduled today: ${new Date(startTimeUTC)} (${relativeDateString(startTimeUTC)})`
-                );
+                const relativeDate = relativeDateString(startTimeUTC);
+                const title = `Kraken game today!`;
+                const startDate = new Date(startTimeUTC);
+                const gameStartEmbed = new EmbedBuilder()
+                    .setTitle(title)
+                    .setDescription(
+                        `Game starts ${format(new Date(startTimeUTC), Config.BODY_DATE_FORMAT)} (${relativeDate})`
+                    )
+                    .setTimestamp(startDate);
+                // TODO - add more game details (game story?)
+                await this.thread.send({ embeds: [gameStartEmbed] });
             }
 
             console.log("--------------------------------------------------");
