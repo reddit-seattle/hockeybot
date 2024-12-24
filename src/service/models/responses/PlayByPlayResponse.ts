@@ -6,7 +6,7 @@ interface TvBroadcast {
   countryCode: string;
   network: string;
 }
-interface PeriodDescriptor {
+export interface PeriodDescriptor {
   number: number;
   periodType: string;
 }
