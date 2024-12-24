@@ -105,7 +105,7 @@ export module Strings {
     };
 }
 export module Environment {
-    export const botToken = process.env["dev_token"] || undefined;
+    export const botToken = process.env["bot_token"] || undefined;
     export const DEBUG = process.env["hockeybotDEBUG"] ? true : false;
 }
 

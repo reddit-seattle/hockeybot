@@ -2,7 +2,6 @@ import { Client, Guild, Channel, TextChannel, Interaction } from "discord.js";
 import { REST } from "@discordjs/rest";
 import { RESTPostAPIApplicationCommandsJSONBody, Routes } from "discord-api-types/v10";
 import { createServer } from "http";
-// import { KillGameCheckerCommand, SetupKrakenGameDayChecker } from './commands/KrakenCommands';
 import { CommandDictionary } from "./models/Command";
 import { ChannelIds, Environment, GuildIds } from "./utils/constants";
 import { exit } from "process";
@@ -58,13 +57,11 @@ const registerAllSlashCommands = async (client: Client) => {
 };
 
 const startGameDayThreadChecker = async (client: Client) => {
-
-    const seattleGuild = await client.guilds.fetch(GuildIds.TEST);
-    const krakenChannel = await seattleGuild.channels.fetch(ChannelIds.KRAKEN_TEST) as TextChannel;
+    const seattleGuild = await client.guilds.fetch(GuildIds.SEATTLE);
+    const krakenChannel = (await seattleGuild.channels.fetch(ChannelIds.KRAKEN)) as TextChannel;
     const threadmanager = new GameThreadManager(krakenChannel);
     await threadmanager.initialize();
-
-}
+};
 
 client.on("ready", async () => {
     console.log(`Logged in as ${client?.user?.tag}!`);
