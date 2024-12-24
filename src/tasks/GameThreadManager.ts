@@ -15,21 +15,27 @@ let every_morning = "0 0 9 * * *";
 
 const startedStates = [GameState.pregame, GameState.live, GameState.critical];
 
+/** BIG list of TODOs
+ * 
+ * * TODO - add game story to game start embed
+ * * TODO - shootout tracker?
+ * * TODO - playoffs? (among other places)
+ */
+
 /**
  * Manages the creation of a game day thread and the live game feed checker
  * TODO write better documentation
  * Owns a task that runs every minute to check for a game start
- * Owns a task that runs every day at 9am to check for a kraken game
+ * Starts a task that runs every day at 9am to check for a kraken game
  * Owns a game feed manager that runs every 10 seconds to check for game updates
- * Owns a channel to create a thread in
- * Owns a thread to post messages in
- * Owns a game id to check for game updates
+ * channel to create a thread in
+ * thread to post messages in
+ * game id to check for game updates
  */
 class GameThreadManager {
     private channel: TextChannel;
     private gameId?: string;
     private thread?: ThreadChannel;
-    private dailyScheduleCheckTask?: ScheduledTask;
     private pregameCheckerTask?: ScheduledTask;
     private gameFeedManager?: GameFeedManager;
 
@@ -140,7 +146,7 @@ class GameThreadManager {
         await this?.createKrakenGameDayThread();
 
         // then, start the daily checker (for the next games)
-        this.dailyScheduleCheckTask = schedule(every_morning, this.createKrakenGameDayThread, {
+        schedule(every_morning, this.createKrakenGameDayThread, {
             scheduled: true,
             timezone: "America/Los_Angeles",
         });

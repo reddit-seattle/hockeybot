@@ -6,6 +6,8 @@ import { getSituationCodeString, isGameOver, periodToStr } from "../utils/helper
 import { EventTypeCode } from "../utils/enums";
 import { Kraken } from "../utils/constants";
 import { Strings } from "../utils/constants";
+import { PeriodDescriptor } from "../service/models/responses/PlayByPlayResponse";
+import _ from "underscore";
 
 export class GameFeedManager {
     private CRON: string = "*/10 * * * * *";
@@ -17,7 +19,6 @@ export class GameFeedManager {
     private gameId: string;
     private feed?: PlayByPlayResponse;
 
-    // TODO - on first load, we probably want to pre-load all "previous" goals and penalties without announcing them
     // In case we start in the middle of a game (crash / reboot / etc) we don't want to announce all the goals / penalties again
     private eventIds: Set<string> = new Set<string>();
     private teamsMap: Map<string, Team> = new Map<string, Team>();
@@ -53,7 +54,7 @@ export class GameFeedManager {
 
     private checkGameStatus = async () => {
         const game = await API.Games.GetBoxScore(this.gameId);
-        const { gameState, gameDate, awayTeam, homeTeam, periodDescriptor } = game;
+        const { gameState, gameDate, awayTeam, homeTeam } = game;
 
         // Check for game end state on box score
         if (isGameOver(gameState)) {
@@ -142,7 +143,6 @@ export class GameFeedManager {
             periodDescriptor.number || 1,
             periodDescriptor.periodType || "REG"
         )} period`;
-        // TODO - parse empty details / figure out what to do
 
         const title = `${away.commonName.default} at ${home.commonName.default}`;
         return new EmbedBuilder()
@@ -230,7 +230,6 @@ export class GameFeedManager {
         const excitement = scoringTeamId == Kraken.TeamId;
         const goalString = `${excitement ? "GOAL!" : "goal"}`;
 
-        // Strings for SH/PP/EN goals / etc
         // this is absolutely the worst way to do this
         // do not look at this code
         const { situationCode, homeTeamDefendingSide } = goal;
@@ -300,8 +299,6 @@ export class GameFeedManager {
     };
 
     private processGoals = async (goals: Play[]) => {
-        // process goals
-        // track new goals and announce
         for (const goal of goals) {
             await this.processGoal(goal);
         }
@@ -312,52 +309,43 @@ export class GameFeedManager {
         await this?.thread?.send({ embeds: [penaltyEmbed] });
     };
 
-    private processClockEvents = async (clockEvents: Play[]) => {
-        const periodStarts = clockEvents.filter((play) => play.typeCode == EventTypeCode.periodStart);
-        const periodEnds = clockEvents.filter((play) => play.typeCode == EventTypeCode.periodEnd);
-        const gameEnds = clockEvents.filter((play) => play.typeCode == EventTypeCode.gameEnd);
+    private sendPeriodUpdate = async (periodDescriptor: PeriodDescriptor, descriptionStr: string) => {
+        const scoreEmbed = await this.createScoreEmbed();
+        const periodStartString = `${periodToStr(
+            periodDescriptor.number || 1,
+            periodDescriptor.periodType || "REG"
+        )} period has ${descriptionStr}`;
+        await this?.thread?.send({
+            content: periodStartString,
+            embeds: [scoreEmbed],
+        });
+    }
 
+    private processClockEvents = async (clockEvents: Play[]) => {
         const { periodDescriptor } = await this.getFeed();
-        // TODO - do we even care whats in these arrays?
-        // did a new period start
-        for (const periodStart of periodStarts) {
-            if (periodDescriptor) {
-                const scoreEmbed = await this.createScoreEmbed();
-                const periodStartString = `${periodToStr(
-                    periodDescriptor.number || 1,
-                    periodDescriptor.periodType || "REG"
-                )} period has started!`;
-                await this?.thread?.send({
-                    content: periodStartString,
-                    embeds: [scoreEmbed],
-                });
-            }
+        if (!periodDescriptor) {
+            return;
         }
+        const periodStarts = _.any(clockEvents, (play) => play.typeCode == EventTypeCode.periodStart);
+        const periodEnds = _.any(clockEvents, (play) => play.typeCode == EventTypeCode.periodEnd);
+        const gameEnds = _.any(clockEvents, (play) => play.typeCode == EventTypeCode.gameEnd);
+
+        // did a period start
+        periodStarts && await this.sendPeriodUpdate(periodDescriptor, "started");
         // did a period end
-        for (const periodEnd of periodEnds) {
-            if (periodDescriptor) {
-                const scoreEmbed = await this.createScoreEmbed();
-                const periodEndString = `${periodToStr(
-                    periodDescriptor.number || 1,
-                    periodDescriptor.periodType || "REG"
-                )} period has ended!`;
-                await this?.thread?.send({
-                    content: periodEndString,
-                    embeds: [scoreEmbed],
-                });
-            }
-        }
+        periodEnds && await this.sendPeriodUpdate(periodDescriptor, "ended");
         // did the game end
-        for (const gameEnd of gameEnds) {
-            // TODO - game end function to add teardown code
-            const scoreEmbed = await this.createScoreEmbed();
-            await this?.thread?.send({
-                content: "Game has ended.",
-                embeds: [scoreEmbed],
-            });
-            await this?.thread?.setArchived(true, "game over").catch(console.error);
-            await this.Stop();
-        }
+        gameEnds && await this.EndGame();
+    };
+
+    private EndGame = async () => {
+        const scoreEmbed = await this.createScoreEmbed();
+        await this?.thread?.send({
+            content: "Game has ended.",
+            embeds: [scoreEmbed],
+        });
+        await this?.thread?.setArchived(true, "game over").catch(console.error);
+        await this.Stop();
     };
 
     public Stop = () => {
