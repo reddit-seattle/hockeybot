@@ -1,18 +1,18 @@
 import { LocalizedString } from "./Common";
 
 interface TvBroadcast {
-  id: number;
+  id: string;
   market: string;
   countryCode: string;
   network: string;
 }
-interface PeriodDescriptor {
+export interface PeriodDescriptor {
   number: number;
   periodType: string;
 }
-interface AwayTeam {
-  id: number;
-  name: LocalizedString;
+export interface Team {
+  id: string;
+  commonName: LocalizedString;
   abbrev: string;
   score: number;
   sog: number;
@@ -29,28 +29,28 @@ interface Clock {
 interface GameOutcome {
   lastPeriodType: string;
 }
-interface Details {
-  eventOwnerTeamId?: number;
-  losingPlayerId?: number;
-  winningPlayerId?: number;
+export interface Details {
+  eventOwnerTeamId?: string;
+  losingPlayerId?: string;
+  winningPlayerId?: string;
   xCoord?: number;
   yCoord?: number;
   zoneCode?: string;
   reason?: string;
-  hittingPlayerId?: number;
-  hitteePlayerId?: number;
-  playerId?: number;
+  hittingPlayerId?: string;
+  hitteePlayerId?: string;
+  playerId?: string;
   shotType?: string;
-  shootingPlayerId?: number;
-  goalieInNetId?: number;
+  shootingPlayerId?: string;
+  goalieInNetId?: string;
   awaySOG?: number;
   homeSOG?: number;
-  blockingPlayerId?: number;
-  scoringPlayerId?: number;
+  blockingPlayerId?: string;
+  scoringPlayerId?: string;
   scoringPlayerTotal?: number;
-  assist1PlayerId?: number;
+  assist1PlayerId?: string;
   assist1PlayerTotal?: number;
-  assist2PlayerId?: number;
+  assist2PlayerId?: string;
   assist2PlayerTotal?: number;
   awayScore?: number;
   homeScore?: number;
@@ -58,11 +58,12 @@ interface Details {
   typeCode?: string;
   descKey?: string;
   duration?: number;
-  committedByPlayerId?: number;
-  drawnByPlayerId?: number;
+  committedByPlayerId?: string;
+  servedByPlayerId?: string;
+  drawnByPlayerId?: string;
 }
-interface Play {
-  eventId: number;
+export interface Play {
+  eventId: string;
   periodDescriptor: PeriodDescriptor;
   timeInPeriod: string;
   timeRemaining: string;
@@ -79,13 +80,13 @@ interface TeamGameStat {
   homeValue: number | string;
 }
 interface SeriesTeam {
-  id: number;
+  id: string;
   abbrev: string;
   logo: string;
   score: number;
 }
 interface Series {
-  id: number;
+  id: string;
   season: number;
   gameType: number;
   gameDate: string;
@@ -131,7 +132,7 @@ interface GameReports {
   toiHome: string;
 }
 interface Scratch {
-  id: number;
+  id: string;
   firstName: LocalizedString;
   lastName: LocalizedString;
 }
@@ -154,8 +155,20 @@ interface Summary {
   gameReports: GameReports;
   gameInfo: GameInfo;
 }
+
+export interface RosterPlayer {
+  teamId: string;
+  playerId: string;
+  firstName: LocalizedString;
+  lastName: LocalizedString;
+  sweaterNumber: number;
+  positionCode: string;
+  headshot: string;
+}
+
+
 export interface PlayByPlayResponse {
-  id: number;
+  id: string;
   season: number;
   gameType: number;
   gameDate: string;
@@ -168,11 +181,13 @@ export interface PlayByPlayResponse {
   gameState: string;
   gameScheduleState: string;
   periodDescriptor: PeriodDescriptor;
-  awayTeam: AwayTeam;
-  homeTeam: AwayTeam;
+  awayTeam: Team;
+  homeTeam: Team;
   clock: Clock;
   displayPeriod: number;
   gameOutcome: GameOutcome;
   plays: Play[];
   summary: Summary;
+  rosterSpots: RosterPlayer[];
+
 }

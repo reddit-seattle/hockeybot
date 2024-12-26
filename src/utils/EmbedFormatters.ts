@@ -59,9 +59,7 @@ export const CreateGameDayThreadEmbed = (game: ScheduleResponse.Game, gamePrevie
     )
 }
 
-//TODO: empty net goals show as even strength
 export const CreateGoalEmbed = (play: GameFeedResponse.AllPlay, teams: GameFeedResponse.Teams) => {
-    //TODO: Get more excited about kraken-specific goals (:redlight: / gifs / etc)
     const descriptor = play?.result?.strength?.code === 'PPG' ? play.result.strength.name : (play?.result?.strength?.name + ' Strength');
     let title = `${play?.team?.name} GOAL - ${descriptor}`;
     

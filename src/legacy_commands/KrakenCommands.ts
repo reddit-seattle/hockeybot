@@ -152,7 +152,6 @@ const StartGoalChecker = (channel: ThreadChannel | TextChannel, gamePk: string) 
             // Get all goals from scoringPlays.
             const allGoals: GameFeedResponse.AllPlay[] = [];
             scoringPlays.forEach((event: number) => {allGoals.push(allPlays[event])});
-            // TODO - figure out how to handle disallowed goals (toronto vs montreal from 9/28 or 9/27 as an example)
             const newGoals = allGoals.filter(play =>  new Date(play.about.dateTime) > lastGoalAt);
 
             //testing something else
@@ -267,8 +266,6 @@ const CheckForTodaysGames = async (client: Client) => {
         //Check for game day thread if it exists
         const krakenChannel = client.channels.cache.get(ChannelIds.KRAKEN);
         
-        //TODO: Maybe we just make a new thread for each game?
-        //TODO: find a better way to persist the ID of the gameDayThread (env config possibly)
         let gameDayThread = (krakenChannel as TextChannel)?.threads.cache.find(ch => ch.name == Strings.KRAKEN_GAMEDAY_THREAD_TITLE)
 
         // post in gameday thread if it exists, or the kraken channel

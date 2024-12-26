@@ -1,13 +1,12 @@
-import { Client, Guild, Channel, TextChannel, Interaction } from "discord.js";
+import { Client, Guild, Channel, TextChannel, Interaction, ChannelType } from "discord.js";
 import { REST } from "@discordjs/rest";
 import { RESTPostAPIApplicationCommandsJSONBody, Routes } from "discord-api-types/v10";
 import { createServer } from "http";
-// import { KillGameCheckerCommand, SetupKrakenGameDayChecker } from './commands/KrakenCommands';
 import { CommandDictionary } from "./models/Command";
-import { ChannelIds, Environment } from "./utils/constants";
+import { ChannelIds, Environment, GuildIds } from "./utils/constants";
 import { exit } from "process";
-
 import { GetStandings, GetScores, GetSchedule, GetStats } from "./commands";
+import GameThreadManager from "./tasks/GameThreadManager";
 
 const client = new Client({
     intents: ["Guilds", "GuildMessages", "GuildMessageReactions"],
@@ -57,6 +56,19 @@ const registerAllSlashCommands = async (client: Client) => {
     });
 };
 
+const startGameDayThreadChecker = async (guild: Guild) => {
+    if (!Environment.KRAKENCHANNEL) {
+        console.log("Kraken channel ID env var (KRAKEN_CHANNEL_ID) not set. Game day thread checker will not start.");
+        return;
+    }
+    const krakenChannel = (await guild.channels.fetch(Environment.KRAKENCHANNEL));
+    if (!(krakenChannel?.type == ChannelType.GuildText)) {
+        console.log("Kraken channel not found, or not a text channel. Game day thread checker will not start.");
+        return;
+    }
+    new GameThreadManager(krakenChannel).initialize();
+};
+
 client.on("ready", async () => {
     console.log(`Logged in as ${client?.user?.tag}!`);
     if (Environment.DEBUG) {
@@ -64,6 +76,7 @@ client.on("ready", async () => {
         client.guilds.cache.forEach((guild: Guild) => {
             const debugChannel = guild.channels.cache.find((ch: Channel) => ch.id == ChannelIds.DEBUG) as TextChannel;
             debugChannel?.send("HockeyBot, reporting for duty!");
+            startGameDayThreadChecker(guild);
         });
     }
     registerAllSlashCommands(client);

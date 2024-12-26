@@ -12,7 +12,7 @@ export interface PeriodDescriptor {
 }
 export interface Team {
   id: number;
-  name: LocalizedString;
+  commonName: LocalizedString;
   abbrev: string;
   score: number;
   sog: number;

@@ -8,7 +8,7 @@ import { LocalizedString } from "./Common";
   }
 
   export interface AwayTeam {
-    id: number;
+    id: string;
     placeName: LocalizedString;
     abbrev: string;
     logo: string;
@@ -20,7 +20,7 @@ import { LocalizedString } from "./Common";
   }
 
   export interface HomeTeam {
-    id: number;
+    id: string;
     placeName: LocalizedString;
     abbrev: string;
     logo: string;
@@ -40,7 +40,7 @@ import { LocalizedString } from "./Common";
   }
 
   export interface Game {
-    id: number;
+    id: string;
     season: number;
     gameType: number;
     venue: LocalizedString;
