@@ -107,6 +107,7 @@ export module Strings {
 export module Environment {
     export const botToken = process.env["bot_token"] || undefined;
     export const DEBUG = process.env["hockeybotDEBUG"] ? true : false;
+    export const KRAKENCHANNEL = process.env["KRAKEN_CHANNEL_ID"] || undefined;
 }
 
 export enum MEDIA_FORMAT {
