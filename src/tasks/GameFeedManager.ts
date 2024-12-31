@@ -4,7 +4,7 @@ import { API } from "../service/API";
 import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/models/responses/PlayByPlayResponse";
 import { getSituationCodeString, isGameOver, periodToStr } from "../utils/helpers";
 import { EventTypeCode } from "../utils/enums";
-import { Kraken } from "../utils/constants";
+import { Config, Kraken } from "../utils/constants";
 import { Strings } from "../utils/constants";
 import { PeriodDescriptor } from "../service/models/responses/PlayByPlayResponse";
 import { contains } from "underscore";
@@ -23,7 +23,7 @@ interface PlayMessageContainer {
 export class GameFeedManager {
     private CRON: string = "*/10 * * * * *";
 
-    private taskOptions: ScheduleOptions = { scheduled: true, timezone: "America/Los_Angeles" };
+    private taskOptions: ScheduleOptions = { scheduled: true, timezone: Config.TIME_ZONE };
 
     private task: ScheduledTask;
     private thread: ThreadChannel;
@@ -92,10 +92,6 @@ export class GameFeedManager {
         console.dir(feed);
         const { plays } = feed;
 
-        const goals = [];
-        const penalties = [];
-        const clockEvents = [];
-
         // parse plays once into buckets
         for (const play of plays) {
             const { typeCode } = play;
@@ -105,17 +101,14 @@ export class GameFeedManager {
             }
             switch (typeCode) {
                 case EventTypeCode.goal:
-                    goals.push(play);
                     this.processGoal(play);
                     break;
                 case EventTypeCode.penalty:
-                    penalties.push(play);
                     this.processPenalty(play);
                     break;
                 case EventTypeCode.periodStart:
                 case EventTypeCode.periodEnd:
                 case EventTypeCode.gameEnd:
-                    clockEvents.push(play);
                     this.processClockEvent(play);
                     break;
                 default:
