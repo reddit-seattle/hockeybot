@@ -1,5 +1,9 @@
 import { LocalizedString } from "./Common";
 
+/** TODO
+ * Consolidate all endpoint "player"-like objects into extension classes and one typings file.
+ * Repeat for other similar objects (roster, game, event types [goal, penalty])
+ */
 interface TvBroadcast {
   id: string;
   market: string;
@@ -154,6 +158,18 @@ interface Summary {
   shotsByPeriod: ByPeriod[];
   gameReports: GameReports;
   gameInfo: GameInfo;
+  iceSurface: IceSurface;
+}
+
+interface GameTeamInfo {
+    forwards: GameTeamInfoPlayer[]
+    defensemen: GameTeamInfoPlayer[]
+    goalies: GameTeamInfoPlayer[]
+    penaltyBox: GameTeamInfoPlayer[]
+}
+interface IceSurface {
+    awayTeam: GameTeamInfo;
+    homeTeam: GameTeamInfo;
 }
 
 export interface RosterPlayer {
@@ -164,6 +180,11 @@ export interface RosterPlayer {
   sweaterNumber: number;
   positionCode: string;
   headshot: string;
+
+}
+
+export interface GameTeamInfoPlayer extends RosterPlayer {
+  totalSOI: number;
 }
 
 
