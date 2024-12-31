@@ -8,7 +8,7 @@ import { Config, Kraken } from "../utils/constants";
 import { GameState } from "../utils/enums";
 import { ApiDateString, isGameOver, relativeDateString } from "../utils/helpers";
 import { GameFeedManager } from "./GameFeedManager";
-import { format } from "date-fns-tz";
+import { format, utcToZonedTime } from "date-fns-tz";
 
 let every_minute = "*/1 * * * *";
 let every_morning = "0 0 9 * * *";
@@ -77,12 +77,6 @@ class GameThreadManager {
             console.log("--------------------------------------------------");
 
             // Create game day embed
-            const embed = new EmbedBuilder().setTitle("Kraken Game Day").addFields([
-                {
-                    name: `${awayTeam.abbrev} at ${homeTeam.abbrev}`,
-                    value: game.venue.default,
-                },
-            ]);
             const threadTitle = generateThreadTitle(game);
 
             // check for existing game day thread (in case we had an oopsies)
@@ -92,7 +86,17 @@ class GameThreadManager {
             // create thread if it doesn't exist
             if (!this.thread) {
                 // announce to channel
-                const message = await this.channel.send({ embeds: [embed] });
+                // announce in thread when the game starts
+                const relativeDate = relativeDateString(startTimeUTC);
+                const startDateZoned = utcToZonedTime(startTimeUTC, Config.TIME_ZONE);
+                const gameStartTimeString = format(startDateZoned, Config.BODY_DATE_FORMAT);
+                const title = `Kraken game today!`;
+                const gameStartEmbed = new EmbedBuilder()
+                    .setTitle(title)
+                    .setDescription(`Game start: ${gameStartTimeString} (${relativeDate})\n${game.venue.default}`)
+                    .setTimestamp(startDateZoned);
+                // TODO - add more game details (game story?)
+                const message = await this.channel.send({ embeds: [gameStartEmbed] });
                 // create thread (title is imperative)
                 // TODO - this might be fun when next season split-squads happen
                 this.thread = await this.channel.threads.create({
@@ -104,19 +108,6 @@ class GameThreadManager {
                 console.log("--------------------------------------------------");
                 console.log(`CREATED THREAD: ${this.thread.id}`);
                 console.log("--------------------------------------------------");
-
-                // announce in thread when the game starts
-                const relativeDate = relativeDateString(startTimeUTC);
-                const title = `Kraken game today!`;
-                const startDate = new Date(startTimeUTC);
-                const gameStartEmbed = new EmbedBuilder()
-                    .setTitle(title)
-                    .setDescription(
-                        `Game starts ${format(new Date(startTimeUTC), Config.BODY_DATE_FORMAT)} (${relativeDate})`
-                    )
-                    .setTimestamp(startDate);
-                // TODO - add more game details (game story?)
-                await this.thread.send({ embeds: [gameStartEmbed] });
             }
 
             console.log("--------------------------------------------------");
@@ -129,7 +120,7 @@ class GameThreadManager {
             console.log("--------------------------------------------------");
             this.pregameCheckerTask = schedule(every_minute, this.checkForGameStart, {
                 scheduled: true,
-                timezone: "America/Los_Angeles",
+                timezone: Config.TIME_ZONE,
             });
         }
     };
@@ -148,7 +139,7 @@ class GameThreadManager {
         // then, start the daily checker (for the next games)
         schedule(every_morning, this.createKrakenGameDayThread, {
             scheduled: true,
-            timezone: "America/Los_Angeles",
+            timezone: Config.TIME_ZONE,
         });
     }
 
