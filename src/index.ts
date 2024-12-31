@@ -71,14 +71,20 @@ const startGameDayThreadChecker = async (guild: Guild) => {
 
 client.on("ready", async () => {
     console.log(`Logged in as ${client?.user?.tag}!`);
-    if (Environment.DEBUG) {
-        //try to announce to servers when you go online
-        client.guilds.cache.forEach((guild: Guild) => {
-            const debugChannel = guild.channels.cache.find((ch: Channel) => ch.id == ChannelIds.DEBUG) as TextChannel;
-            debugChannel?.send("HockeyBot, reporting for duty!");
-            startGameDayThreadChecker(guild);
-        });
-    }
+    client.guilds.cache.forEach((guild: Guild) => {
+        if (Environment.DEBUG) {
+            //try to announce to servers when you go online
+            try {
+                const debugChannel = guild.channels.cache.find((ch: Channel) => ch.id == ChannelIds.DEBUG) as TextChannel;
+                debugChannel?.send("HockeyBot, reporting for duty!");
+            } catch (e) {
+                console.log(e);
+            }
+        }
+        // start the game day thread checker for this guild
+        startGameDayThreadChecker(guild);
+    });
+    // keep this out of the loop, this actually loops through guilds
     registerAllSlashCommands(client);
 });
 

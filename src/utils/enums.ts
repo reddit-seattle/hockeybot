@@ -77,7 +77,8 @@ export enum EventTypeCode {
     penalty = 509,
     periodStart = 520,
     periodEnd = 521,
-    gameEnd = 524 
+    gameEnd = 524,
+    stoppage = 516,
 }
 
 export enum GameState {
@@ -332,6 +333,63 @@ export enum GoalShotType {
     WRAP_AROUND = 'wrap-around',
     BETWEEN_LEGS = 'between-legs',
     CRADLE = 'cradle'
+}
+
+export enum Reasons {
+    ABOVE_CROSSBAR = 'above-crossbar',
+    BLOCKED = 'blocked',
+    CHLG_HM_GOAL_INTERFERENCE = 'chlg-hm-goal-interference',
+    CHLG_HM_MISSED_STOPPAGE = 'chlg-hm-missed-stoppage',
+    CHLG_HM_OFF_SIDE = 'chlg-hm-off-side',
+    CHLG_LEAGUE_GOAL_INTERFERENCE = 'chlg-league-goal-interference',
+    CHLG_LEAGUE_MISSED_STOPPAGE = 'chlg-league-missed-stoppage',
+    CHLG_LEAGUE_OFF_SIDE = 'chlg-league-off-side',
+    CHLG_VIS_GOAL_INTERFERENCE = 'chlg-vis-goal-interference',
+    CHLG_VIS_MISSED_STOPPAGE = 'chlg-vis-missed-stoppage',
+    CHLG_VIS_OFF_SIDE = 'chlg-vis-off-side',
+    CLOCK_PROBLEM = 'clock-problem',
+    GOALIE_PUCK_FROZEN_PLAYED_FROM_BEYOND_CENTER = 'goalie-puck-frozen-played-from-beyond-center',
+    GOALIE_STOPPED_AFTER_SOG = 'goalie-stopped-after-sog',
+    GOALPOST = 'goalpost',
+    HAND_PASS = 'hand-pass',
+    HIGH_AND_WIDE_LEFT = 'high-and-wide-left',
+    HIGH_AND_WIDE_RIGHT = 'high-and-wide-right',
+    HIGH_STICK = 'high-stick',
+    HIT_CROSSBAR = 'hit-crossbar',
+    HIT_LEFT_POST = 'hit-left-post',
+    HIT_RIGHT_POST = 'hit-right-post',
+    HOME_TIMEOUT = 'home-timeout',
+    ICE_PROBLEM = 'ice-problem',
+    ICING = 'icing',
+    NET_DISLODGED_BY_GOALTENDER = 'net-dislodged-by-goaltender',
+    NET_DISLODGED_DEFENSIVE_SKATER = 'net-dislodged-defensive-skater',
+    NET_DISLODGED_OFFENSIVE_SKATER = 'net-dislodged-offensive-skater',
+    OBJECTS_ON_ICE = 'objects-on-ice',
+    OFFICIAL_INJURY = 'official-injury',
+    OFFSIDE = 'offside',
+    OTHER_BLOCK = 'other-block',
+    OVER_NET = 'over-net',
+    PLAYER_EQUIPMENT = 'player-equipment',
+    PLAYER_INJURY = 'player-injury',
+    PREMATURE_SUBSTITUTION = 'premature-substitution',
+    PUCK_FROZEN = 'puck-frozen',
+    PUCK_IN_BENCHES = 'puck-in-benches',
+    PUCK_IN_CROWD = 'puck-in-crowd',
+    PUCK_IN_NETTING = 'puck-in-netting',
+    PUCK_IN_PENALTY_BENCHES = 'puck-in-penalty-benches',
+    REFEREE_OR_LINESMAN = 'referee-or-linesman',
+    RINK_REPAIR = 'rink-repair',
+    SHORT = 'short',
+    SKATER_PUCK_FROZEN = 'skater-puck-frozen',
+    SWITCH_SIDES = 'switch-sides',
+    TEAMMATE_BLOCKED = 'teammate-blocked',
+    TV_TIMEOUT = 'tv-timeout',
+    VIDEO_REVIEW = 'video-review',
+    VISITOR_TIMEOUT = 'visitor-timeout',
+    WIDE_LEFT = 'wide-left',
+    WIDE_OF_NET = 'wide-of-net',
+    WIDE_RIGHT = 'wide-right'
+    
 }
 
 export enum CookieName {
