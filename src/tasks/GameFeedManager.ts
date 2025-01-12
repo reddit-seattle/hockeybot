@@ -133,8 +133,8 @@ export class GameFeedManager {
         return this.feed;
     };
 
-    private createScoreEmbed = async () => {
-        const { awayTeam: away, homeTeam: home, periodDescriptor, clock } = await this.getFeed();
+    private createScoreEmbed = async (feed: PlayByPlayResponse) => {
+        const { awayTeam: away, homeTeam: home, periodDescriptor, clock } = feed;
         const { timeRemaining, inIntermission} = clock;
         const { score: homeScore, sog: homeSOG } = home;
         const { score: awayScore, sog: awaySOG } = away;
@@ -310,7 +310,8 @@ export class GameFeedManager {
     };
 
     private createPeriodUpdateMessage = async (periodDescriptor: PeriodDescriptor, descriptionStr: string) => {
-        const scoreEmbed = await this.createScoreEmbed();
+        const feed = await this.getFeed();
+        const scoreEmbed = await this.createScoreEmbed(feed);
         const periodStartString = `${periodToStr(
             periodDescriptor.number || 1,
             periodDescriptor.periodType || "REG"
@@ -361,7 +362,10 @@ export class GameFeedManager {
     };
 
     private EndGame = async () => {
-        const scoreEmbed = await this.createScoreEmbed();
+        // force an update to get end of game details
+        // TODO - might have to wait for a final final state
+        const feed = await this.getFeed(true);
+        const scoreEmbed = await this.createScoreEmbed(feed);
         await this?.thread?.send({
             content: "Game has ended.",
             embeds: [scoreEmbed],
