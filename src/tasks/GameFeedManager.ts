@@ -17,7 +17,8 @@ interface PlayMessageContainer {
 }
 
 /** 
-* TODO - announce challenges / goal removals / unsuccessful challenges?
+* TODO - announce challenges / goal removals / unsuccessful challenges? / GOALIE PULLS / RUNS
+* TODO - intermission clock rundown is good but doesn't stop lol
 */
 
 export class GameFeedManager {
@@ -66,13 +67,6 @@ export class GameFeedManager {
     private checkGameStatus = async () => {
         const game = await API.Games.GetBoxScore(this.gameId);
         const { gameState, gameDate, awayTeam, homeTeam } = game;
-
-        // Check for game end state on box score
-        if (isGameOver(gameState)) {
-            await this.thread?.setArchived(true, "game over").catch(console.error);
-            await this.task.stop();
-            return;
-        }
 
         // #region logging
         console.log(
@@ -224,7 +218,7 @@ export class GameFeedManager {
         if (!details) {
             return;
         }
-        const { scoringPlayerId, assist1PlayerId, assist2PlayerId } = details;
+        const { scoringPlayerId, assist1PlayerId, assist2PlayerId, homeSOG, homeScore, awaySOG, awayScore } = details;
         const scorer = this.roster.get(scoringPlayerId ?? "");
         const assist1 = this.roster.get(assist1PlayerId ?? "");
         const assist2 = this.roster.get(assist2PlayerId ?? "");
@@ -239,6 +233,7 @@ export class GameFeedManager {
         // do not look at this code
         const { situationCode, homeTeamDefendingSide } = goal;
         const homeLeft = homeTeamDefendingSide == "left";
+
         const { awayTeam: away, homeTeam: home } = await this.getFeed();
         const { id: homeTeamId } = home;
 
@@ -275,12 +270,12 @@ export class GameFeedManager {
         fields.push(
             {
                 name: `**${away.commonName.default}**`,
-                value: `Goals: **${away.score}**\nShots: ${away.sog}`,
+                value: `Goals: **${awayScore}**\nShots: ${awaySOG}`,
                 inline: true,
             },
             {
                 name: `**${home.commonName.default}**`,
-                value: `Goals: **${home.score}**\nShots: ${home.sog}`,
+                value: `Goals: **${homeScore}**\nShots: ${homeSOG}`,
                 inline: true,
             }
         );
@@ -322,17 +317,30 @@ export class GameFeedManager {
         } as MessageCreateOptions | MessageEditOptions;
     }
 
-    private updateEventAndProcessMessage = async (eventId: string, play: Play, messageOpts?: MessageCreateOptions | MessageEditOptions) => {
+    private updateEventAndProcessMessage = async (eventId: string, play: Play, messageOpts: MessageCreateOptions | MessageEditOptions) => {
         const event = this.events.get(eventId);
+        console.log("--------------------------------------------------");
+        console.log(`Provessing event: ${eventId}, type: ${play.typeDescKey}. Existing event: ${event ? "found" : "not found."}`);
+        console.log("Play:");
+        console.dir(play);
+        console.log("Tracked Events:");
+        console.dir(this.events);
+        console.log("--------------------------------------------------");
         const { message: existingMessage } = event ?? {};
-        let message;
+        let message: Message | undefined;
         if (!event) {
             // announce new event
-            message = messageOpts && await this.thread?.send(messageOpts as MessageCreateOptions);
+            message = await this.thread?.send(messageOpts as MessageCreateOptions);
+            console.log("--------------------------------------------------");
+            console.log(`New message to track event: ${eventId}, type: ${play.typeDescKey} - message link: ${message?.url}`);
+            console.log("--------------------------------------------------");
         }
         else if (existingMessage) {
             // the event is already in the feed, update the message
-            message = messageOpts && await existingMessage?.edit(messageOpts as MessageEditOptions);
+            message = await existingMessage?.edit(messageOpts as MessageEditOptions);
+            console.log("--------------------------------------------------");
+            console.log(`Updated message to track event: ${eventId}, type: ${play.typeDescKey} - message link: ${message?.url}`);
+            console.log("--------------------------------------------------");
         }
         // update the local event object
         this.events.set(eventId, { message, play });
