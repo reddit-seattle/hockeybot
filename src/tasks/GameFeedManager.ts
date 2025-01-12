@@ -320,7 +320,7 @@ export class GameFeedManager {
     private updateEventAndProcessMessage = async (eventId: string, play: Play, messageOpts: MessageCreateOptions | MessageEditOptions) => {
         const event = this.events.get(eventId);
         console.log("--------------------------------------------------");
-        console.log(`Provessing event: ${eventId}, type: ${play.typeDescKey}. Existing event: ${event ? "found" : "not found."}`);
+        console.log(`Processing event: ${eventId}, type: ${play.typeDescKey}. Existing event: ${event ? "found" : "not found."}`);
         console.log("Play:");
         console.dir(play);
         console.log("Tracked Events:");
