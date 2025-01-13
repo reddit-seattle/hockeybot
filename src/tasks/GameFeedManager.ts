@@ -1,4 +1,4 @@
-import { ThreadChannel, EmbedBuilder, Message, MessageCreateOptions, MessageEditOptions } from "discord.js";
+import { ThreadChannel, EmbedBuilder, Message, MessageCreateOptions, MessageEditOptions, Embed } from "discord.js";
 import { ScheduleOptions, ScheduledTask, schedule } from "node-cron";
 import { API } from "../service/API";
 import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/models/responses/PlayByPlayResponse";
@@ -9,17 +9,23 @@ import { Strings } from "../utils/constants";
 import { PeriodDescriptor } from "../service/models/responses/PlayByPlayResponse";
 import { contains } from "underscore";
 
-const tracked_types = [EventTypeCode.goal, EventTypeCode.penalty, EventTypeCode.periodStart, EventTypeCode.periodEnd, EventTypeCode.gameEnd];
+const tracked_types = [
+    EventTypeCode.goal,
+    EventTypeCode.penalty,
+    EventTypeCode.periodStart,
+    EventTypeCode.periodEnd,
+    EventTypeCode.gameEnd,
+];
 
 interface PlayMessageContainer {
     message?: Message;
     play: Play;
 }
 
-/** 
-* TODO - announce challenges / goal removals / unsuccessful challenges? / GOALIE PULLS / RUNS
-* TODO - intermission clock rundown is good but doesn't stop lol
-*/
+/**
+ * TODO - announce challenges / goal removals / unsuccessful challenges? / GOALIE PULLS / RUNS
+ * TODO - intermission clock rundown is good but doesn't stop lol
+ */
 
 export class GameFeedManager {
     private CRON: string = "*/10 * * * * *";
@@ -31,7 +37,6 @@ export class GameFeedManager {
     private gameId: string;
     private feed?: PlayByPlayResponse;
 
-    // In case we start in the middle of a game (crash / reboot / etc) we don't want to announce all the goals / penalties again
     private events: Map<string, PlayMessageContainer> = new Map<string, PlayMessageContainer>();
     private teamsMap: Map<string, Team> = new Map<string, Team>();
     private roster: Map<string, RosterPlayer> = new Map<string, RosterPlayer>();
@@ -75,13 +80,14 @@ export class GameFeedManager {
         console.dir(game);
         console.log("--------------------------------------------------");
         console.log(
-            `Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${homeTeam.commonName.default} ${homeTeam?.score || 0
+            `Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${homeTeam.commonName.default} ${
+                homeTeam?.score || 0
             }`
         );
         console.log("--------------------------------------------------");
         // #endregion
 
-        // game feed
+        // game feed update
         const feed = await this.getFeed(true);
         console.dir(feed);
         const { plays } = feed;
@@ -114,7 +120,7 @@ export class GameFeedManager {
     private getFeed = async (force: boolean = false): Promise<PlayByPlayResponse> => {
         if (force || !this.feed) {
             const feed = await API.Games.GetPlays(this.gameId);
-            // first time we're setting feed, log all plays we are about 
+            // first time we're setting feed, log all plays we are about
             if (!this.feed) {
                 for (const play of feed.plays) {
                     if (tracked_types.includes(play.typeCode)) {
@@ -129,7 +135,7 @@ export class GameFeedManager {
 
     private createScoreEmbed = async (feed: PlayByPlayResponse) => {
         const { awayTeam: away, homeTeam: home, periodDescriptor, clock } = feed;
-        const { timeRemaining, inIntermission} = clock;
+        const { timeRemaining, inIntermission } = clock;
         const { score: homeScore, sog: homeSOG } = home;
         const { score: awayScore, sog: awaySOG } = away;
         const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
@@ -164,21 +170,23 @@ export class GameFeedManager {
         }
         // we like the kraken (reverse penalty edition)
         const excitement = details?.eventOwnerTeamId != Kraken.TeamId;
-        const { committedByPlayerId, servedByPlayerId, drawnByPlayerId, eventOwnerTeamId, descKey, } =
-            details ?? {};
+        const { committedByPlayerId, servedByPlayerId, drawnByPlayerId, eventOwnerTeamId, descKey } = details ?? {};
         const penaltyPlayer = this.roster.get(committedByPlayerId ?? servedByPlayerId ?? "");
         const drawnByPlayer = this.roster.get(drawnByPlayerId ?? "");
         const penaltyTeam = this.teamsMap.get(eventOwnerTeamId ?? "");
 
         // Seattle Kraken penalty(!)
 
-        const title = `${penaltyTeam?.placeName.default} ${penaltyTeam?.commonName.default} penalty${excitement ? "!" : ""}`;
+        const title = `${penaltyTeam?.placeName.default} ${penaltyTeam?.commonName.default} penalty${
+            excitement ? "!" : ""
+        }`;
         const fields = [];
         // Penalty Description
         const penaltyTypeKeys = Object.keys(Strings.PENALTY_STRINGS);
-        const penaltyDescription = descKey && contains(penaltyTypeKeys, descKey)
-            ? Strings.PENALTY_STRINGS[descKey as keyof typeof Strings.PENALTY_STRINGS]
-            : "Unknown penalty";
+        const penaltyDescription =
+            descKey && contains(penaltyTypeKeys, descKey)
+                ? Strings.PENALTY_STRINGS[descKey as keyof typeof Strings.PENALTY_STRINGS]
+                : "Unknown penalty";
         fields.push({
             name: "Infraction:",
             value: penaltyDescription,
@@ -234,8 +242,12 @@ export class GameFeedManager {
         const { situationCode, homeTeamDefendingSide } = goal;
         const homeLeft = homeTeamDefendingSide == "left";
 
-        const { awayTeam: away, homeTeam: home } = await this.getFeed();
-        const { id: homeTeamId } = home;
+        const feed = await this.getFeed();
+
+        const homeTeamId = feed.homeTeam.id;
+        const homeTeam = this.teamsMap.get(homeTeamId);
+        const awayTeamId = feed.awayTeam.id;
+        const awayTeam = this.teamsMap.get(awayTeamId);
 
         const homeScored = homeTeamId == scoringTeamId;
         const leftScored = homeScored ? homeLeft : !homeLeft;
@@ -246,13 +258,20 @@ export class GameFeedManager {
             title = `${Strings.REDLIGHT_EMBED} ${title} ${Strings.REDLIGHT_EMBED}`;
         }
         const unassisted = !assist1 && !assist2;
-        const description = scorer ?`${excitement ? "## " : ""}${scorer.firstName.default} ${scorer.lastName.default} (${goal.details?.scoringPlayerTotal})` : "Unknown player";
+        const description = scorer
+            ? `${excitement ? "## " : ""}${scorer.firstName.default} ${scorer.lastName.default} (${
+                  goal.details?.scoringPlayerTotal
+              })`
+            : "Unknown player";
         const shotType = goal.details?.shotType;
         const goalTypeKeys = Object.keys(Strings.GOAL_TYPE_STRINGS);
-        const shotTypeString = (shotType && contains(goalTypeKeys, shotType))
-            ? Strings.GOAL_TYPE_STRINGS[shotType as keyof typeof Strings.GOAL_TYPE_STRINGS]  :
-            "Unknown shot type";
-        const secondaryDescription = `${shotTypeString}${unassisted ? ` - Unassisted` : ""}${goalphrase ? ` - ${goalphrase}` : ""}`;
+        const shotTypeString =
+            shotType && contains(goalTypeKeys, shotType)
+                ? Strings.GOAL_TYPE_STRINGS[shotType as keyof typeof Strings.GOAL_TYPE_STRINGS]
+                : "Unknown shot type";
+        const secondaryDescription = `${shotTypeString}${unassisted ? ` - Unassisted` : ""}${
+            goalphrase ? ` - ${goalphrase}` : ""
+        }`;
 
         const fields = [];
         if (assist1) {
@@ -269,13 +288,13 @@ export class GameFeedManager {
         }
         fields.push(
             {
-                name: `**${away.commonName.default}**`,
-                value: `Goals: **${awayScore}**\nShots: ${awaySOG}`,
+                name: `**${awayTeam?.commonName.default ?? "Away"}**`,
+                value: `Goals: **${awayScore}**\nShots: **${awaySOG}**`,
                 inline: true,
             },
             {
-                name: `**${home.commonName.default}**`,
-                value: `Goals: **${homeScore}**\nShots: ${homeSOG}`,
+                name: `**${homeTeam?.commonName.default ?? "Home"}**`,
+                value: `Goals: **${homeScore}**\nShots: **${homeSOG}**`,
                 inline: true,
             }
         );
@@ -293,34 +312,59 @@ export class GameFeedManager {
             .setFooter({ text: timeRemainingString })
             .setColor(39129);
     };
-
+    // todo - find a way to patch diffs of new event and previous event?
+    // want to avoid heavy processing multiple times -
+    // like if the assists change we don't need to re-process the situation code
     private processGoal = async (goal: Play) => {
         const embed = await this.createGoalEmbed(goal);
-        embed && await this.updateEventAndProcessMessage(goal.eventId, goal, { embeds: [embed] });
+        embed && (await this.createOrUpdateEventMessage(goal, { embeds: [embed] }));
     };
 
     private processPenalty = async (penalty: Play) => {
         const penaltyEmbed = await this.createPenaltyEmbed(penalty);
-        penaltyEmbed && await this.updateEventAndProcessMessage(penalty.eventId, penalty, { embeds: [penaltyEmbed] });
+        penaltyEmbed && (await this.createOrUpdateEventMessage(penalty, { embeds: [penaltyEmbed] }));
     };
 
-    private createPeriodUpdateMessage = async (periodDescriptor: PeriodDescriptor, descriptionStr: string) => {
-        const feed = await this.getFeed();
-        const scoreEmbed = await this.createScoreEmbed(feed);
-        const periodStartString = `${periodToStr(
-            periodDescriptor.number || 1,
-            periodDescriptor.periodType || "REG"
-        )} period has ${descriptionStr}`;
+    private createOrUpdateIntermissionMessage = async (play: Play) => {
+        const { periodDescriptor, timeRemaining, eventId, typeCode } = play;
+
+        // if typecode is period start, announce start
+        // otherwise assume this is period end (and intermission update)
+        const start = typeCode == EventTypeCode.periodStart;
+        const event = this.events.get(eventId);
+        const existingEmbed = event?.message?.embeds?.[0];
+
+        const periodOrdinal = `${periodToStr(periodDescriptor.number || 1, periodDescriptor.periodType || "REG")}`;
+        // if start - we use Period has Started. Otherwise, Period has ended. for the message text
+        const periodStateString = `${periodOrdinal} period has ${start ? "started" : "ended"}.`;
+        // if end - we use countdown to end of intermission as the footer
+        const intermissionString =
+            timeRemaining == "00:00"
+                ? "Intermission has ended."
+                : `${timeRemaining} remaining in the ${periodOrdinal} intermission.`;
+
+        // get new score embed or update existing one.
+        const scoreEmbed = !existingEmbed
+            ? await this.createScoreEmbed(await this.getFeed())
+            : new EmbedBuilder()
+                  .setTitle(existingEmbed.title)
+                  .setDescription(existingEmbed.description)
+                  .setFields(existingEmbed.fields)
+                  // period start messages just say "period has started" (statestring), period end messages update intermission clock as the footer
+                  .setFooter({ text: start ? periodStateString : intermissionString });
         return {
-            content: periodStartString,
+            content: periodStateString,
             embeds: [scoreEmbed],
         } as MessageCreateOptions | MessageEditOptions;
-    }
+    };
 
-    private updateEventAndProcessMessage = async (eventId: string, play: Play, messageOpts: MessageCreateOptions | MessageEditOptions) => {
+    private createOrUpdateEventMessage = async (play: Play, messageOpts: MessageCreateOptions | MessageEditOptions) => {
+        const { eventId } = play;
         const event = this.events.get(eventId);
         console.log("--------------------------------------------------");
-        console.log(`Processing event: ${eventId}, type: ${play.typeDescKey}. Existing event: ${event ? "found" : "not found."}`);
+        console.log(
+            `Processing event: ${eventId}, type: ${play.typeDescKey}. Existing event: ${event ? "found" : "not found."}`
+        );
         console.log("Play:");
         console.dir(play);
         console.log("Tracked Events:");
@@ -332,14 +376,17 @@ export class GameFeedManager {
             // announce new event
             message = await this.thread?.send(messageOpts as MessageCreateOptions);
             console.log("--------------------------------------------------");
-            console.log(`New message to track event: ${eventId}, type: ${play.typeDescKey} - message link: ${message?.url}`);
+            console.log(
+                `New message to track event: ${eventId}, type: ${play.typeDescKey} - message link: ${message?.url}`
+            );
             console.log("--------------------------------------------------");
-        }
-        else if (existingMessage) {
+        } else if (existingMessage) {
             // the event is already in the feed, update the message
             message = await existingMessage?.edit(messageOpts as MessageEditOptions);
             console.log("--------------------------------------------------");
-            console.log(`Updated message to track event: ${eventId}, type: ${play.typeDescKey} - message link: ${message?.url}`);
+            console.log(
+                `Updated message to track event: ${eventId}, type: ${play.typeDescKey} - message link: ${message?.url}`
+            );
             console.log("--------------------------------------------------");
         }
         // update the local event object
@@ -352,13 +399,10 @@ export class GameFeedManager {
         if (!periodDescriptor || !contains(tracked_types, clockEvent.typeCode)) {
             return;
         }
-        let messageOpts: MessageCreateOptions | MessageEditOptions = {};
         switch (clockEvent.typeCode) {
             case EventTypeCode.periodStart:
-                messageOpts = await this.createPeriodUpdateMessage(periodDescriptor, "started");
-                break;
             case EventTypeCode.periodEnd:
-                messageOpts = await this.createPeriodUpdateMessage(periodDescriptor, "ended");
+                await this.createOrUpdateIntermissionMessage(clockEvent);
                 break;
             case EventTypeCode.gameEnd:
                 await this.EndGame();
@@ -366,7 +410,6 @@ export class GameFeedManager {
             default:
                 break;
         }
-        await this.updateEventAndProcessMessage(clockEvent.eventId, clockEvent, messageOpts);
     };
 
     private EndGame = async () => {

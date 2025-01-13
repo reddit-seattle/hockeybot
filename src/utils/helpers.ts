@@ -169,7 +169,7 @@ export const processLocalizedDateInput = (input?: string | Date | null) => {
  *
  */
 export const getSituationCodeString = (situationCode?: string, leftScored: boolean = false) => {
-    console.log(`PROCESSING SITUATIONCODE: ${situationCode}`);
+    // console.log(`PROCESSING SITUATIONCODE: ${situationCode}`);
     if (!situationCode) {
         return undefined;
     }
@@ -200,6 +200,6 @@ export const getSituationCodeString = (situationCode?: string, leftScored: boole
         "1330": leftScored ? "Empty Net (3-3)" : "3 on 3 (EN)", // are these possible?
         "0331": leftScored ? "3 on 3 (EN)" : "Empty Net (3-3)", // are these possible?
     };
-    console.log(`SITUATIONCODE: ${situationCode} -> ${SITUATION_TYPE_DICT?.[situationCode]}`);
+    // console.log(`SITUATIONCODE: ${situationCode} -> ${SITUATION_TYPE_DICT?.[situationCode]}`);
     return situationCode in SITUATION_TYPE_DICT ? `${SITUATION_TYPE_DICT[situationCode]} ` : undefined;
 };
