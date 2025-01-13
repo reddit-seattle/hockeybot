@@ -158,14 +158,14 @@ export module API {
             const response = await get<PlayoffCarouselResponse>(Paths.Playoffs.Carousel(season));
             return response;
         };
-        export module Search {
-            export const Player: (query: string) => Promise<PlayerSearchResult> = async (query) => {
-                const response = await get<PlayerSearchResult>(Paths.Search.Player(query));
-                return response;
-            };
-        }
     }
 
+    export module Search {
+        export const Player: (query: string) => Promise<PlayerSearchResult[]> = async (query) => {
+            const response = await get<PlayerSearchResult[]>(Paths.Search.Player(query));
+            return response;
+        };
+    }
     export module Seasons {
         export const GetAll: () => Promise<number[]> = async () => {
             const response = await get<number[]>(Paths.Seasons.All);
