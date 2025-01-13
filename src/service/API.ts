@@ -16,6 +16,10 @@ import { PlayerSearchResult } from "./models/responses/Common";
 import { TeamSummary, TeamSummaryResponse } from "./models/responses/TeamSummaryResponse";
 import { TeamRestResponse } from "./models/responses/TeamRestResponse";
 import _ from "underscore";
+import { StoryResponse } from "./models/responses/StoryResponse";
+import { PlayoffSeriesResponse } from "./models/responses/PlayoffSeriesResponse";
+import { PlayoffBracketResponse } from "./models/responses/PlayoffBracketResponse";
+import { PlayoffCarouselResponse } from "./models/responses/PlayoffCarouselResponse";
 
 
 
@@ -106,6 +110,10 @@ export module API {
             const response = await get<PlayByPlayResponse>(Paths.Games.Live.Game(id).PlayByPlay)
             return response;
         }
+        export const GetStory: (id: string) => Promise<StoryResponse> = async (id) => {
+            const response = await get<StoryResponse>(Paths.Games.Story(id))
+            return response;
+        }
 
     }
     export module Stats {
@@ -137,6 +145,19 @@ export module API {
         }
     }
 
+    export module Playoffs {
+        export const GetPlayoffSeries: (season: string, series: string) => Promise<PlayoffSeriesResponse[]> = async (season, series) => {
+            const response = await get<PlayoffSeriesResponse[]>(Paths.Playoffs.Series(season, series));
+            return response;
+        }
+        export const GetPlayoffBracket: (year: string) => Promise<PlayoffBracketResponse[]> = async (year) => {
+            const response = await get<PlayoffBracketResponse[]>(Paths.Playoffs.Bracket(year));
+            return response;
+        }
+        export const GetPlayoffCarousel: (season: string) => Promise<PlayoffCarouselResponse[]> = async (season) => {
+            const response = await get<PlayoffCarouselResponse[]>(Paths.Playoffs.Carousel(season));
+            return response;
+    }
     export module Search {
         export const Player: (query: string) => Promise<PlayerSearchResult[]> = async (query) => {
             const response = await get<PlayerSearchResult[]>(Paths.Search.Player(query));

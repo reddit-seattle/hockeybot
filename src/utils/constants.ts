@@ -260,6 +260,7 @@ export module Paths {
 
         // https://api-web.nhle.com/v1/scoreboard/sea/now
         export const Scoreboard = (team?: string) => `${SCOREBOARD_URL}/${team ?? ""}/now`;
+        export const Story = (id: string) => `${API_ENDPOINT}/wsc/game-story/${id}`;
         // Today's games: https://api-web.nhle.com/v1/score/now
         // Dated games:   https://api-web.nhle.com/v1/score/2023-10-19
         export const ByDate: (date?: string) => string = (date) => `${SCORE_URL}/${date || "now"}`;
@@ -292,6 +293,16 @@ export module Paths {
     export module Seasons {
         const URL = `${API_ENDPOINT}/season`;
         export const All = URL;
+    }
+
+    export module Playoffs {
+
+        // https://api-web.nhle.com/v1/playoff-series/carousel/20232024/
+        export const Carousel = (season: string) => `${API_ENDPOINT}/playoff-series/carousel/${season}`;
+        // https://api-web.nhle.com/v1/schedule/playoff-series/20232024/a
+        export const Series = (season: string, matchup: string) => `${API_ENDPOINT}/schedule/playoff-series/${season}/${matchup}`;
+        // https://api-web.nhle.com/v1/playoff-bracket/2022
+        export const Bracket = (year: string) => `${API_ENDPOINT}/playoff-bracket/${year}`;
     }
 }
 
