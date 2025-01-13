@@ -143,24 +143,24 @@ export module API {
     }
 
     export module Playoffs {
-        export const GetPlayoffSeries: (season: string, series: string) => Promise<PlayoffSeriesResponse[]> = async (
+        export const GetPlayoffSeries: (season: string, series: string) => Promise<PlayoffSeriesResponse> = async (
             season,
             series
         ) => {
-            const response = await get<PlayoffSeriesResponse[]>(Paths.Playoffs.Series(season, series));
+            const response = await get<PlayoffSeriesResponse>(Paths.Playoffs.Series(season, series));
             return response;
         };
-        export const GetPlayoffBracket: (year: string) => Promise<PlayoffBracketResponse[]> = async (year) => {
-            const response = await get<PlayoffBracketResponse[]>(Paths.Playoffs.Bracket(year));
+        export const GetPlayoffBracket: (year: string) => Promise<PlayoffBracketResponse> = async (year) => {
+            const response = await get<PlayoffBracketResponse>(Paths.Playoffs.Bracket(year));
             return response;
         };
-        export const GetPlayoffCarousel: (season: string) => Promise<PlayoffCarouselResponse[]> = async (season) => {
-            const response = await get<PlayoffCarouselResponse[]>(Paths.Playoffs.Carousel(season));
+        export const GetPlayoffCarousel: (season: string) => Promise<PlayoffCarouselResponse> = async (season) => {
+            const response = await get<PlayoffCarouselResponse>(Paths.Playoffs.Carousel(season));
             return response;
         };
         export module Search {
-            export const Player: (query: string) => Promise<PlayerSearchResult[]> = async (query) => {
-                const response = await get<PlayerSearchResult[]>(Paths.Search.Player(query));
+            export const Player: (query: string) => Promise<PlayerSearchResult> = async (query) => {
+                const response = await get<PlayerSearchResult>(Paths.Search.Player(query));
                 return response;
             };
         }
