@@ -24,7 +24,6 @@ interface PlayMessageContainer {
 
 /**
  * TODO - announce challenges / goal removals / unsuccessful challenges? / GOALIE PULLS / RUNS
- * TODO - intermission clock rundown is good but doesn't stop lol
  */
 
 export class GameFeedManager {
@@ -269,7 +268,7 @@ export class GameFeedManager {
             shotType && contains(goalTypeKeys, shotType)
                 ? Strings.GOAL_TYPE_STRINGS[shotType as keyof typeof Strings.GOAL_TYPE_STRINGS]
                 : "Unknown shot type";
-        const secondaryDescription = `${shotTypeString}${unassisted ? ` - Unassisted` : ""}${
+        let secondaryDescription = `${shotTypeString}${unassisted ? ` - Unassisted` : ""}${
             goalphrase ? ` - ${goalphrase}` : ""
         }`;
 
@@ -298,6 +297,12 @@ export class GameFeedManager {
                 inline: true,
             }
         );
+
+        // check for highlights and append to description
+        if (details?.highlightClipSharingUrl) {
+            const { highlightClipSharingUrl } = details;
+            secondaryDescription += `\n[Watch](${highlightClipSharingUrl})`;
+        }
 
         const { periodDescriptor, timeRemaining } = goal;
         const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
