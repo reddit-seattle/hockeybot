@@ -93,11 +93,15 @@ export class GameFeedManager {
 
         // parse plays once into buckets
         for (const play of plays) {
-            const { typeCode } = play;
+            const { typeCode, eventId, typeDescKey, periodDescriptor, timeRemaining } = play;
             // skip if it's not an event we care about
             if (!tracked_types.includes(typeCode)) {
                 continue;
             }
+            console.log("--------------------------------------------------");
+            console.log(`Processing event ${eventId}, type: ${typeDescKey} (${typeCode}) - ${timeRemaining} remaining in the ${periodToStr(periodDescriptor.number || 1, periodDescriptor.periodType || "REG")} period`);
+            console.log(`Game time: ${feed.clock.timeRemaining} remaining in the ${periodToStr(feed.periodDescriptor.number || 1, feed.periodDescriptor.periodType || "REG")} period`);
+            console.log("--------------------------------------------------");
             switch (typeCode) {
                 case EventTypeCode.goal:
                     this.processGoal(play);

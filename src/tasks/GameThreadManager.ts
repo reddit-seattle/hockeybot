@@ -123,6 +123,11 @@ class GameThreadManager {
                 timezone: Config.TIME_ZONE,
             });
         }
+        else {
+            console.log("--------------------------------------------------");
+            console.log("No kraken game today. Will check again tomorrow at 9:00");
+            console.log("--------------------------------------------------");
+        }
     };
 
     /**
