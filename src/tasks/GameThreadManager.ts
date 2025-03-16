@@ -1,4 +1,5 @@
 import { EmbedBuilder } from "@discordjs/builders";
+import { format, utcToZonedTime } from "date-fns-tz";
 import { TextChannel, ThreadChannel } from "discord.js";
 import { schedule, ScheduledTask } from "node-cron";
 import { contains } from "underscore";
@@ -8,7 +9,6 @@ import { Config, Kraken } from "../utils/constants";
 import { GameState } from "../utils/enums";
 import { ApiDateString, isGameOver, relativeDateString } from "../utils/helpers";
 import { GameFeedManager } from "./GameFeedManager";
-import { format, utcToZonedTime } from "date-fns-tz";
 
 let every_minute = "*/1 * * * *";
 let every_morning = "0 0 9 * * *";
@@ -16,7 +16,7 @@ let every_morning = "0 0 9 * * *";
 const startedStates = [GameState.pregame, GameState.live, GameState.critical];
 
 /** BIG list of TODOs
- * 
+ *
  * * TODO - add game story to game start embed
  * * TODO - shootout tracker?
  * * TODO - playoffs? (among other places)
@@ -122,8 +122,7 @@ class GameThreadManager {
                 scheduled: true,
                 timezone: Config.TIME_ZONE,
             });
-        }
-        else {
+        } else {
             console.log("--------------------------------------------------");
             console.log("No kraken game today. Will check again tomorrow at 9:00");
             console.log("--------------------------------------------------");
@@ -194,7 +193,8 @@ class GameThreadManager {
             );
             console.log("--------------------------------------------------");
             // spawn a live game feed checker
-            this.gameFeedManager = new GameFeedManager(this.thread, this.gameId);
+            const feed = await API.Games.GetPlays(this.gameId);
+            this.gameFeedManager = new GameFeedManager(this.thread, feed);
             // check if the game start is in the past or future (don't re-announce)
             if (new Date(startTimeUTC) > new Date()) {
                 this.announceGameStartingSoon(startTimeUTC);

@@ -108,6 +108,7 @@ export module Environment {
     export const botToken = process.env["bot_token"] || undefined;
     export const DEBUG = process.env["hockeybotDEBUG"] ? true : false;
     export const KRAKENCHANNEL = process.env["KRAKEN_CHANNEL_ID"] || undefined;
+    export const LOCAL_RUN = process.env["local_run"] ? true : false;
 }
 
 export enum MEDIA_FORMAT {
@@ -260,6 +261,7 @@ export module Paths {
 
         // https://api-web.nhle.com/v1/scoreboard/sea/now
         export const Scoreboard = (team?: string) => `${SCOREBOARD_URL}/${team ?? ""}/now`;
+        // https://api-web.nhle.com/v1/wsc/game-story/2024020543
         export const Story = (id: string) => `${API_ENDPOINT}/wsc/game-story/${id}`;
         // Today's games: https://api-web.nhle.com/v1/score/now
         // Dated games:   https://api-web.nhle.com/v1/score/2023-10-19

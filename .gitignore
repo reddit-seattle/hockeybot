@@ -62,3 +62,6 @@ typings/
 
 # dist / build output
 dist
+
+# test output files
+output/**/*.json

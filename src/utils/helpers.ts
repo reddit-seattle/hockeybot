@@ -1,8 +1,9 @@
 import { addHours, format, getUnixTime } from "date-fns";
 import { AutocompleteInteraction, SlashCommandStringOption } from "discord.js";
-import { ConferenceAbbrev, DivisionAbbrev, GameState, PeriodType, TeamTriCode } from "./enums";
-import _ from "underscore";
+import { all, first } from "underscore";
 import { API } from "../service/API";
+import { Play } from "../service/models/responses/PlayByPlayResponse";
+import { ConferenceAbbrev, DivisionAbbrev, GameState, PeriodType, TeamTriCode } from "./enums";
 
 // credit: Typescript documentation, src
 // https://www.typescriptlang.org/docs/handbook/advanced-types.html#index-types
@@ -37,7 +38,7 @@ export const teamOrPlayerAutocomplete = async (interaction: AutocompleteInteract
         const choices = Object.keys(TeamTriCode);
         const filtered = choices.filter((choice) => choice.toUpperCase().startsWith(value.value.toUpperCase()));
         await interaction.respond(
-            _.first(
+            first(
                 filtered.map((choice) => ({ name: choice, value: choice })),
                 25
             )
@@ -48,7 +49,7 @@ export const teamOrPlayerAutocomplete = async (interaction: AutocompleteInteract
         const choices = await API.Search.Player(value.value);
         await interaction.respond(
             choices
-                ? _.first(
+                ? first(
                       choices.map((choice) => ({
                           name: `${choice.name} [${choice.teamAbbrev}]`,
                           value: choice.playerId,
@@ -160,12 +161,12 @@ export const processLocalizedDateInput = (input?: string | Date | null) => {
     if (!input) {
         return undefined;
     }
-    // all hail the pacific timezome
+    // all hail the pacific timezone
     return addHours(new Date(input), 8);
 };
 
 /**
- * This is absolutlely ridiculous but I can't figure out how to do it otherwise
+ * This is absolutely ridiculous but I can't figure out how to do it otherwise
  *
  */
 export const getSituationCodeString = (situationCode?: string, leftScored: boolean = false) => {
@@ -202,4 +203,51 @@ export const getSituationCodeString = (situationCode?: string, leftScored: boole
     };
     // console.log(`SITUATIONCODE: ${situationCode} -> ${SITUATION_TYPE_DICT?.[situationCode]}`);
     return situationCode in SITUATION_TYPE_DICT ? `${SITUATION_TYPE_DICT[situationCode]} ` : undefined;
+};
+
+/**
+ * logs the difference in the game feed
+ * Returns an object of {added: [], removed: [], updated: []}
+ *
+ * @param oldFeed
+ * @param newFeed
+ */
+export const logDiff = (oldFeed: Play[], newFeed: Play[]) => {
+    const oldIds = new Set(oldFeed.map((play) => play.eventId));
+    const newIds = new Set(newFeed.map((play) => play.eventId));
+
+    const added = newFeed.filter((play) => !oldIds.has(play.eventId));
+    const removed = oldFeed.filter((play) => !newIds.has(play.eventId));
+    const updatedPlays = newFeed.filter((play) => oldIds.has(play.eventId));
+
+    // check if the updated plays have actually changed, and only keep the updated fields
+    const updated = updatedPlays.map((play) => {
+        const oldPlay = oldFeed.find((p) => p.eventId === play.eventId);
+        if (oldPlay) {
+            const updatedFields = Object.keys(play).reduce((acc, key) => {
+                if (
+                    (key as keyof typeof play) &&
+                    play[key as keyof typeof play] !== oldPlay[key as keyof typeof play]
+                ) {
+                    acc[key] = play[key as keyof typeof play];
+                }
+                return acc;
+            }, {} as any);
+            return { eventId: play.eventId, ...updatedFields };
+        }
+        return play;
+    });
+    if (all([added.length, removed.length, updated.length])) {
+        console.log("--------------------------------------------------");
+        console.log("Game feed diff:");
+        console.log("Added plays:");
+        console.dir(added);
+        console.log("Removed plays:");
+        console.dir(removed);
+        console.log("Updated plays:");
+        console.dir(updated);
+        console.log("--------------------------------------------------");
+    }
+
+    return { added, removed, updated };
 };
