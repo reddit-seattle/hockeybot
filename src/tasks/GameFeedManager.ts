@@ -77,21 +77,14 @@ export class GameFeedManager {
 
     private checkGameStatus = async () => {
         const game = await API.Games.GetBoxScore(this.gameId);
-        const { gameState, gameDate, awayTeam, homeTeam } = game;
+        const { gameState, awayTeam, homeTeam, clock, period } = game;
 
-        // #region logging
-        console.log(
-            `LIVE GAME FEED CHECKER FOR ID: ${this.gameId}, (${awayTeam.abbrev} at ${homeTeam.abbrev}) @ ${gameDate}`
-        );
-        console.dir(game);
-        console.log("--------------------------------------------------");
+        // log main game loop
         console.log(
             `Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${homeTeam.commonName.default} ${
                 homeTeam?.score || 0
-            }`
+            } - ${clock.timeRemaining} - Period ${period}`
         );
-        console.log("--------------------------------------------------");
-        // #endregion
 
         // map old game event ids
         const oldEventIds = Array.from(this.events.keys());
@@ -133,20 +126,21 @@ export class GameFeedManager {
             }
             switch (typeCode) {
                 case EventTypeCode.goal:
-                    this.processGoal(play);
+                    await this.processGoal(play);
                     break;
                 case EventTypeCode.penalty:
-                    this.processPenalty(play);
+                    await this.processPenalty(play);
                     break;
                 case EventTypeCode.periodStart:
                 case EventTypeCode.periodEnd:
-                case EventTypeCode.gameEnd:
-                    this.processClockEvent(play);
+                    await this.processClockEvent(play);
                     break;
                 default:
                     break;
             }
         }
+        console.log(`Tracked events after processing: `);
+        console.log(Array.from(this.events.values()).map(event => `${event.play.eventId} - ${event.play.typeDescKey} - message link: ${event.message?.url ?? "undefined"}`));
     };
 
     private getFeed = async (force: boolean = false): Promise<PlayByPlayResponse> => {
@@ -177,11 +171,6 @@ export class GameFeedManager {
             // update the feed
             this.feed = feed;
             this.embedFormatter.updateFeed(feed);
-            // log the new feed
-            console.log("--------------------------------------------------");
-            console.log("New game feed:");
-            console.dir(feed);
-            console.log("--------------------------------------------------");
         }
         return this.feed;
     };
@@ -191,12 +180,18 @@ export class GameFeedManager {
     // like if the assists change we don't need to re-process the situation code
     private processGoal = async (goal: Play) => {
         const embed = await this.embedFormatter.createGoalEmbed(goal);
-        embed && (await this.createOrUpdateEventMessage(goal, { embeds: [embed] }));
+        if (!embed) {
+            return;
+        }
+        await this.createOrUpdateEventMessage(goal, { embeds: [embed] });
     };
 
     private processPenalty = async (penalty: Play) => {
         const penaltyEmbed = await this.embedFormatter.createPenaltyEmbed(penalty);
-        penaltyEmbed && (await this.createOrUpdateEventMessage(penalty, { embeds: [penaltyEmbed] }));
+        if (!penaltyEmbed) {
+            return;
+        }
+        await this.createOrUpdateEventMessage(penalty, { embeds: [penaltyEmbed] });
     };
 
     private createOrUpdateEventMessage = async (play: Play, messageOpts: MessageCreateOptions | MessageEditOptions) => {
@@ -204,15 +199,14 @@ export class GameFeedManager {
         const event = this.events.get(eventId);
         const { message: existingMessage } = event ?? {};
         let message: Message | undefined;
-        if (!event) {
+        if (!event?.play?.eventId) {
             // announce new event
             message = await this.thread?.send(messageOpts as MessageCreateOptions);
-            console.log(
-                `New message created for event ${eventId} - ${play.typeDescKey} - message link: ${message?.url}`
-            );
+            console.log(`Created new message for event ${eventId} - ${play.typeDescKey} - ${message.url}`);
         } else if (existingMessage) {
             // the event is already in the feed, update the message
             message = await existingMessage?.edit(messageOpts as MessageEditOptions);
+            console.log( `Updating message for event ${eventId} - ${play.typeDescKey} - message: ${existingMessage.url}`);
         }
         // update the local event object
         this.events.set(eventId, { message, play });
