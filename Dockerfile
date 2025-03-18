@@ -1,5 +1,5 @@
-# Use the official Node.js 14 image as the base image
-FROM node:18 as base
+# Use the official Node.js 22 image as the base image
+FROM node:22 AS base
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -17,7 +17,7 @@ COPY src ./src
 RUN npm ci && npm run tsc
 
 # Put app in new image
-FROM node:18-slim as app
+FROM node:22-slim AS app
 
 WORKDIR /app
 COPY --from=base /app/dist /app/dist
