@@ -449,7 +449,7 @@ export class GameFeedEmbedFormatter {
             ? `${feed?.clock.timeRemaining ?? "00:00"} remaining in the ${playPeriodOrdinal} intermission`
             : `${playPeriodOrdinal} intermission has ended`;
 
-        const embed = new EmbedBuilder()
+        return new EmbedBuilder()
             .setTitle(existingEmbed.title)
             .setDescription(existingEmbed.description)
             .setFields(existingEmbed.fields)
@@ -458,8 +458,8 @@ export class GameFeedEmbedFormatter {
                     typeCode == EventTypeCode.periodStart
                         ? `${playPeriodOrdinal} period has started".` // period start messages just say "period has started" (statestring),
                         : timeRemainingString, //  period end messages update intermission clock as the footer
-            });
-        return { embeds: [embed] } as MessageEditOptions;
+            })
+            .setColor(39129);
     };
     createGameEndEmbed = async () => {
         // TODO - kraken win additions

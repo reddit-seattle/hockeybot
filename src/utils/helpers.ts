@@ -1,8 +1,10 @@
 import { addHours, format, getUnixTime } from "date-fns";
 import { AutocompleteInteraction, SlashCommandStringOption } from "discord.js";
-import { all, first } from "underscore";
+import { mkdirSync, writeFileSync } from "fs";
+import { any, first } from "underscore";
 import { API } from "../service/API";
-import { Play } from "../service/models/responses/PlayByPlayResponse";
+import { PlayByPlayResponse } from "../service/models/responses/PlayByPlayResponse";
+import { Environment } from "./constants";
 import { ConferenceAbbrev, DivisionAbbrev, GameState, PeriodType, TeamTriCode } from "./enums";
 
 // credit: Typescript documentation, src
@@ -212,17 +214,23 @@ export const getSituationCodeString = (situationCode?: string, leftScored: boole
  * @param oldFeed
  * @param newFeed
  */
-export const logDiff = (oldFeed: Play[], newFeed: Play[]) => {
-    const oldIds = new Set(oldFeed.map((play) => play.eventId));
-    const newIds = new Set(newFeed.map((play) => play.eventId));
+export const logDiff = (oldFeed: PlayByPlayResponse | undefined, newFeed: PlayByPlayResponse) => {
+    if (!oldFeed) {
+        return { added: newFeed.plays, removed: [], updated: [] };
+    }
 
-    const added = newFeed.filter((play) => !oldIds.has(play.eventId));
-    const removed = oldFeed.filter((play) => !newIds.has(play.eventId));
-    const updatedPlays = newFeed.filter((play) => oldIds.has(play.eventId));
+    const { plays: oldPlays } = oldFeed;
+    const { plays: newPlays } = newFeed;
+    const oldIds = new Set(oldPlays.map((play) => play.eventId));
+    const newIds = new Set(newPlays.map((play) => play.eventId));
+
+    const added = oldPlays.filter((play) => !oldIds.has(play.eventId));
+    const removed = oldPlays.filter((play) => !newIds.has(play.eventId));
+    const updatedPlays = newPlays.filter((play) => oldIds.has(play.eventId));
 
     // check if the updated plays have actually changed, and only keep the updated fields
     const updated = updatedPlays.map((play) => {
-        const oldPlay = oldFeed.find((p) => p.eventId === play.eventId);
+        const oldPlay = oldPlays.find((p) => p.eventId === play.eventId);
         if (oldPlay) {
             const updatedFields = Object.keys(play).reduce((acc, key) => {
                 if (
@@ -237,17 +245,19 @@ export const logDiff = (oldFeed: Play[], newFeed: Play[]) => {
         }
         return play;
     });
-    if (all([added.length, removed.length, updated.length])) {
-        console.log("--------------------------------------------------");
-        console.log("Game feed diff:");
-        console.log("Added plays:");
-        console.dir(added);
-        console.log("Removed plays:");
-        console.dir(removed);
-        console.log("Updated plays:");
-        console.dir(updated);
-        console.log("--------------------------------------------------");
-    }
 
-    return { added, removed, updated };
+    const diff = { added, removed, updated };
+    // if there are any changes, log the diff to a file (for local run only)
+    if (Environment.LOCAL_RUN && any([added.length, updated.length, removed.length])) {
+        const { id } = newFeed;
+        const outputDir = `./output/${id}`;
+        //  create the directory if it doesn't exist
+        mkdirSync(outputDir, { recursive: true });
+        // write the diff to a file with current timestamp
+        const timestamp = new Date().toLocaleTimeString().replace(/:/g, "-");
+        const fileName = `${outputDir}/${timestamp}.json`;
+        // write the diff to a file
+        writeFileSync(fileName, JSON.stringify(diff, null, 2));
+    }
+    return diff;
 };
