@@ -456,7 +456,7 @@ export class GameFeedEmbedFormatter {
             .setFooter({
                 text:
                     typeCode == EventTypeCode.periodStart
-                        ? `${playPeriodOrdinal} period has started".` // period start messages just say "period has started" (statestring),
+                        ? `${playPeriodOrdinal} period has started.` // period start messages just say "period has started" (statestring),
                         : timeRemainingString, //  period end messages update intermission clock as the footer
             })
             .setColor(39129);
