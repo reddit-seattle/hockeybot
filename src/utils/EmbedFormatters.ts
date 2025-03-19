@@ -251,7 +251,7 @@ export class GameFeedEmbedFormatter {
         this.feed = feed;
     };
 
-    createGoalEmbed = async (goal: Play) => {
+    createGoalEmbed = (goal: Play) => {
         const { details } = goal;
         if (!details) {
             return;
@@ -350,7 +350,7 @@ export class GameFeedEmbedFormatter {
             .setFooter({ text: timeRemainingString })
             .setColor(39129);
     };
-    createPenaltyEmbed = async (penalty: Play) => {
+    createPenaltyEmbed = (penalty: Play) => {
         const { details } = penalty;
         if (!details) {
             return;
@@ -408,7 +408,7 @@ export class GameFeedEmbedFormatter {
             .setFooter({ text: timeRemainingString })
             .setColor(39129);
     };
-    createIntermissionEmbed = async (periodEvent: Play) => {
+    createIntermissionEmbed = (periodEvent: Play) => {
         const { awayTeam: away, homeTeam: home } = this.feed;
         const { score: homeScore, sog: homeSOG } = home;
         const { score: awayScore, sog: awaySOG } = away;
@@ -435,7 +435,7 @@ export class GameFeedEmbedFormatter {
         // first intermission should always just say 'X' period has ended
         return new EmbedBuilder().setTitle(title).addFields(scoreFields).setFooter({ text: title }).setColor(39129);
     };
-    updateIntermissionEmbed = async (periodEvent: Play, existingEmbed: Embed) => {
+    updateIntermissionEmbed = (periodEvent: Play, existingEmbed: Embed) => {
         // use these values to ensure we always are using the play's intermission / period value
         const { periodDescriptor, typeCode } = periodEvent;
         const playPeriod = periodDescriptor.number;
@@ -461,7 +461,7 @@ export class GameFeedEmbedFormatter {
             })
             .setColor(39129);
     };
-    createGameEndEmbed = async () => {
+    createGameEndEmbed = () => {
         // TODO - kraken win additions
         // TODO - add highlight videos after the game 
         // TODO - three stars of the game
