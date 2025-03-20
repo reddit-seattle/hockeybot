@@ -6,6 +6,7 @@
   "dependencies": {
     "@discordjs/builders": "^1.7.0",
     "@discordjs/rest": "^2.4.3",
+    "croner": "^9.0.0",
     "date-fns": "^2.16.1",
     "date-fns-tz": "^1.0.12",
     "discord-api-types": "^0.37.66",
@@ -16,6 +17,7 @@
     "node-cron": "^3.0.3",
     "node-fetch": "^2.6.7",
     "table": "^6.8.1",
+    "toad-scheduler": "^3.0.1",
     "underscore": "^1.12.1"
   },
   "devDependencies": {
