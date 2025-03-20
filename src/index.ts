@@ -10,7 +10,9 @@ import { ChannelIds, Environment } from "./utils/constants";
 // @ts-ignore
 import LogTimestamp from "log-timestamp";
 
-LogTimestamp();
+if (Environment.LOCAL_RUN) {
+    LogTimestamp();
+}
 
 const client = new Client({
     intents: ["Guilds", "GuildMessages", "GuildMessageReactions"],
