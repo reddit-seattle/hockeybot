@@ -1,7 +1,7 @@
 import { EmbedBuilder } from "@discordjs/builders";
 import { format, utcToZonedTime } from "date-fns-tz";
 import { TextChannel, ThreadChannel } from "discord.js";
-import { schedule, ScheduledTask } from "node-cron";
+import { CronJob, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { contains } from "underscore";
 import { API } from "../service/API";
 import { Game } from "../service/models/responses/DaySchedule";
@@ -10,8 +10,9 @@ import { GameState } from "../utils/enums";
 import { ApiDateString, isGameOver, relativeDateString } from "../utils/helpers";
 import { GameFeedManager } from "./GameFeedManager";
 
-let every_minute = "*/1 * * * *";
 let every_morning = "0 0 9 * * *";
+
+const PREGAME_CHECKER_ID = "pregame_checker";
 
 const startedStates = [GameState.pregame, GameState.live, GameState.critical];
 
@@ -36,8 +37,15 @@ class GameThreadManager {
     private channel: TextChannel;
     private gameId?: string;
     private thread?: ThreadChannel;
-    private pregameCheckerTask?: ScheduledTask;
+    private scheduler: ToadScheduler = new ToadScheduler();
     private gameFeedManager?: GameFeedManager;
+
+    private StopExistingCheckers = () => {
+        if (this.scheduler.existsById(PREGAME_CHECKER_ID)) {
+            this.scheduler.stopById(PREGAME_CHECKER_ID);
+        }
+        this?.gameFeedManager?.Stop();
+    };
 
     // TODO - this function does too much and has too many side-effects - refactor
     /**
@@ -51,9 +59,8 @@ class GameThreadManager {
         console.log("Checking for kraken game today (stopping existing checkers)...");
         console.log("--------------------------------------------------");
 
-        // stop existing checkers
-        this?.pregameCheckerTask?.stop();
-        this?.gameFeedManager?.Stop();
+        // stop existing existing checkers
+        this.StopExistingCheckers();
 
         const games = await API.Schedule.GetDailySchedule();
         const krakenGames = games?.filter(
@@ -69,6 +76,7 @@ class GameThreadManager {
                 console.log("--------------------------------------------------");
                 console.log("Game over, skipping pregame checker...");
                 console.log("--------------------------------------------------");
+                this.StopExistingCheckers();
                 return;
             }
 
@@ -118,14 +126,24 @@ class GameThreadManager {
             console.log("--------------------------------------------------");
             console.log("There's hockey today, starting pregame task...");
             console.log("--------------------------------------------------");
-            this.pregameCheckerTask = schedule(every_minute, this.checkForGameStart, {
-                scheduled: true,
-                timezone: Config.TIME_ZONE,
-            });
+            // checks for game start every 5 minutes (and immediately)
+            const pregameCheckerTask = new SimpleIntervalJob(
+                {
+                    minutes: 5,
+                    runImmediately: true,
+                },
+                new Task("pregame checker", this.checkForGameStart),
+                {
+                    id: PREGAME_CHECKER_ID,
+                    preventOverrun: true,
+                }
+            );
+            this.scheduler.addSimpleIntervalJob(pregameCheckerTask);
         } else {
             console.log("--------------------------------------------------");
             console.log("No kraken game today. Will check again tomorrow at 9:00");
             console.log("--------------------------------------------------");
+            this.StopExistingCheckers();
         }
     };
 
@@ -141,10 +159,18 @@ class GameThreadManager {
         await this?.createKrakenGameDayThread();
 
         // then, start the daily checker (for the next games)
-        schedule(every_morning, this.createKrakenGameDayThread, {
-            scheduled: true,
-            timezone: Config.TIME_ZONE,
-        });
+        const dailyCheckerTask = new CronJob(
+            {
+                cronExpression: every_morning,
+                timezone: Config.TIME_ZONE,
+            },
+            new Task("daily kraken game day thread checker", this.createKrakenGameDayThread),
+            {
+                // TODO - may need to be false, depending if old task cleans up correctly
+                preventOverrun: true,
+            }
+        );
+        this.scheduler.addCronJob(dailyCheckerTask);
     }
 
     /**
@@ -168,8 +194,7 @@ class GameThreadManager {
             console.log("--------------------------------------------------");
             console.log("No game id or thread set, , skipping pregame checker...");
             console.log("--------------------------------------------------");
-            this.pregameCheckerTask?.stop();
-            this?.gameFeedManager?.Stop();
+            this.StopExistingCheckers();
             return;
         }
         console.log("--------------------------------------------------");
@@ -192,19 +217,20 @@ class GameThreadManager {
                 `PREGAME STARTED FOR ID: ${this.gameId}, (${awayTeam.abbrev} at ${homeTeam.abbrev}) @ ${gameDate}`
             );
             console.log("--------------------------------------------------");
-            // spawn a live game feed checker
+            // spawn a live game feed checker... that should end itself
             const feed = await API.Games.GetPlays(this.gameId);
             this.gameFeedManager = new GameFeedManager(this.thread, feed);
             // check if the game start is in the past or future (don't re-announce)
             if (new Date(startTimeUTC) > new Date()) {
                 this.announceGameStartingSoon(startTimeUTC);
             }
-            await this?.pregameCheckerTask?.stop();
+            // stop pregame checker
+            if (this.scheduler.existsById(PREGAME_CHECKER_ID)) {
+                await this.scheduler.stopById(PREGAME_CHECKER_ID);
+            }
         }
         if (isGameOver(gameState)) {
-            // the game is over
-            this?.gameFeedManager?.Stop();
-            this?.pregameCheckerTask?.stop();
+            this.StopExistingCheckers();
         }
     };
 
