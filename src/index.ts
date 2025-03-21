@@ -1,12 +1,18 @@
-import { Client, Guild, Channel, TextChannel, Interaction, ChannelType } from "discord.js";
 import { REST } from "@discordjs/rest";
 import { RESTPostAPIApplicationCommandsJSONBody, Routes } from "discord-api-types/v10";
+import { Channel, ChannelType, Client, Guild, Interaction, TextChannel } from "discord.js";
 import { createServer } from "http";
-import { CommandDictionary } from "./models/Command";
-import { ChannelIds, Environment, GuildIds } from "./utils/constants";
 import { exit } from "process";
-import { GetStandings, GetScores, GetSchedule, GetStats } from "./commands";
+import { GetSchedule, GetScores, GetStandings, GetStats } from "./commands";
+import { CommandDictionary } from "./models/Command";
 import GameThreadManager from "./tasks/GameThreadManager";
+import { ChannelIds, Environment } from "./utils/constants";
+// @ts-ignore
+import LogTimestamp from "log-timestamp";
+
+if (Environment.LOCAL_RUN) {
+    LogTimestamp();
+}
 
 const client = new Client({
     intents: ["Guilds", "GuildMessages", "GuildMessageReactions"],
@@ -61,7 +67,7 @@ const startGameDayThreadChecker = async (guild: Guild) => {
         console.log("Kraken channel ID env var (KRAKEN_CHANNEL_ID) not set. Game day thread checker will not start.");
         return;
     }
-    const krakenChannel = (await guild.channels.fetch(Environment.KRAKENCHANNEL));
+    const krakenChannel = await guild.channels.fetch(Environment.KRAKENCHANNEL);
     if (!(krakenChannel?.type == ChannelType.GuildText)) {
         console.log("Kraken channel not found, or not a text channel. Game day thread checker will not start.");
         return;
@@ -71,14 +77,25 @@ const startGameDayThreadChecker = async (guild: Guild) => {
 
 client.on("ready", async () => {
     console.log(`Logged in as ${client?.user?.tag}!`);
-    if (Environment.DEBUG) {
-        //try to announce to servers when you go online
-        client.guilds.cache.forEach((guild: Guild) => {
-            const debugChannel = guild.channels.cache.find((ch: Channel) => ch.id == ChannelIds.DEBUG) as TextChannel;
-            debugChannel?.send("HockeyBot, reporting for duty!");
-            startGameDayThreadChecker(guild);
-        });
-    }
+    // log the version from package.json
+    const packageJson = require("../package.json");
+    console.log(`Version: ${packageJson.version}`);
+    client.guilds.cache.forEach((guild: Guild) => {
+        if (Environment.DEBUG) {
+            //try to announce to servers when you go online
+            try {
+                const debugChannel = guild.channels.cache.find(
+                    (ch: Channel) => ch.id == ChannelIds.DEBUG
+                ) as TextChannel;
+                debugChannel?.send("HockeyBot, reporting for duty!");
+            } catch (e) {
+                console.log(e);
+            }
+        }
+        // start the game day thread checker for this guild
+        startGameDayThreadChecker(guild);
+    });
+    // keep this out of the loop, this actually loops through guilds
     registerAllSlashCommands(client);
 });
 

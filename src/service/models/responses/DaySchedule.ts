@@ -58,8 +58,8 @@ import { LocalizedString } from "./Common";
     gameCenterLink: string;
     ticketsLink?: string;
     gameOutcome?: GameOutcome;
-    winningGoalie?: WinningGoalie;
-    winningGoalScorer?: WinningGoalScorer;
+    winningGoalie?: WinningPlayer;
+    winningGoalScorer?: WinningPlayer;
     threeMinRecap?: string;
     threeMinRecapFr?: string;
   }
@@ -67,13 +67,7 @@ import { LocalizedString } from "./Common";
   export interface GameOutcome {
     lastPeriodType: string;
   }
-  export interface WinningGoalie {
-    playerId: number;
-    firstInitial: LocalizedString;
-    lastName: LocalizedString;
-  }
-
-  export interface WinningGoalScorer {
+  export interface WinningPlayer {
     playerId: number;
     firstInitial: LocalizedString;
     lastName: LocalizedString;

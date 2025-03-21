@@ -84,6 +84,7 @@ export interface Game {
   gameOutcome: GameOutcome;
   goals: Goal[];
   threeMinRecapFr?: string;
+  condensedGame?: string;
 }
 export interface ScoresResponse {
   prevDate: string;
