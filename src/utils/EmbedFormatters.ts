@@ -110,8 +110,8 @@ export class GameFeedEmbedFormatter {
 
         const { periodDescriptor, timeRemaining, eventId } = goal;
         const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
-            periodDescriptor.number || 1,
-            periodDescriptor.periodType || "REG"
+            periodDescriptor?.number || 1,
+            periodDescriptor?.periodType || "REG"
         )} period`;
         return new EmbedBuilder()
             .setTitle(title)
@@ -167,8 +167,8 @@ export class GameFeedEmbedFormatter {
 
         const { timeRemaining, periodDescriptor } = penalty;
         const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
-            periodDescriptor.number || 1,
-            periodDescriptor.periodType || "REG"
+            periodDescriptor?.number || 1,
+            periodDescriptor?.periodType || "REG"
         )} period`;
 
         return new EmbedBuilder()
@@ -185,7 +185,7 @@ export class GameFeedEmbedFormatter {
         const { score: awayScore, sog: awaySOG } = away;
 
         const { periodDescriptor } = periodEvent;
-        const periodOrdinal = periodToStr(periodDescriptor.number || 1, periodDescriptor.periodType || "REG");
+        const periodOrdinal = periodToStr(periodDescriptor?.number || 1, periodDescriptor?.periodType || "REG");
         const title = `${periodOrdinal} period has ${
             periodEvent.typeCode == EventTypeCode.periodEnd ? "ended" : "started"
         }.`;
@@ -209,8 +209,8 @@ export class GameFeedEmbedFormatter {
     updateIntermissionEmbed = (periodEvent: Play, existingEmbed: Embed) => {
         // use these values to ensure we always are using the play's intermission / period value
         const { periodDescriptor, typeCode } = periodEvent;
-        const playPeriod = periodDescriptor.number;
-        const playPeriodOrdinal = periodToStr(playPeriod, periodDescriptor.periodType);
+        const playPeriod = periodDescriptor?.number || 1;
+        const playPeriodOrdinal = periodToStr(playPeriod, periodDescriptor?.periodType || "REG");
 
         // are we updating the current intermission's value? or just writing that it's ended
         const feed = this.feed;

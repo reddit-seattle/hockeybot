@@ -185,7 +185,7 @@ export enum StatsTypes {
 }
 
 export namespace Kraken {
-    export const TeamId: string = "29";
+    export const TeamId: string = "55";
 }
 
 export interface Record {

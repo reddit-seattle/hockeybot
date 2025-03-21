@@ -123,7 +123,7 @@ export interface Details {
 // todo - base play?
 export interface Play {
     eventId: string;
-    periodDescriptor: PeriodDescriptor;
+    periodDescriptor?: PeriodDescriptor;
     timeInPeriod: string;
     timeRemaining: string;
     situationCode?: string;

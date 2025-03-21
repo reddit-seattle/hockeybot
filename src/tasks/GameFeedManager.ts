@@ -60,6 +60,8 @@ export class GameFeedManager {
 
         const { gameState, awayTeam, homeTeam, clock, periodDescriptor } = await API.Games.GetBoxScore(this.gameId);
 
+        const periodNumber = periodDescriptor?.number || 1;
+
         // check if game is over
         if (isGameOver(gameState)) {
             console.log("Ending Game");
@@ -68,13 +70,13 @@ export class GameFeedManager {
         }
 
         // state / iteration unique key
-        const stateKey = uniqueId(`${this.gameId}-${periodDescriptor.number}-${clock.timeRemaining}`);
+        const stateKey = uniqueId(`${this.gameId}-${periodNumber}-${clock.timeRemaining}`);
 
         // log main game loop
         console.log(
             `{${stateKey}} CheckGameStatus - Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${
                 homeTeam.commonName.default
-            } ${homeTeam?.score || 0} - ${clock.timeRemaining} - Period ${periodDescriptor.number} - (${gameState})`
+            } ${homeTeam?.score || 0} - ${clock.timeRemaining} - Period ${periodNumber} - (${gameState})`
         );
 
         // map old game event ids
