@@ -102,7 +102,6 @@ class GameThreadManager {
                 const gameStartEmbed = new EmbedBuilder()
                     .setTitle(title)
                     .setDescription(`Game start: ${gameStartTimeString} (${relativeDate})\n${game.venue.default}`)
-                    .setTimestamp(startDateZoned);
                 // TODO - add more game details (game story?)
                 const message = await this.channel.send({ embeds: [gameStartEmbed] });
                 // create thread (title is imperative)
@@ -152,9 +151,6 @@ class GameThreadManager {
      * Checks for a kraken game today
      */
     public async initialize() {
-        console.log("--------------------------------------------------");
-        console.log("Game THREAD manager initialize...");
-        console.log("--------------------------------------------------");
         // check if the game is on today and create / attach to a thread if it is
         await this?.createKrakenGameDayThread();
 
@@ -180,9 +176,6 @@ class GameThreadManager {
      * @param channel - the channel to create the message and thread in
      */
     constructor(channel: TextChannel) {
-        console.log("--------------------------------------------------");
-        console.log("Game THREAD manager constructor...");
-        console.log("--------------------------------------------------");
         this.channel = channel;
     }
 

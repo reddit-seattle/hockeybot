@@ -77,6 +77,9 @@ const startGameDayThreadChecker = async (guild: Guild) => {
 
 client.on("ready", async () => {
     console.log(`Logged in as ${client?.user?.tag}!`);
+    // log the version from package.json
+    const packageJson = require("../package.json");
+    console.log(`Version: ${packageJson.version}`);
     client.guilds.cache.forEach((guild: Guild) => {
         if (Environment.DEBUG) {
             //try to announce to servers when you go online

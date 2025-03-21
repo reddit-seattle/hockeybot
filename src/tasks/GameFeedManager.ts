@@ -197,7 +197,9 @@ export class GameFeedManager {
     };
 
     public Stop = () => {
-        this.scheduler.stopById(this.gameId);
+        if (this.scheduler.existsById(this.gameId)) {
+            this.scheduler.stopById(this.gameId);
+        }
     };
     public Start = () => {
         return this.scheduler.startById(this.gameId);
