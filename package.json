@@ -1,6 +1,6 @@
 {
   "name": "hockeybot",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "",
   "main": "dist/index.js",
   "dependencies": {
@@ -31,6 +31,6 @@
     "start": "npm ci && npm run tsc && node dist/index.js",
     "launch": "npm i --no-optional && npm run build && npm start"
   },
-  "author": "",
+  "author": "burn-piano-island",
   "license": "MIT"
 }
