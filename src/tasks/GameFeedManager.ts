@@ -1,4 +1,5 @@
 import { EmbedBuilder } from "@discordjs/builders";
+import { Mutex } from "async-mutex";
 import { Message, ThreadChannel } from "discord.js";
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { uniqueId } from "underscore";
@@ -29,6 +30,7 @@ export class GameFeedManager {
     private feed?: PlayByPlayResponse;
     private embedFormatter: GameFeedEmbedFormatter;
     private gameOver: boolean = false;
+    private eventsMutex: Mutex = new Mutex();
 
     private events: Map<string, PlayMessageContainer> = new Map<string, PlayMessageContainer>();
 
@@ -92,32 +94,61 @@ export class GameFeedManager {
         const removedEventIds = trackedEvents.filter((eventId) => !newEventIds.includes(eventId));
 
         // remove them from the tracked events
-        for (const eventId of removedEventIds) {
-            if (this.events.has(eventId)) {
-                const event = this.events.get(eventId);
-                // if the event has a message, delete it
-                console.log(
-                    `{${stateKey}} Deleting removed event ${eventId} - ${event?.play.typeDescKey} - message link: ${event?.message?.url}`
-                );
-                await event?.message?.delete();
-                this.events.delete(eventId);
+        await this.eventsMutex.runExclusive(async () => {
+            for (const eventId of removedEventIds) {
+                if (this.events.has(eventId)) {
+                    const event = this.events.get(eventId);
+                    // if the event has a message, delete it
+                    console.log(
+                        `{${stateKey}} Deleting removed event ${eventId} - ${event?.play.typeDescKey} - message link: ${event?.message?.url}`
+                    );
+                    await event?.message?.delete();
+                    this.events.delete(eventId);
+                }
             }
-        }
+        });
 
         // re-process each play and update message
         await Promise.all(
             plays.map(async (play) => {
+                let embed: EmbedBuilder | undefined;
                 switch (play.typeCode) {
                     case EventTypeCode.goal:
-                        await this.processGoal(play);
+                        embed = this.embedFormatter.createGoalEmbed(play);
                         break;
                     case EventTypeCode.penalty:
-                        await this.processPenalty(play);
+                        embed = this.embedFormatter.createPenaltyEmbed(play);
                         break;
                     case EventTypeCode.periodStart:
                     case EventTypeCode.periodEnd:
-                        await this.processClockEvent(play);
+                        const existingEmbed = this.events.get(play.eventId)?.message?.embeds?.[0];
+                        embed = existingEmbed
+                            ? this.embedFormatter.updateIntermissionEmbed(play, existingEmbed)
+                            : this.embedFormatter.createIntermissionEmbed(play);
                         break;
+                    case EventTypeCode.gameEnd:
+                        await this.EndGame();
+                        break;
+                }
+                if (embed) {
+                    const { eventId } = play;
+                    const messageOpts = { embeds: [embed] };
+                    await this.eventsMutex.runExclusive(async () => {
+                        if (!this.events.has(eventId)) {
+                            const message = await this.thread?.send(messageOpts);
+                            this.events.set(eventId, { message: message, play: play });
+                            console.log(
+                                `${eventId} not found in tracked events, created new message for event ${eventId} - ${play.typeDescKey} - ${message.url}`
+                            );
+                        } else {
+                            // try to get the existing message
+                            const existingMessage = this.events.get(eventId)?.message;
+                            // the event is already in the feed, update the message
+                            const newMessage = await existingMessage?.edit(messageOpts);
+                            // TODO - is this a valid fallback?
+                            this.events.set(eventId, { message: newMessage ?? existingMessage, play: play });
+                        }
+                    });
                 }
             })
         );
@@ -132,13 +163,15 @@ export class GameFeedManager {
         if (force || !this.feed) {
             const newFeed = await API.Games.GetPlays(this.gameId);
             // first time we're setting feed, mark all previous plays as tracked, but with no message to update
-            if (this.feed === undefined) {
-                for (const play of newFeed.plays) {
-                    if (tracked_types.includes(play.typeCode) && !this.events.has(play.eventId)) {
-                        this.events.set(play.eventId, { message: undefined, play: play });
+            await this.eventsMutex.runExclusive(async () => {
+                if (this.feed === undefined) {
+                    for (const play of newFeed.plays) {
+                        if (tracked_types.includes(play.typeCode) && !this.events.has(play.eventId)) {
+                            this.events.set(play.eventId, { message: undefined, play: play });
+                        }
                     }
                 }
-            }
+            });
             // log the diff of the plays (time consuming?)
             if (Environment.LOCAL_RUN) {
                 logDiff(this.feed, newFeed);
@@ -150,68 +183,11 @@ export class GameFeedManager {
         return this.feed;
     };
 
-    // todo - find a way to patch diffs of new event and previous event?
-    // want to avoid heavy processing multiple times -
-    // like if the assists change we don't need to re-process the situation code
-    private processGoal = async (goal: Play) => {
-        const goalEmbed = this.embedFormatter.createGoalEmbed(goal);
-        if (!goalEmbed) {
-            return;
-        }
-        return this.createOrUpdatePlayEmbed(goal, goalEmbed);
-    };
-
-    private processPenalty = async (penalty: Play) => {
-        const penaltyEmbed = this.embedFormatter.createPenaltyEmbed(penalty);
-        if (!penaltyEmbed) {
-            return;
-        }
-        return this.createOrUpdatePlayEmbed(penalty, penaltyEmbed);
-    };
-
-    private createOrUpdatePlayEmbed = async (play: Play, embed: EmbedBuilder) => {
-        const { eventId } = play;
-        const messageOpts = { embeds: [embed] };
-        if (!this.events.has(eventId)) {
-            const message = await this.thread?.send(messageOpts);
-            this.events.set(eventId, { message: message, play: play });
-            console.log(
-                `${eventId} not found in tracked events, created new message for event ${eventId} - ${play.typeDescKey} - ${message.url}`
-            );
-        } else {
-            // try to get the existing message
-            const existingMessage = this.events.get(eventId)?.message;
-            // the event is already in the feed, update the message
-            const newMessage = await existingMessage?.edit(messageOpts);
-            // TODO - is this a valid fallback?
-            this.events.set(eventId, { message: newMessage ?? existingMessage, play: play });
-        }
-    };
-
-    private processClockEvent = async (clockEvent: Play) => {
-        const { eventId } = clockEvent;
-        // exit if we don't have a period descriptor or if it's not a clock event we care about
-        switch (clockEvent.typeCode) {
-            case EventTypeCode.periodStart:
-            case EventTypeCode.periodEnd:
-                const existingEmbed = this.events.get(eventId)?.message?.embeds?.[0];
-                const intermissionEmbed = existingEmbed
-                    ? this.embedFormatter.updateIntermissionEmbed(clockEvent, existingEmbed)
-                    : this.embedFormatter.createIntermissionEmbed(clockEvent);
-
-                await this.createOrUpdatePlayEmbed(clockEvent, intermissionEmbed);
-                break;
-            case EventTypeCode.gameEnd:
-                await this.EndGame();
-                break;
-            default:
-                break;
-        }
-    };
-
     private EndGame = async () => {
         this.gameOver = true;
-        this.events.clear();
+        await this.eventsMutex.runExclusive(async () => {
+            this.events.clear();
+        });
         const scoreEmbed = this.embedFormatter.createGameEndEmbed();
         await this?.thread?.send({
             embeds: [scoreEmbed],

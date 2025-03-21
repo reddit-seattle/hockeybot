@@ -220,17 +220,12 @@ export class GameFeedEmbedFormatter {
             ? `${feed?.clock.timeRemaining ?? "00:00"} remaining in the ${playPeriodOrdinal} intermission`
             : `${playPeriodOrdinal} intermission has ended`;
 
-        return new EmbedBuilder()
-            .setTitle(existingEmbed.title)
-            .setDescription(existingEmbed.description)
-            .setFields(existingEmbed.fields)
-            .setFooter({
-                text:
-                    typeCode == EventTypeCode.periodStart
-                        ? `${playPeriodOrdinal} period has started.` // period start messages just say "period has started" (statestring),
-                        : timeRemainingString, //  period end messages update intermission clock as the footer
-            })
-            .setColor(39129);
+        return EmbedBuilder.from(existingEmbed).setFooter({
+            text:
+                typeCode == EventTypeCode.periodStart
+                    ? `${playPeriodOrdinal} period has started.` // period start messages just say "period has started" (statestring),
+                    : timeRemainingString, //  period end messages update intermission clock as the footer
+        });
     };
     createGameEndEmbed = () => {
         // TODO - kraken win additions
