@@ -58,45 +58,47 @@ export class GameFeedManager {
             return;
         }
 
-        const { gameState, awayTeam, homeTeam, clock, periodDescriptor } = await API.Games.GetBoxScore(this.gameId);
+        const release = await this.eventsMutex.acquire();
+        try {
+            const { gameState, awayTeam, homeTeam, clock, periodDescriptor } = await API.Games.GetBoxScore(this.gameId);
 
-        const periodNumber = periodDescriptor?.number || 1;
+            const periodNumber = periodDescriptor?.number || 1;
 
-        // check if game is over
-        if (isGameOver(gameState)) {
-            console.log("Ending Game");
-            await this.EndGame();
-            return;
-        }
+            // check if game is over
+            if (isGameOver(gameState)) {
+                console.log("Ending Game");
+                await this.EndGame();
+                return;
+            }
 
-        // state / iteration unique key
-        const stateKey = uniqueId(`${this.gameId}-${periodNumber}-${clock.timeRemaining}`);
+            // state / iteration unique key
+            const stateKey = uniqueId(`${this.gameId}-${periodNumber}-${clock.timeRemaining}`);
 
-        // log main game loop
-        console.log(
-            `{${stateKey}} CheckGameStatus - Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${
-                homeTeam.commonName.default
-            } ${homeTeam?.score || 0} - ${clock.timeRemaining} - Period ${periodNumber} - (${gameState})`
-        );
+            // log main game loop
+            console.log(
+                `{${stateKey}} CheckGameStatus - Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${
+                    homeTeam.commonName.default
+                } ${homeTeam?.score || 0} - ${clock.timeRemaining} - Period ${periodNumber} - (${gameState})`
+            );
 
-        // map old game event ids
-        const trackedEvents = Array.from(this.events.keys());
+            // map old game event ids
+            const trackedEvents = Array.from(this.events.keys());
 
-        // game feed update
-        const { plays: allPlays } = await this.getFeed(true);
+            // game feed update
+            const { plays: allPlays } = await this.getFeed(true);
+            console.log(`{${stateKey}} Game feed updated - ${allPlays.length} plays`);
 
-        // filter out plays that are not in the tracked types (once)
-        const plays = allPlays.filter((play) => tracked_types.includes(play.typeCode));
-        console.log(
-            `{${stateKey}} Processing ${plays.length} plays: [${plays.map((play) => play.eventId).join(", ")}]`
-        );
+            // filter out plays that are not in the tracked types (once)
+            const plays = allPlays.filter((play) => tracked_types.includes(play.typeCode));
+            console.log(
+                `{${stateKey}} Processing ${plays.length} plays: [${plays.map((play) => play.eventId).join(", ")}]`
+            );
 
-        // remove any events that are no longer in the feed
-        const newEventIds = plays.map((play) => play.eventId);
-        const removedEventIds = trackedEvents.filter((eventId) => !newEventIds.includes(eventId));
+            // remove any events that are no longer in the feed
+            const newEventIds = plays.map((play) => play.eventId);
+            const removedEventIds = trackedEvents.filter((eventId) => !newEventIds.includes(eventId));
 
-        // remove them from the tracked events
-        await this.eventsMutex.runExclusive(async () => {
+            // remove them from the tracked events
             for (const eventId of removedEventIds) {
                 if (this.events.has(eventId)) {
                     const event = this.events.get(eventId);
@@ -108,34 +110,32 @@ export class GameFeedManager {
                     this.events.delete(eventId);
                 }
             }
-        });
 
-        // re-process each play and update message
-        await Promise.all(
-            plays.map(async (play) => {
-                let embed: EmbedBuilder | undefined;
-                switch (play.typeCode) {
-                    case EventTypeCode.goal:
-                        embed = this.embedFormatter.createGoalEmbed(play);
-                        break;
-                    case EventTypeCode.penalty:
-                        embed = this.embedFormatter.createPenaltyEmbed(play);
-                        break;
-                    case EventTypeCode.periodStart:
-                    case EventTypeCode.periodEnd:
-                        const existingEmbed = this.events.get(play.eventId)?.message?.embeds?.[0];
-                        embed = existingEmbed
-                            ? this.embedFormatter.updateIntermissionEmbed(play, existingEmbed)
-                            : this.embedFormatter.createIntermissionEmbed(play);
-                        break;
-                    case EventTypeCode.gameEnd:
-                        await this.EndGame();
-                        break;
-                }
-                if (embed) {
-                    const { eventId } = play;
-                    const messageOpts = { embeds: [embed] };
-                    await this.eventsMutex.runExclusive(async () => {
+            // re-process each play and update message
+            await Promise.all(
+                plays.map(async (play) => {
+                    let embed: EmbedBuilder | undefined;
+                    switch (play.typeCode) {
+                        case EventTypeCode.goal:
+                            embed = this.embedFormatter.createGoalEmbed(play);
+                            break;
+                        case EventTypeCode.penalty:
+                            embed = this.embedFormatter.createPenaltyEmbed(play);
+                            break;
+                        case EventTypeCode.periodStart:
+                        case EventTypeCode.periodEnd:
+                            const existingEmbed = this.events.get(play.eventId)?.message?.embeds?.[0];
+                            embed = existingEmbed
+                                ? this.embedFormatter.updateIntermissionEmbed(play, existingEmbed)
+                                : this.embedFormatter.createIntermissionEmbed(play);
+                            break;
+                        case EventTypeCode.gameEnd:
+                            await this.EndGame();
+                            break;
+                    }
+                    if (embed) {
+                        const { eventId } = play;
+                        const messageOpts = { embeds: [embed] };
                         if (!this.events.has(eventId)) {
                             const message = await this.thread?.send(messageOpts);
                             this.events.set(eventId, { message: message, play: play });
@@ -150,12 +150,14 @@ export class GameFeedManager {
                             // TODO - is this a valid fallback?
                             this.events.set(eventId, { message: newMessage ?? existingMessage, play: play });
                         }
-                    });
-                }
-            })
-        );
-        console.log(`{${stateKey}} Finished processing plays: [${plays.map((play) => play.eventId).join(", ")}]`);
-        console.log(`{${stateKey}} Tracked events: [${Array.from(this.events.keys()).join(", ")}]`);
+                    }
+                })
+            );
+            console.log(`{${stateKey}} Finished processing plays: [${plays.map((play) => play.eventId).join(", ")}]`);
+            console.log(`{${stateKey}} Tracked events: [${Array.from(this.events.keys()).join(", ")}]`);
+        } finally {
+            release();
+        }
     };
 
     // Maybe we could use https://api-web.nhle.com/v1/gamecenter/2023020204/landing
@@ -165,15 +167,13 @@ export class GameFeedManager {
         if (force || !this.feed) {
             const newFeed = await API.Games.GetPlays(this.gameId);
             // first time we're setting feed, mark all previous plays as tracked, but with no message to update
-            await this.eventsMutex.runExclusive(async () => {
-                if (this.feed === undefined) {
-                    for (const play of newFeed.plays) {
-                        if (tracked_types.includes(play.typeCode) && !this.events.has(play.eventId)) {
-                            this.events.set(play.eventId, { message: undefined, play: play });
-                        }
+            if (this.feed === undefined) {
+                for (const play of newFeed.plays) {
+                    if (tracked_types.includes(play.typeCode) && !this.events.has(play.eventId)) {
+                        this.events.set(play.eventId, { message: undefined, play: play });
                     }
                 }
-            });
+            }
             // log the diff of the plays (time consuming?)
             if (Environment.LOCAL_RUN) {
                 logDiff(this.feed, newFeed);
@@ -187,15 +187,13 @@ export class GameFeedManager {
 
     private EndGame = async () => {
         this.gameOver = true;
-        await this.eventsMutex.runExclusive(async () => {
-            this.events.clear();
-        });
         const scoreEmbed = this.embedFormatter.createGameEndEmbed();
         await this?.thread?.send({
             embeds: [scoreEmbed],
         });
         await this?.thread?.setArchived(true, "game over").catch(console.error);
         this.Stop();
+        this.events.clear();
     };
 
     public Stop = () => {
