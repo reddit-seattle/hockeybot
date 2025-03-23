@@ -28,6 +28,7 @@ export class GameFeedEmbedFormatter {
             return;
         }
         const { scoringPlayerId, assist1PlayerId, assist2PlayerId, homeScore, awayScore } = details;
+        const { periodDescriptor, timeRemaining, eventId, situationCode } = goal;
 
         const scorer = this.roster.get(scoringPlayerId ?? "");
         const assist1 = this.roster.get(assist1PlayerId ?? "");
@@ -37,24 +38,15 @@ export class GameFeedEmbedFormatter {
         const { id: scoringTeamId } = scoringTeam ?? {};
         // we like the kraken
         const excitement = scoringTeamId == Kraken.TeamId;
-        const goalString = `${excitement ? "GOAL!" : "goal"}`;
-
-        // this is absolutely the worst way to do this
-        // do not look at this code
-        const { situationCode, homeTeamDefendingSide } = goal;
-        const homeLeft = homeTeamDefendingSide == "left";
+        const goalString = `goal${excitement ? "!" : ""}`;
 
         const homeTeamId = this.feed.homeTeam.id;
-        const homeTeam = this.teamsMap.get(homeTeamId);
         const awayTeamId = this.feed.awayTeam.id;
         const awayTeam = this.teamsMap.get(awayTeamId);
+        const homeTeam = this.teamsMap.get(homeTeamId);
 
-        const awaySOG = this.feed?.awayTeam.sog ?? 0;
-        const homeSOG = this.feed?.homeTeam.sog ?? 0;
-
-        const homeScored = homeTeamId == scoringTeamId;
-        const leftScored = homeScored ? homeLeft : !homeLeft;
-        const goalphrase = getSituationCodeString(situationCode, leftScored);
+        // this is wild, don't look at it
+        const goalphrase = getSituationCodeString(situationCode, homeTeamId == scoringTeamId);
 
         let title = `${scoringTeam?.placeName.default} ${scoringTeam?.commonName.default} ${goalString}`;
         if (excitement) {
@@ -62,7 +54,7 @@ export class GameFeedEmbedFormatter {
         }
         const unassisted = !assist1 && !assist2;
         const description = scorer
-            ? `${excitement ? "## " : ""}${scorer.firstName.default} ${scorer.lastName.default} (${
+            ? `${excitement ? "### " : ""}${scorer.firstName.default} ${scorer.lastName.default} (${
                   goal.details?.scoringPlayerTotal
               })`
             : "Unknown player";
@@ -89,6 +81,9 @@ export class GameFeedEmbedFormatter {
                 value: `${assist2?.firstName.default} ${assist2?.lastName.default} (${goal.details?.assist2PlayerTotal})`,
             });
         }
+        const awaySOG = this.feed?.awayTeam.sog ?? 0;
+        const homeSOG = this.feed?.homeTeam.sog ?? 0;
+
         fields.push(
             {
                 name: `**${awayTeam?.commonName.default ?? "Away"}**`,
@@ -108,7 +103,6 @@ export class GameFeedEmbedFormatter {
             secondaryDescription += `\n[Watch](${highlightClipSharingUrl})`;
         }
 
-        const { periodDescriptor, timeRemaining, eventId } = goal;
         const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
             periodDescriptor?.number || 1,
             periodDescriptor?.periodType || "REG"
@@ -179,6 +173,11 @@ export class GameFeedEmbedFormatter {
             .setFooter({ text: timeRemainingString })
             .setColor(39129);
     };
+    // todo - different intermission embeds per period
+    // 1st period started - show teams with points line / maybe starting goaltenders or odds?
+    // 1st intermission - normal
+    // 2nd intermission - hoist the colors?
+    // 3rd intermission - OT coming or game end
     createIntermissionEmbed = (periodEvent: Play) => {
         const { awayTeam: away, homeTeam: home } = this.feed;
         const { score: homeScore, sog: homeSOG } = home;

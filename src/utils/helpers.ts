@@ -168,10 +168,10 @@ export const processLocalizedDateInput = (input?: string | Date | null) => {
 };
 
 /**
- * This is absolutely ridiculous but I can't figure out how to do it otherwise
+ * TODO - This is absolutely ridiculous
  *
  */
-export const getSituationCodeString = (situationCode?: string, leftScored: boolean = false) => {
+export const getSituationCodeString = (situationCode?: string, homeScored: boolean = false) => {
     // console.log(`PROCESSING SITUATIONCODE: ${situationCode}`);
     if (!situationCode) {
         return undefined;
@@ -179,29 +179,29 @@ export const getSituationCodeString = (situationCode?: string, leftScored: boole
     const SITUATION_TYPE_DICT: { [key: string]: string | undefined } = {
         "1551": "Even Strength",
         "1441": "4 on 4",
-        "1451": leftScored ? "Shorthanded" : "Power Play",
-        "1541": leftScored ? "Power Play" : "Shorthanded",
-        "1351": leftScored ? "Shorthanded 3-5" : "5-3 Power Play",
-        "1531": leftScored ? "5-3 Power Play" : "Shorthanded 3-5",
-        "1341": leftScored ? "Shorthanded 3-4" : "4-3 Power Play",
-        "1431": leftScored ? "4-3 Power Play" : "Shorthanded 3-4",
         "1331": "3 on 3",
-        "1560": leftScored ? "Empty Net" : "Power Play (EN)",
-        "0651": leftScored ? "Power Play (EN)" : "Empty Net",
-        "0551": leftScored ? "Even Strength (EN)" : "Empty Net",
-        "1550": leftScored ? "Empty Net" : "Even Strength (EN)",
-        "1460": leftScored ? "Shorthanded" : "Power Play (EN)",
-        "0641": leftScored ? "Power Play (EN)" : "Shorthanded",
-        "1450": leftScored ? "Empty Net (SH)" : "Power Play", // this one feels weird
-        "0541": leftScored ? "Power Play" : "Empty Net (SH)", // this one feels weird
-        "1340": leftScored ? "Empty Net (SH 3-4)" : "4-3 Power Play (EN)",
-        "0431": leftScored ? "4-3 Power Play (EN)" : "Empty Net (SH 3-4)",
-        "0441": leftScored ? "4 on 4 (EN)" : "Empty Net (4-4)",
-        "1440": leftScored ? "Empty Net (4-4)" : "4 on 4 (EN)",
-        "1350": leftScored ? "Empty Net (SH 3-5)" : "5-3 Power Play (EN)",
-        "0531": leftScored ? "5-3 Power Play (EN)" : "Empty Net (SH 3-5)",
-        "1330": leftScored ? "Empty Net (3-3)" : "3 on 3 (EN)", // are these possible?
-        "0331": leftScored ? "3 on 3 (EN)" : "Empty Net (3-3)", // are these possible?
+        "1451": homeScored ? "Power Play" : "Shorthanded",
+        "1541": homeScored ? "Shorthanded" : "Power Play",
+        "1351": homeScored ? "5-3 Power Play" : "Shorthanded 3-5",
+        "1531": homeScored ? "Shorthanded 3-5" : "5-3 Power Play",
+        "1341": homeScored ? "4-3 Power Play" : "Shorthanded 3-4",
+        "1431": homeScored ? "Shorthanded 3-4" : "4-3 Power Play",
+        "1560": homeScored ? "Power Play (EN)" : "Empty Net",
+        "0651": homeScored ? "Empty Net" : "Power Play (EN)",
+        "0551": homeScored ? "Empty Net" : "Even Strength (EN)",
+        "1550": homeScored ? "Even Strength (EN)" : "Empty Net",
+        "1460": homeScored ? "Power Play (EN)" : "Shorthanded",
+        "0641": homeScored ? "Shorthanded" : "Power Play (EN)",
+        "1450": homeScored ? "Power Play" : "Empty Net (SH)", // this one feels weird
+        "0541": homeScored ? "Empty Net (SH)" : "Power Play", // this one feels weird
+        "1340": homeScored ? "4-3 Power Play (EN)" : "Empty Net (SH 3-4)",
+        "0431": homeScored ? "Empty Net (SH 3-4)" : "4-3 Power Play (EN)",
+        "0441": homeScored ? "Empty Net (4-4)" : "4 on 4 (EN)",
+        "1440": homeScored ? "4 on 4 (EN)" : "Empty Net (4-4)",
+        "1350": homeScored ? "5-3 Power Play (EN)" : "Empty Net (SH 3-5)",
+        "0531": homeScored ? "Empty Net (SH 3-5)" : "5-3 Power Play (EN)",
+        "1330": homeScored ? "3 on 3 (EN)" : "Empty Net (3-3)", // are these possible?
+        "0331": homeScored ? "Empty Net (3-3)" : "3 on 3 (EN)", // are these possible?
     };
     // console.log(`SITUATIONCODE: ${situationCode} -> ${SITUATION_TYPE_DICT?.[situationCode]}`);
     return situationCode in SITUATION_TYPE_DICT ? `${SITUATION_TYPE_DICT[situationCode]} ` : undefined;

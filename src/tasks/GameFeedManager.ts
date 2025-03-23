@@ -156,8 +156,7 @@ export class GameFeedManager {
                     }
                 })
             );
-            console.log(`{${stateKey}} Finished processing plays: [${plays.map((play) => play.eventId).join(", ")}]`);
-            console.log(`{${stateKey}} Tracked events: [${Array.from(this.events.keys()).join(", ")}]`);
+            console.log(`{${stateKey}} Finished processing, events: [${Array.from(this.events.keys()).join(", ")}]`);
         }
         catch (error) {
             console.error("Error in checkGameStatus", error);
