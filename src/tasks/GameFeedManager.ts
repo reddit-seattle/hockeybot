@@ -120,6 +120,7 @@ export class GameFeedManager {
             // re-process each play and update message
             await Promise.all(
                 plays.map(async (play) => {
+                    const startTime = Date.now();
                     let embed: EmbedBuilder | undefined;
                     switch (play.typeCode) {
                         case EventTypeCode.goal:
@@ -136,6 +137,7 @@ export class GameFeedManager {
                                 : this.embedFormatter.createIntermissionEmbed(play);
                             break;
                     }
+                    const embedDuration = Date.now() - startTime;
                     if (embed) {
                         const { eventId } = play;
                         const messageOpts = { embeds: [embed] };
@@ -146,14 +148,15 @@ export class GameFeedManager {
                                 `${eventId} not found in tracked events, created new message for event ${eventId} - ${play.typeDescKey} - ${message.url}`
                             );
                         } else {
-                            // try to get the existing message
                             const existingMessage = this.events.get(eventId)?.message;
-                            // the event is already in the feed, update the message
                             const newMessage = await existingMessage?.edit(messageOpts);
-                            // TODO - is this a valid fallback?
                             this.events.set(eventId, { message: newMessage ?? existingMessage, play: play });
                         }
                     }
+                    const finishedTime = Date.now();
+                    const totalDuration = finishedTime - startTime;
+                    const messageDuration = totalDuration - embedDuration;
+                    console.log(`Processed embed for event ${play.eventId} (${play.typeCode}): ${embedDuration}ms (embed), ${messageDuration}ms (message) - total: ${totalDuration}ms`);
                 })
             );
             console.log(`{${stateKey}} Finished processing, events: [${Array.from(this.events.keys()).join(", ")}]`);
