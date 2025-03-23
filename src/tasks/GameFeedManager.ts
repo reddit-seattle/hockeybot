@@ -15,7 +15,6 @@ const tracked_types = [
     EventTypeCode.penalty,
     EventTypeCode.periodStart,
     EventTypeCode.periodEnd,
-    EventTypeCode.gameEnd,
 ];
 
 interface PlayMessageContainer {
@@ -53,34 +52,41 @@ export class GameFeedManager {
     }
 
     private checkGameStatus = async () => {
-        if (this.gameOver) {
-            console.log("Game is over, Skipping loop.");
-            return;
-        }
-
         const release = await this.eventsMutex.acquire();
         try {
-            const { gameState, awayTeam, homeTeam, clock, periodDescriptor } = await API.Games.GetBoxScore(this.gameId);
-
-            const periodNumber = periodDescriptor?.number || 1;
-
-            // check if game is over
-            if (isGameOver(gameState)) {
-                console.log("Ending Game");
-                await this.EndGame();
+            if (this.gameOver) {
+                console.log("Game is already over, skipping checkGameStatus");
                 return;
             }
+            const { gameState, awayTeam, homeTeam, clock, periodDescriptor } = await API.Games.GetBoxScore(this.gameId);
+            const periodNumber = periodDescriptor?.number || 1;
 
             // state / iteration unique key
             const stateKey = uniqueId(`${this.gameId}-${periodNumber}-${clock.timeRemaining}`);
-
             // log main game loop
             console.log(
-                `{${stateKey}} CheckGameStatus - Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${
-                    homeTeam.commonName.default
-                } ${homeTeam?.score || 0} - ${clock.timeRemaining} - Period ${periodNumber} - (${gameState})`
+                `{${stateKey}} CheckGameStatus - Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${homeTeam.commonName.default
+                } ${homeTeam?.score || 0} - ${clock.timeRemaining} - ${clock.inIntermission ? 'Intermission' : 'Period'} ${periodNumber} - (${gameState})`
             );
+            // check if game is over
+            if (isGameOver(gameState)) {
+                console.log("Writing Game Over message");
+                const scoreEmbed = this.embedFormatter.createGameEndEmbed();
+                this.gameOver == false && await this?.thread?.send({
+                    embeds: [scoreEmbed],
+                });
 
+                console.log("Game is over, stopping game feed");
+                this.gameOver = true;
+
+                console.log("Archiving thread");
+                await this?.thread?.setArchived(true, "game over").catch(console.error);
+                // console.log("Deleting all events");
+                // this.events.clear();
+                console.log("Stopping game feed scheduler");
+                this.Stop();
+                return;
+            }
             // map old game event ids
             const trackedEvents = Array.from(this.events.keys());
 
@@ -129,9 +135,6 @@ export class GameFeedManager {
                                 ? this.embedFormatter.updateIntermissionEmbed(play, existingEmbed)
                                 : this.embedFormatter.createIntermissionEmbed(play);
                             break;
-                        case EventTypeCode.gameEnd:
-                            await this.EndGame();
-                            break;
                     }
                     if (embed) {
                         const { eventId } = play;
@@ -155,7 +158,11 @@ export class GameFeedManager {
             );
             console.log(`{${stateKey}} Finished processing plays: [${plays.map((play) => play.eventId).join(", ")}]`);
             console.log(`{${stateKey}} Tracked events: [${Array.from(this.events.keys()).join(", ")}]`);
-        } finally {
+        }
+        catch (error) {
+            console.error("Error in checkGameStatus", error);
+        }
+        finally {
             release();
         }
     };
@@ -183,17 +190,6 @@ export class GameFeedManager {
             this.embedFormatter.updateFeed(this.feed);
         }
         return this.feed;
-    };
-
-    private EndGame = async () => {
-        this.gameOver = true;
-        const scoreEmbed = this.embedFormatter.createGameEndEmbed();
-        await this?.thread?.send({
-            embeds: [scoreEmbed],
-        });
-        await this?.thread?.setArchived(true, "game over").catch(console.error);
-        this.Stop();
-        this.events.clear();
     };
 
     public Stop = () => {

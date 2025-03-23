@@ -194,12 +194,12 @@ export class GameFeedEmbedFormatter {
         const scoreFields = [
             {
                 name: `**${away.commonName.default}**`,
-                value: `Goals: **${awayScore}**\nShots: ${awaySOG}`,
+                value: `Goals: **${awayScore ?? 0}**\nShots: ${awaySOG ?? 0}`,
                 inline: true,
             },
             {
                 name: `**${home.commonName.default}**`,
-                value: `Goals: **${homeScore}**\nShots: ${homeSOG}`,
+                value: `Goals: **${homeScore ?? 0}**\nShots: ${homeSOG ?? 0}`,
                 inline: true,
             },
         ];
@@ -239,12 +239,12 @@ export class GameFeedEmbedFormatter {
         const scoreFields = [
             {
                 name: `**${away.commonName.default}**`,
-                value: `Goals: **${awayScore}**\nShots: ${awaySOG}`,
+                value: `Goals: **${awayScore ?? 0}**\nShots: ${awaySOG ?? 0}`,
                 inline: true,
             },
             {
                 name: `**${home.commonName.default}**`,
-                value: `Goals: **${homeScore}**\nShots: ${homeSOG}`,
+                value: `Goals: **${homeScore ?? 0}**\nShots: ${homeSOG ?? 0}`,
                 inline: true,
             },
         ];
