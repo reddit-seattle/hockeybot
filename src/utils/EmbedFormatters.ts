@@ -1,7 +1,7 @@
 import { Embed, EmbedBuilder } from "discord.js";
 import { contains } from "underscore";
 import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/models/responses/PlayByPlayResponse";
-import { Kraken, Strings } from "./constants";
+import { Colors, Kraken, Strings } from "./constants";
 import { EventTypeCode } from "./enums";
 import { getSituationCodeString, periodToStr } from "./helpers";
 
@@ -113,7 +113,7 @@ export class GameFeedEmbedFormatter {
             .setDescription(`${description}\n${secondaryDescription}`)
             .addFields([...fields, { name: "Event id:", value: `${eventId}` }])
             .setFooter({ text: timeRemainingString })
-            .setColor(39129);
+            .setColor(Colors.EMBED_COLOR);
     };
     createPenaltyEmbed = (penalty: Play) => {
         const { details } = penalty;
@@ -171,7 +171,7 @@ export class GameFeedEmbedFormatter {
             .setThumbnail(penaltyPlayer?.headshot ?? "")
             .addFields(fields)
             .setFooter({ text: timeRemainingString })
-            .setColor(39129);
+            .setColor(Colors.EMBED_COLOR);
     };
     // todo - different intermission embeds per period
     // 1st period started - show teams with points line / maybe starting goaltenders or odds?
@@ -203,7 +203,11 @@ export class GameFeedEmbedFormatter {
             },
         ];
         // first intermission should always just say 'X' period has ended
-        return new EmbedBuilder().setTitle(title).addFields(scoreFields).setFooter({ text: title }).setColor(39129);
+        return new EmbedBuilder()
+            .setTitle(title)
+            .addFields(scoreFields)
+            .setFooter({ text: title })
+            .setColor(Colors.EMBED_COLOR);
     };
     updateIntermissionEmbed = (periodEvent: Play, existingEmbed: Embed) => {
         // use these values to ensure we always are using the play's intermission / period value
@@ -247,6 +251,6 @@ export class GameFeedEmbedFormatter {
                 inline: true,
             },
         ];
-        return new EmbedBuilder().setTitle(title).addFields(scoreFields).setColor(39129);
+        return new EmbedBuilder().setTitle(title).addFields(scoreFields).setColor(Colors.EMBED_COLOR);
     };
 }

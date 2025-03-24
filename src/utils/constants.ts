@@ -8,6 +8,10 @@ export namespace Config {
     export const TITLE_DATE_FORMAT = `iii PP`;
 }
 
+export namespace Colors {
+    export const EMBED_COLOR = 39129;
+}
+
 export namespace RoleIds {
     export const MOD = "370946173902520342";
 }

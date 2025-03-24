@@ -5,7 +5,7 @@ import { CronJob, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler"
 import { contains } from "underscore";
 import { API } from "../service/API";
 import { Game } from "../service/models/responses/DaySchedule";
-import { Config, Kraken } from "../utils/constants";
+import { Colors, Config, Kraken } from "../utils/constants";
 import { GameState } from "../utils/enums";
 import { ApiDateString, isGameOver, relativeDateString } from "../utils/helpers";
 import { GameFeedManager } from "./GameFeedManager";
@@ -102,6 +102,7 @@ class GameThreadManager {
                 const gameStartEmbed = new EmbedBuilder()
                     .setTitle(title)
                     .setDescription(`Game start: ${gameStartTimeString} (${relativeDate})\n${game.venue.default}`)
+                    .setColor(Colors.EMBED_COLOR);
                 // TODO - add more game details (game story?)
                 const message = await this.channel.send({ embeds: [gameStartEmbed] });
                 // create thread (title is imperative)
@@ -215,7 +216,7 @@ class GameThreadManager {
             this.gameFeedManager = new GameFeedManager(this.thread, feed);
             // check if the game start is in the past or future (don't re-announce)
             if (new Date(startTimeUTC) > new Date()) {
-                this.announceGameStartingSoon(startTimeUTC);
+                this.announceGameStartingSoon();
             }
             // stop pregame checker
             if (this.scheduler.existsById(PREGAME_CHECKER_ID)) {
@@ -227,8 +228,32 @@ class GameThreadManager {
         }
     };
 
-    private announceGameStartingSoon = async (startTimeUTC: string) => {
-        await this?.thread?.send(`Game starting soon: ${relativeDateString(startTimeUTC)}`);
+    private announceGameStartingSoon = async () => {
+        if (!this.gameId || !this.thread) {
+            return;
+        }
+        const fields = [];
+        const boxScore = await API.Games.GetBoxScore(this.gameId);
+        const { homeTeam, awayTeam, venue, startTimeUTC } = boxScore;
+        for (const team of [homeTeam, awayTeam]) {
+            const { id } = team;
+            const summary = await API.Teams.GetTeamSummary(`${id}`);
+            const { wins, losses, otLosses, points, gamesPlayed } = summary;
+            const teamRecord = `${points} PTS, ${gamesPlayed} GP\n**${wins}-${losses}-${otLosses}**`;
+            const teamFullName = `**${summary.teamFullName}**`;
+            fields.push({
+                name: teamFullName,
+                value: teamRecord,
+            });
+        }
+        const title = `Pregame: ${homeTeam.commonName.default} vs ${awayTeam.commonName.default}`;
+        const embed = new EmbedBuilder()
+            .setTitle(title)
+            .setDescription(`Puck drop: ${relativeDateString(startTimeUTC)} @ ${venue.default}`)
+            .addFields(fields)
+            .setColor(Colors.EMBED_COLOR);
+
+        await this?.thread?.send({ embeds: [embed] });
     };
 }
 
