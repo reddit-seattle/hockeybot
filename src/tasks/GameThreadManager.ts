@@ -232,25 +232,12 @@ class GameThreadManager {
         if (!this.gameId || !this.thread) {
             return;
         }
-        const fields = [];
         const boxScore = await API.Games.GetBoxScore(this.gameId);
         const { homeTeam, awayTeam, venue, startTimeUTC } = boxScore;
-        for (const team of [homeTeam, awayTeam]) {
-            const { id } = team;
-            const summary = await API.Teams.GetTeamSummary(`${id}`);
-            const { wins, losses, otLosses, points, gamesPlayed } = summary;
-            const teamRecord = `${points} PTS, ${gamesPlayed} GP\n**${wins}-${losses}-${otLosses}**`;
-            const teamFullName = `**${summary.teamFullName}**`;
-            fields.push({
-                name: teamFullName,
-                value: teamRecord,
-            });
-        }
         const title = `Pregame: ${homeTeam.commonName.default} vs ${awayTeam.commonName.default}`;
         const embed = new EmbedBuilder()
             .setTitle(title)
             .setDescription(`Puck drop: ${relativeDateString(startTimeUTC)} @ ${venue.default}`)
-            .addFields(fields)
             .setColor(Colors.EMBED_COLOR);
 
         await this?.thread?.send({ embeds: [embed] });
