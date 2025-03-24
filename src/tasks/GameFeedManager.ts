@@ -2,7 +2,7 @@ import { EmbedBuilder } from "@discordjs/builders";
 import { Mutex } from "async-mutex";
 import { Message, ThreadChannel } from "discord.js";
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
-import { uniqueId } from "underscore";
+import { isEqual, omit, uniqueId } from "underscore";
 import { API } from "../service/API";
 import { Play, PlayByPlayResponse } from "../service/models/responses/PlayByPlayResponse";
 import { Environment } from "../utils/constants";
@@ -10,12 +10,7 @@ import { GameFeedEmbedFormatter } from "../utils/EmbedFormatters";
 import { EventTypeCode } from "../utils/enums";
 import { isGameOver, logDiff } from "../utils/helpers";
 
-const tracked_types = [
-    EventTypeCode.goal,
-    EventTypeCode.penalty,
-    EventTypeCode.periodStart,
-    EventTypeCode.periodEnd,
-];
+const tracked_types = [EventTypeCode.goal, EventTypeCode.penalty, EventTypeCode.periodStart, EventTypeCode.periodEnd];
 
 interface PlayMessageContainer {
     message?: Message;
@@ -65,16 +60,20 @@ export class GameFeedManager {
             const stateKey = uniqueId(`${this.gameId}-${periodNumber}-${clock.timeRemaining}`);
             // log main game loop
             console.log(
-                `{${stateKey}} CheckGameStatus - Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${homeTeam.commonName.default
-                } ${homeTeam?.score || 0} - ${clock.timeRemaining} - ${clock.inIntermission ? 'Intermission' : 'Period'} ${periodNumber} - (${gameState})`
+                `{${stateKey}} CheckGameStatus - Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${
+                    homeTeam.commonName.default
+                } ${homeTeam?.score || 0} - ${clock.timeRemaining} - ${
+                    clock.inIntermission ? "Intermission" : "Period"
+                } ${periodNumber} - (${gameState})`
             );
             // check if game is over
             if (isGameOver(gameState)) {
                 console.log("Writing Game Over message");
                 const scoreEmbed = this.embedFormatter.createGameEndEmbed();
-                this.gameOver == false && await this?.thread?.send({
-                    embeds: [scoreEmbed],
-                });
+                this.gameOver == false &&
+                    (await this?.thread?.send({
+                        embeds: [scoreEmbed],
+                    }));
 
                 console.log("Game is over, stopping game feed");
                 this.gameOver = true;
@@ -92,7 +91,6 @@ export class GameFeedManager {
 
             // game feed update
             const { plays: allPlays } = await this.getFeed(true);
-            console.log(`{${stateKey}} Game feed updated - ${allPlays.length} plays`);
 
             // filter out plays that are not in the tracked types (once)
             const plays = allPlays.filter((play) => tracked_types.includes(play.typeCode));
@@ -141,30 +139,57 @@ export class GameFeedManager {
                     if (embed) {
                         const { eventId } = play;
                         const messageOpts = { embeds: [embed] };
+                        // if we're not tracking this event
                         if (!this.events.has(eventId)) {
+                            // send a new message
                             const message = await this.thread?.send(messageOpts);
                             this.events.set(eventId, { message: message, play: play });
                             console.log(
                                 `${eventId} not found in tracked events, created new message for event ${eventId} - ${play.typeDescKey} - ${message.url}`
                             );
                         } else {
-                            const existingMessage = this.events.get(eventId)?.message;
-                            const newMessage = await existingMessage?.edit(messageOpts);
-                            this.events.set(eventId, { message: newMessage ?? existingMessage, play: play });
+                            // otherwise, see if we need to update the message
+                            const existingEvent = this.events.get(eventId);
+                            const existingMessage = existingEvent?.message;
+                            // TODO - optimize by only checking relevant props)
+                            // check if the play details have changed
+                            if (!isEqual(existingEvent?.play?.details, play.details)) {
+                                // if so, edit the message and update with new details
+                                const editedMessage = await existingMessage?.edit(messageOpts);
+                                this.events.set(eventId, { message: editedMessage ?? existingMessage, play });
+                                console.log(
+                                    `{${stateKey}} Updated event ${eventId} - ${play.typeDescKey} - ${existingMessage?.url}`
+                                );
+                                // try to log difference between old and new play details
+                                try {
+                                    const diff = omit(
+                                        play?.details,
+                                        (value, key) =>
+                                            existingEvent?.play?.details?.[key as keyof typeof play.details] === value
+                                    );
+                                    console.log(`diff:\n${JSON.stringify(diff)}`);
+                                } catch (error) {
+                                    console.error("Error logging diff", error);
+                                }
+                            } else {
+                                console.log(
+                                    `{${stateKey}} Skipping update for event ${eventId} - ${play.typeDescKey} - ${existingMessage?.url}`
+                                );
+                            }
                         }
                     }
                     const finishedTime = Date.now();
                     const totalDuration = finishedTime - startTime;
                     const messageDuration = totalDuration - embedDuration;
-                    console.log(`Processed embed for event ${play.eventId} (${play.typeCode}): ${embedDuration}ms (embed), ${messageDuration}ms (message) - total: ${totalDuration}ms`);
+                    console.log(
+                        `Processed embed for event ${play.eventId} (${play.typeCode}): ${embedDuration}ms (embed), ${messageDuration}ms (message) - total: ${totalDuration}ms`
+                    );
                 })
             );
             console.log(`{${stateKey}} Finished processing, events: [${Array.from(this.events.keys()).join(", ")}]`);
-        }
-        catch (error) {
+        } catch (error) {
             console.error("Error in checkGameStatus", error);
-        }
-        finally {
+        } finally {
             release();
         }
     };

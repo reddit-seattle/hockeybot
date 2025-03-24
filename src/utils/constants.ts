@@ -185,7 +185,8 @@ export enum StatsTypes {
 }
 
 export namespace Kraken {
-    export const TeamId: string = "13";
+    // kraken is 55 plz don't forget
+    export const TeamId: string = "29";
 }
 
 export interface Record {
