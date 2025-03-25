@@ -24,7 +24,8 @@ export interface Team {
     score: number;
     sog: number;
     logo: string;
-    onIce: any[];
+    darkLogo: string;
+    radioLink: string;
     placeName: LocalizedString;
     placeNameWithPreposition: LocalizedString;
 }

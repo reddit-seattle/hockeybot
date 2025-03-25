@@ -108,10 +108,11 @@ export namespace Strings {
     };
 }
 export namespace Environment {
-    export const botToken = process.env["bot_token"] || undefined;
+    export const botToken = process.env["dev_token"] || undefined;
     export const DEBUG = process.env["hockeybotDEBUG"] ? true : false;
     export const KRAKENCHANNEL = process.env["KRAKEN_CHANNEL_ID"] || undefined;
     export const LOCAL_RUN = process.env["local_run"] ? true : false;
+    export const KRAKEN_TEAM_ID = process.env["KRAKEN_TEAM_ID"] ?? "55";
 }
 
 export enum MEDIA_FORMAT {
@@ -190,6 +191,7 @@ export enum StatsTypes {
 
 export namespace Kraken {
     // kraken is 55 plz don't forget
+    // TODO - shift to KRAKEN_TEAM_ID / env var
     export const TeamId: string = "29";
 }
 

@@ -2,7 +2,7 @@ import { EmbedBuilder } from "@discordjs/builders";
 import { Mutex } from "async-mutex";
 import { Message, ThreadChannel } from "discord.js";
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
-import { isEqual, omit, uniqueId } from "underscore";
+import { all, isEqual, omit, uniqueId } from "underscore";
 import { API } from "../service/API";
 import { Play, PlayByPlayResponse } from "../service/models/responses/PlayByPlayResponse";
 import { Environment } from "../utils/constants";
@@ -153,7 +153,15 @@ export class GameFeedManager {
                             const existingMessage = existingEvent?.message;
                             // TODO - optimize by only checking relevant props)
                             // check if the play details have changed
-                            if (!isEqual(existingEvent?.play?.details, play.details)) {
+                            if (
+                                !isEqual(existingEvent?.play?.details, play.details) ||
+                                // period end messages can update with current intermission time
+                                all([
+                                    play.typeCode === EventTypeCode.periodEnd, // period end
+                                    play.periodDescriptor?.number == this.feed?.periodDescriptor.number, // same period as feed
+                                    this.feed?.clock.inIntermission == true, // currently in intermission
+                                ])
+                            ) {
                                 // if so, edit the message and update with new details
                                 const editedMessage = await existingMessage?.edit(messageOpts);
                                 this.events.set(eventId, { message: editedMessage ?? existingMessage, play });

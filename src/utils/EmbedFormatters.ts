@@ -113,7 +113,8 @@ export class GameFeedEmbedFormatter {
             .setDescription(`${description}\n${secondaryDescription}`)
             .addFields([...fields, { name: "Event id:", value: `${eventId}` }])
             .setFooter({ text: timeRemainingString })
-            .setColor(Colors.EMBED_COLOR);
+            .setColor(Colors.EMBED_COLOR)
+            .setImage(scoringTeam?.darkLogo ?? "");
     };
     createPenaltyEmbed = (penalty: Play) => {
         const { details } = penalty;
@@ -188,7 +189,25 @@ export class GameFeedEmbedFormatter {
         const title = `${periodOrdinal} period has ${
             periodEvent.typeCode == EventTypeCode.periodEnd ? "ended" : "started"
         }.`;
-        // const timeRemainingString = `${timeRemaining} remaining in the ${periodOrdinal} intermission`;
+        if (periodEvent.typeCode == EventTypeCode.periodStart && periodDescriptor?.number == 1) {
+            return new EmbedBuilder()
+                 .setTitle(title)
+                 .setDescription(`${this.feed.venue.default}`)
+                 .addFields([
+                    {
+                            name: `**${away.commonName.default}**`,
+                            value: away?.radioLink ? `[${away.abbrev} Audio](${away.radioLink})` : "No radio link",
+                            inline: true,
+                        },
+                        {
+                            name: `**${home.commonName.default}**`,
+                            value: home?.radioLink ? `[${home.abbrev} Audio](${home.radioLink})` : "No radio link",
+                            inline: true,
+                    }
+                 ])
+                 .setFooter({ text: "Game Start" })
+                 .setColor(Colors.EMBED_COLOR);
+         }
 
         const scoreFields = [
             {
@@ -210,6 +229,7 @@ export class GameFeedEmbedFormatter {
             .setColor(Colors.EMBED_COLOR);
     };
     updateIntermissionEmbed = (periodEvent: Play, existingEmbed: Embed) => {
+        // TODO - ensure intermission end messages show up based on timing
         // use these values to ensure we always are using the play's intermission / period value
         const { periodDescriptor, typeCode } = periodEvent;
         const playPeriod = periodDescriptor?.number || 1;
