@@ -1,22 +1,23 @@
 import { EmbedBuilder } from "@discordjs/builders";
+import { format, utcToZonedTime } from "date-fns-tz";
 import { TextChannel, ThreadChannel } from "discord.js";
-import { schedule, ScheduledTask } from "node-cron";
+import { CronJob, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { contains } from "underscore";
 import { API } from "../service/API";
 import { Game } from "../service/models/responses/DaySchedule";
-import { Config, Kraken } from "../utils/constants";
+import { Colors, Config, Kraken } from "../utils/constants";
 import { GameState } from "../utils/enums";
 import { ApiDateString, isGameOver, relativeDateString } from "../utils/helpers";
 import { GameFeedManager } from "./GameFeedManager";
-import { format } from "date-fns-tz";
 
-let every_minute = "*/1 * * * *";
 let every_morning = "0 0 9 * * *";
+
+const PREGAME_CHECKER_ID = "pregame_checker";
 
 const startedStates = [GameState.pregame, GameState.live, GameState.critical];
 
 /** BIG list of TODOs
- * 
+ *
  * * TODO - add game story to game start embed
  * * TODO - shootout tracker?
  * * TODO - playoffs? (among other places)
@@ -36,8 +37,15 @@ class GameThreadManager {
     private channel: TextChannel;
     private gameId?: string;
     private thread?: ThreadChannel;
-    private pregameCheckerTask?: ScheduledTask;
+    private scheduler: ToadScheduler = new ToadScheduler();
     private gameFeedManager?: GameFeedManager;
+
+    private StopExistingCheckers = () => {
+        if (this.scheduler.existsById(PREGAME_CHECKER_ID)) {
+            this.scheduler.stopById(PREGAME_CHECKER_ID);
+        }
+        this?.gameFeedManager?.Stop();
+    };
 
     // TODO - this function does too much and has too many side-effects - refactor
     /**
@@ -51,9 +59,8 @@ class GameThreadManager {
         console.log("Checking for kraken game today (stopping existing checkers)...");
         console.log("--------------------------------------------------");
 
-        // stop existing checkers
-        this?.pregameCheckerTask?.stop();
-        this?.gameFeedManager?.Stop();
+        // stop existing existing checkers
+        this.StopExistingCheckers();
 
         const games = await API.Schedule.GetDailySchedule();
         const krakenGames = games?.filter(
@@ -69,6 +76,7 @@ class GameThreadManager {
                 console.log("--------------------------------------------------");
                 console.log("Game over, skipping pregame checker...");
                 console.log("--------------------------------------------------");
+                this.StopExistingCheckers();
                 return;
             }
 
@@ -77,12 +85,6 @@ class GameThreadManager {
             console.log("--------------------------------------------------");
 
             // Create game day embed
-            const embed = new EmbedBuilder().setTitle("Kraken Game Day").addFields([
-                {
-                    name: `${awayTeam.abbrev} at ${homeTeam.abbrev}`,
-                    value: game.venue.default,
-                },
-            ]);
             const threadTitle = generateThreadTitle(game);
 
             // check for existing game day thread (in case we had an oopsies)
@@ -92,7 +94,17 @@ class GameThreadManager {
             // create thread if it doesn't exist
             if (!this.thread) {
                 // announce to channel
-                const message = await this.channel.send({ embeds: [embed] });
+                // announce in thread when the game starts
+                const relativeDate = relativeDateString(startTimeUTC);
+                const startDateZoned = utcToZonedTime(startTimeUTC, Config.TIME_ZONE);
+                const gameStartTimeString = format(startDateZoned, Config.BODY_DATE_FORMAT);
+                const title = `Kraken game today!`;
+                const gameStartEmbed = new EmbedBuilder()
+                    .setTitle(title)
+                    .setDescription(`Game start: ${gameStartTimeString} (${relativeDate})\n${game.venue.default}`)
+                    .setColor(Colors.EMBED_COLOR);
+                // TODO - add more game details (game story?)
+                const message = await this.channel.send({ embeds: [gameStartEmbed] });
                 // create thread (title is imperative)
                 // TODO - this might be fun when next season split-squads happen
                 this.thread = await this.channel.threads.create({
@@ -104,19 +116,6 @@ class GameThreadManager {
                 console.log("--------------------------------------------------");
                 console.log(`CREATED THREAD: ${this.thread.id}`);
                 console.log("--------------------------------------------------");
-
-                // announce in thread when the game starts
-                const relativeDate = relativeDateString(startTimeUTC);
-                const title = `Kraken game today!`;
-                const startDate = new Date(startTimeUTC);
-                const gameStartEmbed = new EmbedBuilder()
-                    .setTitle(title)
-                    .setDescription(
-                        `Game starts ${format(new Date(startTimeUTC), Config.BODY_DATE_FORMAT)} (${relativeDate})`
-                    )
-                    .setTimestamp(startDate);
-                // TODO - add more game details (game story?)
-                await this.thread.send({ embeds: [gameStartEmbed] });
             }
 
             console.log("--------------------------------------------------");
@@ -127,10 +126,24 @@ class GameThreadManager {
             console.log("--------------------------------------------------");
             console.log("There's hockey today, starting pregame task...");
             console.log("--------------------------------------------------");
-            this.pregameCheckerTask = schedule(every_minute, this.checkForGameStart, {
-                scheduled: true,
-                timezone: "America/Los_Angeles",
-            });
+            // checks for game start every 5 minutes (and immediately)
+            const pregameCheckerTask = new SimpleIntervalJob(
+                {
+                    minutes: 5,
+                    runImmediately: true,
+                },
+                new Task("pregame checker", this.checkForGameStart),
+                {
+                    id: PREGAME_CHECKER_ID,
+                    preventOverrun: true,
+                }
+            );
+            this.scheduler.addSimpleIntervalJob(pregameCheckerTask);
+        } else {
+            console.log("--------------------------------------------------");
+            console.log("No kraken game today. Will check again tomorrow at 9:00");
+            console.log("--------------------------------------------------");
+            this.StopExistingCheckers();
         }
     };
 
@@ -139,17 +152,22 @@ class GameThreadManager {
      * Checks for a kraken game today
      */
     public async initialize() {
-        console.log("--------------------------------------------------");
-        console.log("Game THREAD manager initialize...");
-        console.log("--------------------------------------------------");
         // check if the game is on today and create / attach to a thread if it is
         await this?.createKrakenGameDayThread();
 
         // then, start the daily checker (for the next games)
-        schedule(every_morning, this.createKrakenGameDayThread, {
-            scheduled: true,
-            timezone: "America/Los_Angeles",
-        });
+        const dailyCheckerTask = new CronJob(
+            {
+                cronExpression: every_morning,
+                timezone: Config.TIME_ZONE,
+            },
+            new Task("daily kraken game day thread checker", this.createKrakenGameDayThread),
+            {
+                // TODO - may need to be false, depending if old task cleans up correctly
+                preventOverrun: true,
+            }
+        );
+        this.scheduler.addCronJob(dailyCheckerTask);
     }
 
     /**
@@ -159,9 +177,6 @@ class GameThreadManager {
      * @param channel - the channel to create the message and thread in
      */
     constructor(channel: TextChannel) {
-        console.log("--------------------------------------------------");
-        console.log("Game THREAD manager constructor...");
-        console.log("--------------------------------------------------");
         this.channel = channel;
     }
 
@@ -173,8 +188,7 @@ class GameThreadManager {
             console.log("--------------------------------------------------");
             console.log("No game id or thread set, , skipping pregame checker...");
             console.log("--------------------------------------------------");
-            this.pregameCheckerTask?.stop();
-            this?.gameFeedManager?.Stop();
+            this.StopExistingCheckers();
             return;
         }
         console.log("--------------------------------------------------");
@@ -197,23 +211,36 @@ class GameThreadManager {
                 `PREGAME STARTED FOR ID: ${this.gameId}, (${awayTeam.abbrev} at ${homeTeam.abbrev}) @ ${gameDate}`
             );
             console.log("--------------------------------------------------");
-            // spawn a live game feed checker
-            this.gameFeedManager = new GameFeedManager(this.thread, this.gameId);
+            // spawn a live game feed checker... that should end itself
+            const feed = await API.Games.GetPlays(this.gameId);
+            this.gameFeedManager = new GameFeedManager(this.thread, feed);
             // check if the game start is in the past or future (don't re-announce)
             if (new Date(startTimeUTC) > new Date()) {
-                this.announceGameStartingSoon(startTimeUTC);
+                this.announceGameStartingSoon();
             }
-            await this?.pregameCheckerTask?.stop();
+            // stop pregame checker
+            if (this.scheduler.existsById(PREGAME_CHECKER_ID)) {
+                await this.scheduler.stopById(PREGAME_CHECKER_ID);
+            }
         }
         if (isGameOver(gameState)) {
-            // the game is over
-            this?.gameFeedManager?.Stop();
-            this?.pregameCheckerTask?.stop();
+            this.StopExistingCheckers();
         }
     };
 
-    private announceGameStartingSoon = async (startTimeUTC: string) => {
-        await this?.thread?.send(`Game starting soon: ${relativeDateString(startTimeUTC)}`);
+    private announceGameStartingSoon = async () => {
+        if (!this.gameId || !this.thread) {
+            return;
+        }
+        const boxScore = await API.Games.GetBoxScore(this.gameId);
+        const { homeTeam, awayTeam, venue, startTimeUTC } = boxScore;
+        const title = `Pregame: ${homeTeam.commonName.default} vs ${awayTeam.commonName.default}`;
+        const embed = new EmbedBuilder()
+            .setTitle(title)
+            .setDescription(`Puck drop: ${relativeDateString(startTimeUTC)} @ ${venue.default}`)
+            .setColor(Colors.EMBED_COLOR);
+
+        await this?.thread?.send({ embeds: [embed] });
     };
 }
 

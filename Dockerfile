@@ -20,7 +20,11 @@ RUN npm ci && npm run tsc
 FROM node:22-slim AS app
 
 WORKDIR /app
+# Copy the package.json and package-lock.json files to the working directory
+COPY package*.json ./
+# Copy the transpiled app from the base image
 COPY --from=base /app/dist /app/dist
+# Copy the node_modules from the base image
 COPY --from=base /app/node_modules /app/node_modules
 
 # Expose the necessary ports

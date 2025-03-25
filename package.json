@@ -1,25 +1,26 @@
 {
   "name": "hockeybot",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "",
   "main": "dist/index.js",
   "dependencies": {
     "@discordjs/builders": "^1.7.0",
     "@discordjs/rest": "^2.4.3",
+    "async-mutex": "^0.5.0",
+    "croner": "^9.0.0",
     "date-fns": "^2.16.1",
     "date-fns-tz": "^1.0.12",
     "discord-api-types": "^0.37.66",
     "discord.js": "^14.18.0",
     "dotenv": "^8.2.0",
-    "fuzzball": "^1.3.1",
-    "node-cron": "^3.0.3",
+    "log-timestamp": "^0.3.0",
     "node-fetch": "^2.6.7",
     "table": "^6.8.1",
+    "toad-scheduler": "^3.0.1",
     "underscore": "^1.12.1"
   },
   "devDependencies": {
     "@types/node": "^14.14.16",
-    "@types/node-cron": "^2.0.4",
     "@types/node-fetch": "^2.5.7",
     "@types/underscore": "^1.10.24",
     "typescript": "^5.3.3"
@@ -30,6 +31,6 @@
     "start": "npm ci && npm run tsc && node dist/index.js",
     "launch": "npm i --no-optional && npm run build && npm start"
   },
-  "author": "",
+  "author": "burn-piano-island",
   "license": "MIT"
 }

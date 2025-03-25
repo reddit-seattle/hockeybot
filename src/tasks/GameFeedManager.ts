@@ -1,360 +1,252 @@
-import { ThreadChannel, EmbedBuilder } from "discord.js";
-import { ScheduleOptions, ScheduledTask, schedule } from "node-cron";
+import { EmbedBuilder } from "@discordjs/builders";
+import { Mutex } from "async-mutex";
+import { Message, ThreadChannel } from "discord.js";
+import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
+import { all, isEqual, omit, uniqueId } from "underscore";
 import { API } from "../service/API";
-import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/models/responses/PlayByPlayResponse";
-import { getSituationCodeString, isGameOver, periodToStr } from "../utils/helpers";
+import { Play, PlayByPlayResponse } from "../service/models/responses/PlayByPlayResponse";
+import { Environment } from "../utils/constants";
+import { GameFeedEmbedFormatter } from "../utils/EmbedFormatters";
 import { EventTypeCode } from "../utils/enums";
-import { Kraken } from "../utils/constants";
-import { Strings } from "../utils/constants";
-import { PeriodDescriptor } from "../service/models/responses/PlayByPlayResponse";
-import _ from "underscore";
+import { isGameOver, logDiff } from "../utils/helpers";
+
+/**
+ * TODOs
+ * Extra stats on intermission messages (shots, hits, etc)
+ * Update game start message with teams records / starting lineups
+ * Better shootout / overtime handling
+ * Handle successful challenges
+ * Handle goalie changes
+ */
+
+const tracked_types = [EventTypeCode.goal, EventTypeCode.penalty, EventTypeCode.periodStart, EventTypeCode.periodEnd];
+
+interface PlayMessageContainer {
+    message?: Message;
+    play: Play;
+}
 
 export class GameFeedManager {
-    private CRON: string = "*/10 * * * * *";
-
-    private taskOptions: ScheduleOptions = { scheduled: true, timezone: "America/Los_Angeles" };
-
-    private task: ScheduledTask;
+    private scheduler: ToadScheduler = new ToadScheduler();
     private thread: ThreadChannel;
     private gameId: string;
     private feed?: PlayByPlayResponse;
+    private embedFormatter: GameFeedEmbedFormatter;
+    private gameOver: boolean = false;
+    private eventsMutex: Mutex = new Mutex();
 
-    // In case we start in the middle of a game (crash / reboot / etc) we don't want to announce all the goals / penalties again
-    private eventIds: Set<string> = new Set<string>();
-    private teamsMap: Map<string, Team> = new Map<string, Team>();
-    private roster: Map<string, RosterPlayer> = new Map<string, RosterPlayer>();
+    private events: Map<string, PlayMessageContainer> = new Map<string, PlayMessageContainer>();
 
-    constructor(thread: ThreadChannel, gameId: string, taskOptions?: ScheduleOptions, cron?: string) {
+    constructor(thread: ThreadChannel, feed: PlayByPlayResponse) {
         this.thread = thread;
-        this.gameId = gameId;
-        // force update feed
-        this.getFeed(true);
-        if (taskOptions) {
-            this.taskOptions = taskOptions;
-        }
-        if (cron) {
-            this.CRON = cron;
-        }
-        // get teams and roster and store them
-        this.getTeamsAndRoster();
-
-        // start the task
-        this.task = schedule(this.CRON, this.checkGameStatus, this.taskOptions);
+        this.gameId = feed.id;
+        this.embedFormatter = new GameFeedEmbedFormatter(feed);
+        const gameStatusChecker = new SimpleIntervalJob(
+            {
+                seconds: 10,
+                runImmediately: true,
+            },
+            new Task("check for game status", this.checkGameStatus),
+            {
+                id: this.gameId,
+                preventOverrun: true,
+            }
+        );
+        this.scheduler.addSimpleIntervalJob(gameStatusChecker);
     }
 
-    private getTeamsAndRoster = async () => {
-        const game = await API.Games.GetPlays(this.gameId);
-        const { awayTeam, homeTeam, rosterSpots } = game;
-        this.teamsMap.set(awayTeam.id, awayTeam);
-        this.teamsMap.set(homeTeam.id, homeTeam);
-        rosterSpots.forEach((player) => {
-            this.roster.set(player.playerId, player);
-        });
-    };
-
+    // TODO - refactor and clean up this function
     private checkGameStatus = async () => {
-        const game = await API.Games.GetBoxScore(this.gameId);
-        const { gameState, gameDate, awayTeam, homeTeam } = game;
-
-        // Check for game end state on box score
-        if (isGameOver(gameState)) {
-            await this.thread?.setArchived(true, "game over").catch(console.error);
-            await this.task.stop();
-            return;
-        }
-
-        // #region logging
-        console.log(
-            `LIVE GAME FEED CHECKER FOR ID: ${this.gameId}, (${awayTeam.abbrev} at ${homeTeam.abbrev}) @ ${gameDate}`
-        );
-        console.dir(game);
-        console.log("--------------------------------------------------");
-        console.log(
-            `Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${homeTeam.commonName.default} ${
-                homeTeam?.score || 0
-            }`
-        );
-        console.log("--------------------------------------------------");
-        // #endregion
-
-        // game feed
-        const feed = await this.getFeed(true);
-        console.dir(feed);
-        const { plays } = feed;
-
-        const goals = [];
-        const penalties = [];
-        const clockEvents = [];
-
-        // parse plays once into buckets
-        for (const play of plays) {
-            // skip if we saw this event already
-            const { eventId, typeCode } = play;
-            if (this.eventIds.has(eventId)) {
-                continue;
+        const release = await this.eventsMutex.acquire();
+        try {
+            if (this.gameOver) {
+                console.log("Game is already over, skipping checkGameStatus");
+                return;
             }
-            this.eventIds.add(eventId);
-            if (typeCode == EventTypeCode.goal) {
-                goals.push(play);
-            } else if (typeCode == EventTypeCode.penalty) {
-                penalties.push(play);
-            } else if (
-                typeCode == EventTypeCode.periodStart ||
-                typeCode == EventTypeCode.periodEnd ||
-                typeCode == EventTypeCode.gameEnd
-            ) {
-                clockEvents.push(play);
+            const { gameState, awayTeam, homeTeam, clock, periodDescriptor } = await API.Games.GetBoxScore(this.gameId);
+            const periodNumber = periodDescriptor?.number || 1;
+
+            // state / iteration unique key
+            const stateKey = uniqueId(`${this.gameId}-${periodNumber}-${clock.timeRemaining}`);
+            // log main game loop
+            console.log(
+                `{${stateKey}} CheckGameStatus - Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${
+                    homeTeam.commonName.default
+                } ${homeTeam?.score || 0} - ${clock.timeRemaining} - ${
+                    clock.inIntermission ? "Intermission" : "Period"
+                } ${periodNumber} - (${gameState})`
+            );
+            // check if game is over
+            if (isGameOver(gameState)) {
+                console.log("Writing Game Over message");
+                const scoreEmbed = this.embedFormatter.createGameEndEmbed();
+                this.gameOver == false &&
+                    (await this?.thread?.send({
+                        embeds: [scoreEmbed],
+                    }));
+
+                console.log("Game is over, stopping game feed");
+                this.gameOver = true;
+
+                console.log("Archiving thread");
+                await this?.thread?.setArchived(true, "game over").catch(console.error);
+                // console.log("Deleting all events");
+                // this.events.clear();
+                console.log("Stopping game feed scheduler");
+                this.Stop();
+                return;
             }
-        }
+            // map old game event ids
+            const trackedEvents = Array.from(this.events.keys());
 
-        this.processClockEvents(clockEvents);
-        // TODO - investigate duplicate goals (updated eventid, assists, etc)
-        this.processGoals(goals);
-        this.processPenalties(penalties);
-    };
+            // game feed update
+            const { plays: allPlays } = await this.getFeed(true);
 
-    private processPenalties = async (penalties: Play[]) => {
-        for (const penalty of penalties) {
-            await this.processPenalty(penalty);
-        }
-    };
+            // filter out plays that are not in the tracked types (once)
+            const plays = allPlays.filter((play) => tracked_types.includes(play.typeCode));
+            console.log(
+                `{${stateKey}} Processing ${plays.length} plays: [${plays.map((play) => play.eventId).join(", ")}]`
+            );
 
-    private getFeed = async (force: boolean = false): Promise<PlayByPlayResponse> => {
-        if (force || !this.feed) {
-            const feed = await API.Games.GetPlays(this.gameId);
-            // first time we're setting feed, mark all plays as "seen"
-            if (!this.feed) {
-                for (const play of feed.plays) {
-                    // TODO - may want to SKIP the first play (game / period start) in order to announce it
-                    this.eventIds.add(play.eventId);
+            // remove any events that are no longer in the feed
+            const newEventIds = plays.map((play) => play.eventId);
+            const removedEventIds = trackedEvents.filter((eventId) => !newEventIds.includes(eventId));
+
+            // remove them from the tracked events
+            for (const eventId of removedEventIds) {
+                if (this.events.has(eventId)) {
+                    const event = this.events.get(eventId);
+                    // if the event has a message, delete it
+                    console.log(
+                        `{${stateKey}} Deleting removed event ${eventId} - ${event?.play.typeDescKey} - message link: ${event?.message?.url}`
+                    );
+                    await event?.message?.delete();
+                    this.events.delete(eventId);
                 }
             }
-            this.feed = feed;
+
+            // re-process each play and update message
+            await Promise.all(
+                plays.map(async (play) => {
+                    const startTime = Date.now();
+                    let embed: EmbedBuilder | undefined;
+                    switch (play.typeCode) {
+                        case EventTypeCode.goal:
+                            embed = this.embedFormatter.createGoalEmbed(play);
+                            break;
+                        case EventTypeCode.penalty:
+                            embed = this.embedFormatter.createPenaltyEmbed(play);
+                            break;
+                        case EventTypeCode.periodStart:
+                        case EventTypeCode.periodEnd:
+                            const existingEmbed = this.events.get(play.eventId)?.message?.embeds?.[0];
+                            embed = existingEmbed
+                                ? this.embedFormatter.updateIntermissionEmbed(play, existingEmbed)
+                                : this.embedFormatter.createIntermissionEmbed(play);
+                            break;
+                    }
+                    const embedDuration = Date.now() - startTime;
+                    if (embed) {
+                        const { eventId } = play;
+                        const messageOpts = { embeds: [embed] };
+                        // if we're not tracking this event
+                        if (!this.events.has(eventId)) {
+                            // send a new message
+                            const message = await this.thread?.send(messageOpts);
+                            this.events.set(eventId, { message: message, play: play });
+                            console.log(
+                                `${eventId} not found in tracked events, created new message for event ${eventId} - ${play.typeDescKey} - ${message.url}`
+                            );
+                        } else {
+                            // otherwise, see if we need to update the message
+                            const existingEvent = this.events.get(eventId);
+                            const existingMessage = existingEvent?.message;
+                            // TODO - optimize by only checking relevant props)
+                            // check if the play details have changed
+                            if (
+                                !isEqual(existingEvent?.play?.details, play.details) ||
+                                // period end messages can update with current intermission time
+                                all([
+                                    play.typeCode === EventTypeCode.periodEnd, // period end
+                                    play.periodDescriptor?.number == this.feed?.periodDescriptor.number, // same period as feed
+                                    this.feed?.clock.inIntermission == true, // currently in intermission
+                                ])
+                            ) {
+                                // if so, edit the message and update with new details
+                                const editedMessage = await existingMessage?.edit(messageOpts);
+                                this.events.set(eventId, { message: editedMessage ?? existingMessage, play });
+                                console.log(
+                                    `{${stateKey}} Updated event ${eventId} - ${play.typeDescKey} - ${existingMessage?.url}`
+                                );
+                                // try to log difference between old and new play details
+                                try {
+                                    const diff = omit(
+                                        play?.details,
+                                        (value, key) =>
+                                            existingEvent?.play?.details?.[key as keyof typeof play.details] === value
+                                    );
+                                    console.log(`diff:\n${JSON.stringify(diff)}`);
+                                } catch (error) {
+                                    console.error("Error logging diff", error);
+                                }
+                            } else {
+                                console.log(
+                                    `{${stateKey}} Skipping update for event ${eventId} - ${play.typeDescKey} - ${existingMessage?.url}`
+                                );
+                            }
+                        }
+                    }
+                    const finishedTime = Date.now();
+                    const totalDuration = finishedTime - startTime;
+                    const messageDuration = totalDuration - embedDuration;
+                    console.log(
+                        `Processed embed for event ${play.eventId} (${play.typeCode}): ${embedDuration}ms (embed), ${messageDuration}ms (message) - total: ${totalDuration}ms`
+                    );
+                })
+            );
+            console.log(`{${stateKey}} Finished processing, events: [${Array.from(this.events.keys()).join(", ")}]`);
+        } catch (error) {
+            console.error("Error in checkGameStatus", error);
+        } finally {
+            release();
+        }
+    };
+
+    // Maybe we could use https://api-web.nhle.com/v1/gamecenter/2023020204/landing
+    // to get the game state and other info? rather than a huge list of plays and parsing them
+    // todo - determine delays / performance of each option - does landing mean we don't need to poll for updates, will we get things too delayed?
+    private getFeed = async (force: boolean = false): Promise<PlayByPlayResponse> => {
+        if (force || !this.feed) {
+            const newFeed = await API.Games.GetPlays(this.gameId);
+            // first time we're setting feed, mark all previous plays as tracked, but with no message to update
+            // TODO - flip with env var for testing
+            if (this.feed === undefined) {
+                for (const play of newFeed.plays) {
+                    if (tracked_types.includes(play.typeCode) && !this.events.has(play.eventId)) {
+                        this.events.set(play.eventId, { message: undefined, play: play });
+                    }
+                }
+            }
+            // log the diff of the plays (time consuming?)
+            if (Environment.LOCAL_RUN) {
+                logDiff(this.feed, newFeed);
+            }
+            // update the feed
+            this.feed = newFeed;
+            this.embedFormatter.updateFeed(this.feed);
         }
         return this.feed;
     };
 
-    private createScoreEmbed = async () => {
-        const { awayTeam: away, homeTeam: home, periodDescriptor, clock } = await this.getFeed();
-        const { timeRemaining } = clock;
-        const { score: homeScore, sog: homeSOG } = home;
-        const { score: awayScore, sog: awaySOG } = away;
-        const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
-            periodDescriptor.number || 1,
-            periodDescriptor.periodType || "REG"
-        )} period`;
-
-        const title = `${away.commonName.default} at ${home.commonName.default}`;
-        return new EmbedBuilder()
-            .setTitle(title)
-            .addFields([
-                {
-                    name: `**${away.commonName.default}**`,
-                    value: `Goals: **${awayScore}**\nShots: ${awaySOG}`,
-                    inline: true,
-                },
-                {
-                    name: `**${home.commonName.default}**`,
-                    value: `Goals: **${homeScore}**\nShots: ${homeSOG}`,
-                    inline: true,
-                },
-            ])
-            .setFooter({ text: timeRemainingString })
-            .setColor(39129);
-    };
-
-    private createPenaltyEmbed = async (penalty: Play) => {
-        const { details } = penalty ?? {};
-        // we like the kraken (reverse penalty edition)
-        const excitement = details?.eventOwnerTeamId != Kraken.TeamId;
-        const { committedByPlayerId, servedByPlayerId, drawnByPlayerId, eventOwnerTeamId, descKey, typeCode } =
-            details ?? {};
-        const penaltyPlayer = this.roster.get(committedByPlayerId ?? servedByPlayerId ?? "");
-        const drawnByPlayer = this.roster.get(drawnByPlayerId ?? "");
-        const penaltyTeam = this.teamsMap.get(eventOwnerTeamId ?? "");
-
-        // Seattle Kraken penalty(!)
-        const title = `${penaltyTeam?.placeName.default} ${penaltyTeam?.commonName.default} penalty${
-            excitement ? "!" : ""
-        }`;
-
-        const fields = [];
-        // Penalty Description
-        const penaltyDescription =
-            Strings.PENALTY_STRINGS[descKey as keyof typeof Strings.PENALTY_STRINGS] ?? "Unknown penalty";
-
-        fields.push({
-            name: "Infraction:",
-            value: penaltyDescription,
-        });
-
-        // committed or served
-        const servedByString = `${committedByPlayerId ? "Committed" : "Served"} by`;
-        if (penaltyPlayer) {
-            fields.push({
-                name: servedByString,
-                value: `${penaltyPlayer?.firstName.default} ${penaltyPlayer?.lastName.default}`,
-            });
-        }
-        if (drawnByPlayer) {
-            fields.push({
-                name: "Drawn by:",
-                value: `${drawnByPlayer?.firstName.default} ${drawnByPlayer?.lastName.default}`,
-            });
-        }
-
-        const { periodDescriptor, clock } = await this.getFeed();
-        const { timeRemaining } = clock;
-        const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
-            periodDescriptor.number || 1,
-            periodDescriptor.periodType || "REG"
-        )} period`;
-
-        return new EmbedBuilder()
-            .setTitle(title)
-            .setThumbnail(penaltyPlayer?.headshot ?? "")
-            .addFields(fields)
-            .setFooter({ text: timeRemainingString })
-            .setColor(39129);
-    };
-
-    private createGoalEmbed = async (goal: Play) => {
-        const { scoringPlayerId, assist1PlayerId, assist2PlayerId } = goal.details ?? {};
-        const scorer = this.roster.get(scoringPlayerId ?? "");
-        const assist1 = this.roster.get(assist1PlayerId ?? "");
-        const assist2 = this.roster.get(assist2PlayerId ?? "");
-
-        const scoringTeam = this.teamsMap.get(goal.details?.eventOwnerTeamId ?? "");
-        const { id: scoringTeamId } = scoringTeam ?? {};
-        // we like the kraken
-        const excitement = scoringTeamId == Kraken.TeamId;
-        const goalString = `${excitement ? "GOAL!" : "goal"}`;
-
-        // this is absolutely the worst way to do this
-        // do not look at this code
-        const { situationCode, homeTeamDefendingSide } = goal;
-        const homeLeft = homeTeamDefendingSide == "left";
-        const { homeTeam } = await this.getFeed();
-        const { id: homeTeamId } = homeTeam;
-
-        const homeScored = homeTeamId == scoringTeamId;
-        const leftScored = homeScored ? homeLeft : !homeLeft;
-        const goalphrase = getSituationCodeString(situationCode, leftScored);
-
-        let title = `${scoringTeam?.placeName.default} ${scoringTeam?.commonName.default} ${goalString}`;
-        if (excitement) {
-            title = `${Strings.REDLIGHT_EMBED} ${title} ${Strings.REDLIGHT_EMBED}`;
-        }
-        const unassisted = !assist1 && !assist2;
-        const description = `${excitement ? "## " : ""}${scorer?.firstName.default} ${scorer?.lastName.default} (${
-            goal.details?.scoringPlayerTotal
-        })`;
-
-        const shotType = `${
-            Strings.GOAL_TYPE_STRINGS[goal.details?.shotType as keyof typeof Strings.GOAL_TYPE_STRINGS] ??
-            goal.details?.shotType ??
-            "Unknown shot type"
-        }`;
-        const secondaryDescription = `${shotType}${unassisted ? ` - Unassisted` : ""}${
-            goalphrase ? ` - ${goalphrase}` : ""
-        }`;
-
-        const fields = [];
-        if (assist1) {
-            fields.push({
-                name: "1st Assist:",
-                value: `${assist1?.firstName.default} ${assist1?.lastName.default} (${goal.details?.assist1PlayerTotal})`,
-            });
-        }
-        if (assist2) {
-            fields.push({
-                name: "2nd Assist:",
-                value: `${assist2?.firstName.default} ${assist2?.lastName.default} (${goal.details?.assist2PlayerTotal})`,
-            });
-        }
-        const { awayTeam: away, homeTeam: home } = await this.getFeed();
-        fields.push(
-            {
-                name: `**${away.commonName.default}**`,
-                value: `Goals: **${away.score}**\nShots: ${away.sog}`,
-                inline: true,
-            },
-            {
-                name: `**${home.commonName.default}**`,
-                value: `Goals: **${home.score}**\nShots: ${home.sog}`,
-                inline: true,
-            }
-        );
-        return new EmbedBuilder()
-            .setTitle(title)
-            .setThumbnail(scorer?.headshot ?? "")
-            .setDescription(`${description}\n${secondaryDescription}`)
-            .addFields(fields)
-            .setColor(39129);
-    };
-
-    private processGoal = async (goal: Play) => {
-        const embed = await this.createGoalEmbed(goal);
-        await this.thread?.send({ embeds: [embed] });
-    };
-
-    private processGoals = async (goals: Play[]) => {
-        for (const goal of goals) {
-            await this.processGoal(goal);
-        }
-    };
-
-    private processPenalty = async (penalty: Play) => {
-        const penaltyEmbed = await this.createPenaltyEmbed(penalty);
-        await this?.thread?.send({ embeds: [penaltyEmbed] });
-    };
-
-    private sendPeriodUpdate = async (periodDescriptor: PeriodDescriptor, descriptionStr: string) => {
-        const scoreEmbed = await this.createScoreEmbed();
-        const periodStartString = `${periodToStr(
-            periodDescriptor.number || 1,
-            periodDescriptor.periodType || "REG"
-        )} period has ${descriptionStr}`;
-        await this?.thread?.send({
-            content: periodStartString,
-            embeds: [scoreEmbed],
-        });
-    }
-
-    private processClockEvents = async (clockEvents: Play[]) => {
-        const { periodDescriptor } = await this.getFeed();
-        if (!periodDescriptor) {
-            return;
-        }
-        const periodStarts = _.any(clockEvents, (play) => play.typeCode == EventTypeCode.periodStart);
-        const periodEnds = _.any(clockEvents, (play) => play.typeCode == EventTypeCode.periodEnd);
-        const gameEnds = _.any(clockEvents, (play) => play.typeCode == EventTypeCode.gameEnd);
-
-        // did a period start
-        periodStarts && await this.sendPeriodUpdate(periodDescriptor, "started");
-        // did a period end
-        periodEnds && await this.sendPeriodUpdate(periodDescriptor, "ended");
-        // did the game end
-        gameEnds && await this.EndGame();
-    };
-
-    private EndGame = async () => {
-        const scoreEmbed = await this.createScoreEmbed();
-        await this?.thread?.send({
-            content: "Game has ended.",
-            embeds: [scoreEmbed],
-        });
-        await this?.thread?.setArchived(true, "game over").catch(console.error);
-        await this.Stop();
-    };
-
     public Stop = () => {
-        return this.task.stop();
+        if (this.scheduler.existsById(this.gameId)) {
+            this.scheduler.stopById(this.gameId);
+        }
     };
     public Start = () => {
-        return this.task.start();
+        return this.scheduler.startById(this.gameId);
     };
     public Status = () => {
-        return this.task.getStatus();
+        return this.scheduler.getById(this.gameId);
     };
 }
