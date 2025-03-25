@@ -10,6 +10,15 @@ import { GameFeedEmbedFormatter } from "../utils/EmbedFormatters";
 import { EventTypeCode } from "../utils/enums";
 import { isGameOver, logDiff } from "../utils/helpers";
 
+/**
+ * TODOs
+ * Extra stats on intermission messages (shots, hits, etc)
+ * Update game start message with teams records / starting lineups
+ * Better shootout / overtime handling
+ * Handle successful challenges
+ * Handle goalie changes
+ */
+
 const tracked_types = [EventTypeCode.goal, EventTypeCode.penalty, EventTypeCode.periodStart, EventTypeCode.periodEnd];
 
 interface PlayMessageContainer {
@@ -46,6 +55,7 @@ export class GameFeedManager {
         this.scheduler.addSimpleIntervalJob(gameStatusChecker);
     }
 
+    // TODO - refactor and clean up this function
     private checkGameStatus = async () => {
         const release = await this.eventsMutex.acquire();
         try {
