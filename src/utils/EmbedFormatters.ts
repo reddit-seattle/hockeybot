@@ -113,8 +113,7 @@ export class GameFeedEmbedFormatter {
             .setDescription(`${description}\n${secondaryDescription}`)
             .addFields([...fields, { name: "Event id:", value: `${eventId}` }])
             .setFooter({ text: timeRemainingString })
-            .setColor(Colors.EMBED_COLOR)
-            .setImage(scoringTeam?.darkLogo ?? "");
+            .setColor(Colors.EMBED_COLOR);
     };
     createPenaltyEmbed = (penalty: Play) => {
         const { details } = penalty;

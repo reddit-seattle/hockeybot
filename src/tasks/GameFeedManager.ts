@@ -209,6 +209,7 @@ export class GameFeedManager {
         if (force || !this.feed) {
             const newFeed = await API.Games.GetPlays(this.gameId);
             // first time we're setting feed, mark all previous plays as tracked, but with no message to update
+            // TODO - flip with env var for testing
             if (this.feed === undefined) {
                 for (const play of newFeed.plays) {
                     if (tracked_types.includes(play.typeCode) && !this.events.has(play.eventId)) {
