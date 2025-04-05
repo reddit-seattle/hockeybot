@@ -1,13 +1,13 @@
 import { LocalizedString } from "./Common";
 
-  export interface TvBroadcast {
+export interface TvBroadcast {
     id: number;
     market: string;
     countryCode: string;
     network: string;
-  }
+}
 
-  export interface AwayTeam {
+export interface AwayTeam {
     id: string;
     placeName: LocalizedString;
     abbrev: string;
@@ -17,9 +17,9 @@ import { LocalizedString } from "./Common";
     radioLink: string;
     odds?: Odd[];
     score?: number;
-  }
+}
 
-  export interface HomeTeam {
+export interface HomeTeam {
     id: string;
     placeName: LocalizedString;
     abbrev: string;
@@ -28,18 +28,18 @@ import { LocalizedString } from "./Common";
     homeSplitSquad: boolean;
     radioLink: string;
     odds?: Odd[];
-  }
-  export interface PeriodDescriptor {
+}
+export interface PeriodDescriptor {
     number?: number;
     periodType?: string;
-  }
+}
 
-  export interface Odd {
+export interface Odd {
     providerId: number;
     value: string;
-  }
+}
 
-  export interface Game {
+export interface Game {
     id: string;
     season: number;
     gameType: number;
@@ -62,24 +62,24 @@ import { LocalizedString } from "./Common";
     winningGoalScorer?: WinningPlayer;
     threeMinRecap?: string;
     threeMinRecapFr?: string;
-  }
+}
 
-  export interface GameOutcome {
+export interface GameOutcome {
     lastPeriodType: string;
-  }
-  export interface WinningPlayer {
+}
+export interface WinningPlayer {
     playerId: number;
     firstInitial: LocalizedString;
     lastName: LocalizedString;
-  }
+}
 
-  export interface GameWeek {
+export interface GameWeek {
     date: string;
     dayAbbrev: string;
     numberOfGames: number;
     games: Game[];
-  }
-  export interface OddsPartner {
+}
+export interface OddsPartner {
     partnerId: number;
     country: string;
     name: string;
@@ -88,8 +88,8 @@ import { LocalizedString } from "./Common";
     bgColor: string;
     textColor: string;
     accentColor: string;
-  }
-  export interface DayScheduleResponse {
+}
+export interface DayScheduleResponse {
     nextStartDate: string;
     previousStartDate: string;
     gameWeek: GameWeek[];
@@ -99,5 +99,4 @@ import { LocalizedString } from "./Common";
     regularSeasonEndDate: string;
     playoffEndDate: string;
     numberOfGames: number;
-  }
-
+}

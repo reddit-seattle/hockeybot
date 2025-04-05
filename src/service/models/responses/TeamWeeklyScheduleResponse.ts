@@ -1,12 +1,12 @@
 import { LocalizedString } from "./Common";
 
-  export interface TvBroadcast {
+export interface TvBroadcast {
     id: number;
     market: string;
     countryCode: string;
     network: string;
-  }
-  export interface AwayTeam {
+}
+export interface AwayTeam {
     id: number;
     placeName: LocalizedString;
     abbrev: string;
@@ -17,8 +17,8 @@ import { LocalizedString } from "./Common";
     airlineDesc: string;
     score?: number;
     radioLink?: string;
-  }
-  export interface HomeTeam {
+}
+export interface HomeTeam {
     id: number;
     placeName: LocalizedString;
     abbrev: string;
@@ -29,20 +29,20 @@ import { LocalizedString } from "./Common";
     radioLink?: string;
     hotelLink?: string;
     hotelDesc?: string;
-  }
-  export interface PeriodDescriptor {
+}
+export interface PeriodDescriptor {
     number?: number;
     periodType?: string;
-  }
-  export interface GameOutcome {
+}
+export interface GameOutcome {
     lastPeriodType: string;
-  }
-  export interface WinningGoalie {
+}
+export interface WinningGoalie {
     playerId: number;
     firstInitial: LocalizedString;
     lastName: LocalizedString;
-  }
-  export interface Game {
+}
+export interface Game {
     id: number;
     season: number;
     gameType: number;
@@ -66,12 +66,12 @@ import { LocalizedString } from "./Common";
     ticketsLink?: string;
     threeMinRecap?: string;
     threeMinRecapFr?: string;
-  }
-  export interface TeamWeeklyScheduleResponse {
+}
+export interface TeamWeeklyScheduleResponse {
     previousStartDate: string;
     nextStartDate: string;
     calendarUrl: string;
     clubTimezone: string;
     clubUTCOffset: string;
     games: Game[];
-  }
+}

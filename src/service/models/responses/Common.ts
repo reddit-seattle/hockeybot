@@ -5,9 +5,9 @@ export interface LocalizedString {
     cs?: string;
     sk?: string;
     fi?: string;
-  }
+}
 
-  export interface PlayerSearchResult {
+export interface PlayerSearchResult {
     playerId: string;
     name: string;
     positionCode: string;
@@ -25,4 +25,4 @@ export interface LocalizedString {
     birthCity: string;
     birthStateProvince?: string;
     birthCountry: string;
-  }
+}

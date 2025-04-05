@@ -23,10 +23,9 @@ export interface TeamSummary {
     wins: number; // 20,
     winsInRegulation: number; // 18,
     winsInShootout: number; // 0
-};
-
-export interface TeamSummaryResponse {
-    data: TeamSummary[]
-    total: number;
 }
 
+export interface TeamSummaryResponse {
+    data: TeamSummary[];
+    total: number;
+}
