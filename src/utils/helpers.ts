@@ -7,6 +7,8 @@ import { PlayByPlayResponse } from "../service/NHL/models/PlayByPlayResponse";
 import { Environment } from "./constants";
 import { ConferenceAbbrev, DivisionAbbrev, GameState, PeriodType, TeamTriCode } from "./enums";
 
+// TODO - split MLB and NHL into their own modules
+
 // credit: Typescript documentation, src
 // https://www.typescriptlang.org/docs/handbook/advanced-types.html#index-types
 export function getProperty<T, K extends keyof T>(o: T, propertyName: K): T[K] {
@@ -151,6 +153,8 @@ export const requiredConferenceOption = (option: SlashCommandStringOption) =>
 
 export const requiredTeamOption = (option: SlashCommandStringOption) =>
     option.setName("team").setDescription("Team abbreviation (SEA)").setAutocomplete(true).setRequired(true);
+export const optionalTeamOption = (option: SlashCommandStringOption) =>
+    option.setName("team").setDescription("Team abbreviation (SEA)").setAutocomplete(true).setRequired(false);
 export const requiredPlayerOption = (option: SlashCommandStringOption) =>
     option.setName("player").setDescription("Player query (Daccord)").setAutocomplete(true).setRequired(true);
 

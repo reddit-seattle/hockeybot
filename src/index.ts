@@ -4,6 +4,7 @@ import { Channel, ChannelType, Client, Guild, Interaction, TextChannel } from "d
 import { createServer } from "http";
 import { exit } from "process";
 import { GetSchedule, GetScores, GetStandings, GetStats } from "./commands/NHL";
+import { GetMarinersGameToday } from "./commands/MLB";
 import { CommandDictionary } from "./models/Command";
 import GameThreadManager from "./service/NHL/tasks/GameThreadManager";
 import { ChannelIds, Environment } from "./utils/constants";
@@ -20,7 +21,7 @@ const client = new Client({
 
 //load commands
 
-const commands = [GetSchedule, GetScores, GetStats, GetStandings].reduce((map, obj) => {
+const commands = [GetSchedule, GetScores, GetStats, GetStandings, GetMarinersGameToday].reduce((map, obj) => {
     map[obj.name] = obj;
     return map;
 }, {} as CommandDictionary);
