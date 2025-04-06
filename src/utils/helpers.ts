@@ -2,8 +2,8 @@ import { addHours, format, getUnixTime } from "date-fns";
 import { AutocompleteInteraction, SlashCommandStringOption } from "discord.js";
 import { mkdirSync, writeFileSync } from "fs";
 import { any, first } from "underscore";
-import { API } from "../service/API";
-import { PlayByPlayResponse } from "../service/models/responses/PlayByPlayResponse";
+import { API } from "../service/NHL/API";
+import { PlayByPlayResponse } from "../service/NHL/models/PlayByPlayResponse";
 import { Environment } from "./constants";
 import { ConferenceAbbrev, DivisionAbbrev, GameState, PeriodType, TeamTriCode } from "./enums";
 

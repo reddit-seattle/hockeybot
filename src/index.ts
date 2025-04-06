@@ -3,9 +3,9 @@ import { RESTPostAPIApplicationCommandsJSONBody, Routes } from "discord-api-type
 import { Channel, ChannelType, Client, Guild, Interaction, TextChannel } from "discord.js";
 import { createServer } from "http";
 import { exit } from "process";
-import { GetSchedule, GetScores, GetStandings, GetStats } from "./commands";
+import { GetSchedule, GetScores, GetStandings, GetStats } from "./commands/NHL";
 import { CommandDictionary } from "./models/Command";
-import GameThreadManager from "./tasks/GameThreadManager";
+import GameThreadManager from "./service/NHL/tasks/GameThreadManager";
 import { ChannelIds, Environment } from "./utils/constants";
 // @ts-ignore
 import LogTimestamp from "log-timestamp";

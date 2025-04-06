@@ -3,12 +3,12 @@ import { Mutex } from "async-mutex";
 import { Message, ThreadChannel } from "discord.js";
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { all, isEqual, omit, uniqueId } from "underscore";
-import { API } from "../service/API";
-import { Play, PlayByPlayResponse } from "../service/models/responses/PlayByPlayResponse";
-import { Environment } from "../utils/constants";
-import { GameFeedEmbedFormatter } from "../utils/EmbedFormatters";
-import { EventTypeCode } from "../utils/enums";
-import { isGameOver, logDiff } from "../utils/helpers";
+import { API } from "../API";
+import { Play, PlayByPlayResponse } from "../models/PlayByPlayResponse";
+import { Environment } from "../../../utils/constants";
+import { GameFeedEmbedFormatter } from "../../../utils/EmbedFormatters";
+import { EventTypeCode } from "../../../utils/enums";
+import { isGameOver, logDiff } from "../../../utils/helpers";
 
 /**
  * TODOs

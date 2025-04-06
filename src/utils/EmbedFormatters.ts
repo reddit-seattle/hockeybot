@@ -1,7 +1,7 @@
 import { Embed, EmbedBuilder } from "discord.js";
 import { contains } from "underscore";
-import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/models/responses/PlayByPlayResponse";
-import { Colors, Kraken, Strings } from "./constants";
+import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/NHL/models/PlayByPlayResponse";
+import { Colors, TeamIds, Strings } from "./constants";
 import { EventTypeCode } from "./enums";
 import { getSituationCodeString, periodToStr } from "./helpers";
 
@@ -37,7 +37,7 @@ export class GameFeedEmbedFormatter {
         const scoringTeam = this.teamsMap.get(goal.details?.eventOwnerTeamId ?? "");
         const { id: scoringTeamId } = scoringTeam ?? {};
         // we like the kraken
-        const excitement = scoringTeamId == Kraken.TeamId;
+        const excitement = scoringTeamId == TeamIds.Kraken;
         const goalString = `goal${excitement ? "!" : ""}`;
 
         const homeTeamId = this.feed.homeTeam.id;
@@ -121,7 +121,7 @@ export class GameFeedEmbedFormatter {
             return;
         }
         // we like the kraken (reverse penalty edition)
-        const excitement = details?.eventOwnerTeamId != Kraken.TeamId;
+        const excitement = details?.eventOwnerTeamId != TeamIds.Kraken;
         const { committedByPlayerId, servedByPlayerId, drawnByPlayerId, eventOwnerTeamId, descKey } = details ?? {};
         const penaltyPlayer = this.roster.get(committedByPlayerId ?? servedByPlayerId ?? "");
         const drawnByPlayer = this.roster.get(drawnByPlayerId ?? "");
@@ -190,23 +190,23 @@ export class GameFeedEmbedFormatter {
         }.`;
         if (periodEvent.typeCode == EventTypeCode.periodStart && periodDescriptor?.number == 1) {
             return new EmbedBuilder()
-                 .setTitle(title)
-                 .setDescription(`${this.feed.venue.default}`)
-                 .addFields([
+                .setTitle(title)
+                .setDescription(`${this.feed.venue.default}`)
+                .addFields([
                     {
-                            name: `**${away.commonName.default}**`,
-                            value: away?.radioLink ? `[${away.abbrev} Audio](${away.radioLink})` : "No radio link",
-                            inline: true,
-                        },
-                        {
-                            name: `**${home.commonName.default}**`,
-                            value: home?.radioLink ? `[${home.abbrev} Audio](${home.radioLink})` : "No radio link",
-                            inline: true,
-                    }
-                 ])
-                 .setFooter({ text: "Game Start" })
-                 .setColor(Colors.EMBED_COLOR);
-         }
+                        name: `**${away.commonName.default}**`,
+                        value: away?.radioLink ? `[${away.abbrev} Audio](${away.radioLink})` : "No radio link",
+                        inline: true,
+                    },
+                    {
+                        name: `**${home.commonName.default}**`,
+                        value: home?.radioLink ? `[${home.abbrev} Audio](${home.radioLink})` : "No radio link",
+                        inline: true,
+                    },
+                ])
+                .setFooter({ text: "Game Start" })
+                .setColor(Colors.EMBED_COLOR);
+        }
 
         const scoreFields = [
             {

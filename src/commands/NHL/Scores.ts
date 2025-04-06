@@ -1,17 +1,17 @@
 import { format } from "date-fns";
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { Command } from "../models/Command";
-import { API } from "../service/API";
-import { Game } from "../service/models/responses/ScoresResponse";
-import { Config } from "../utils/constants";
-import { GameState, PeriodType } from "../utils/enums";
+import { Command } from "../../models/Command";
+import { API } from "../../service/NHL/API";
+import { Game } from "../../service/NHL/models/ScoresResponse";
+import { Config } from "../../utils/constants";
+import { GameState, PeriodType } from "../../utils/enums";
 import {
     hasGameStarted,
     isGameOver,
     optionalDateOption,
     periodToStr,
     processLocalizedDateInput,
-} from "../utils/helpers";
+} from "../../utils/helpers";
 
 export const GetScores: Command = {
     name: "scores",

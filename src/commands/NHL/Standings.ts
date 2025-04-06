@@ -1,11 +1,11 @@
 import { EmbedBuilder } from "@discordjs/builders";
 import { SlashCommandBuilder } from "discord.js";
 import _ from "underscore";
-import { Command } from "../models/Command";
-import { API } from "../service/API";
-import { Standing } from "../service/models/responses/DefaultStandingsResponse";
-import { ConferenceAbbrev } from "../utils/enums";
-import { requiredConferenceOption, requiredDivisionOption } from "../utils/helpers";
+import { Command } from "../../models/Command";
+import { API } from "../../service/NHL/API";
+import { Standing } from "../../service/NHL/models/DefaultStandingsResponse";
+import { ConferenceAbbrev } from "../../utils/enums";
+import { requiredConferenceOption, requiredDivisionOption } from "../../utils/helpers";
 
 /**
  * Standings

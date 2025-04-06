@@ -5,17 +5,17 @@ import {
     SlashCommandSubcommandGroupBuilder,
 } from "@discordjs/builders";
 import { table } from "table";
-import { Command } from "../models/Command";
-import { API } from "../service/API";
+import { Command } from "../../models/Command";
+import { API } from "../../service/NHL/API";
 import {
     Career,
     Last5Game,
     PlayerStatsSummary,
     SubSeason,
-} from "../service/models/responses/PlayerStatsSummaryResponse";
-import { TeamSummary } from "../service/models/responses/TeamSummaryResponse";
-import { PlayerPosition, PlayerStatAbbrev } from "../utils/enums";
-import { requiredPlayerOption, requiredTeamOption, teamOrPlayerAutocomplete } from "../utils/helpers";
+} from "../../service/NHL/models/PlayerStatsSummaryResponse";
+import { TeamSummary } from "../../service/NHL/models/TeamSummaryResponse";
+import { PlayerPosition, PlayerStatAbbrev } from "../../utils/enums";
+import { requiredPlayerOption, requiredTeamOption, teamOrPlayerAutocomplete } from "../../utils/helpers";
 
 export const GetStats: Command = {
     name: "stats",

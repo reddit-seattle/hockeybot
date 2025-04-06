@@ -2,6 +2,8 @@ import dotenv from "dotenv";
 import { GoalShotType, PenaltyType } from "./enums";
 dotenv.config();
 
+
+// TODO - separate MLB and NHL constants
 export namespace Config {
     export const TIME_ZONE = "America/Los_Angeles";
     export const BODY_DATE_FORMAT = `iii PP @ p`; // "Thu Dec 28, 2023 @ 4:16 PM"
@@ -189,10 +191,11 @@ export enum StatsTypes {
     statsSingleSeasonPlayoffs = "statsSingleSeasonPlayoffs",
 }
 
-export namespace Kraken {
+export namespace TeamIds {
     // kraken is 55 plz don't forget
     // TODO - shift to KRAKEN_TEAM_ID / env var
-    export const TeamId: string = "55";
+    export const Kraken: string = "55";
+    export const Mariners: string = "136";
 }
 
 export interface Record {
@@ -312,6 +315,33 @@ export namespace Paths {
                 `${API_ENDPOINT}/schedule/playoff-series/${season}/${matchup}`;
             // https://api-web.nhle.com/v1/playoff-bracket/2022
             export const Bracket = (year: string) => `${API_ENDPOINT}/playoff-bracket/${year}`;
+        }
+    }
+    export namespace MLB {
+        const API_V1 = "https://statsapi.mlb.com/api/v1";
+        const API_V1_1 = "https://statsapi.mlb.com/api/v1.1";
+        const SPORT_ID = 1;
+
+        export namespace Schedule {
+            export const All = `${API_V1}/schedule?sportId=${SPORT_ID}`;
+            export const Custom = (date?: string, teamId?: string) => {
+                const dateParam = date ? `&date=${date}` : "";
+                const teamParam = teamId ? `&teamId=${teamId}` : "";
+                return `${All}${dateParam}${teamParam}`;
+            };
+        }
+
+        export namespace Teams {
+            export const All = `${API_V1}/teams`;
+            export const ById = (id: string) => `${API_V1}/teams/${id}`;
+        }
+
+        export namespace Standings {
+            export const Current = `${API_V1}/standings`;
+        }
+
+        export namespace Games {
+            export const ById = (id: string) => `${API_V1_1}/game/${id}/feed/live`;
         }
     }
 }

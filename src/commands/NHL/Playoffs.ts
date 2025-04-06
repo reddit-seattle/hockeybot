@@ -1,7 +1,7 @@
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { Command } from "../models/Command";
-import { API } from "../service/API";
-import { Colors } from "../utils/constants";
+import { Command } from "../../models/Command";
+import { API } from "../../service/NHL/API";
+import { Colors } from "../../utils/constants";
 
 export const PlayoffBracket: Command = {
     name: "playoffs",

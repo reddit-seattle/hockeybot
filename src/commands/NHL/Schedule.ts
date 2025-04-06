@@ -1,11 +1,11 @@
 import { EmbedBuilder, SlashCommandBuilder, SlashCommandSubcommandBuilder } from "@discordjs/builders";
 import { format, utcToZonedTime } from "date-fns-tz";
-import { Command } from "../models/Command";
-import { API } from "../service/API";
-import { Game as DayScheduleGame } from "../service/models/responses/DaySchedule";
-import { Game as TeamMonthlyScheduleGame } from "../service/models/responses/TeamMonthlyScheduleResponse";
-import { Game as TeamWeeklyScheduleGame } from "../service/models/responses/TeamWeeklyScheduleResponse";
-import { Config } from "../utils/constants";
+import { Command } from "../../models/Command";
+import { API } from "../../service/NHL/API";
+import { Game as DayScheduleGame } from "../../service/NHL/models/DaySchedule";
+import { Game as TeamMonthlyScheduleGame } from "../../service/NHL/models/TeamMonthlyScheduleResponse";
+import { Game as TeamWeeklyScheduleGame } from "../../service/NHL/models/TeamWeeklyScheduleResponse";
+import { Config } from "../../utils/constants";
 import {
     optionalDateOption,
     processLocalizedDateInput,
@@ -13,7 +13,7 @@ import {
     requiredTeamOption,
     teamOrPlayerAutocomplete,
     validTeamName,
-} from "../utils/helpers";
+} from "../../utils/helpers";
 
 const teamScheduleSubgroupCommand = new SlashCommandSubcommandBuilder()
     .setName("team")
