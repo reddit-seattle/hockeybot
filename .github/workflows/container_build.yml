@@ -5,6 +5,7 @@ on:
                 type: environment
                 required: true
 name: Publish Hockeybot Image
+run-name: Publish Hockeybot Image (${{ inputs.environment }})
 permissions:
     contents: "read"
     id-token: "write"
