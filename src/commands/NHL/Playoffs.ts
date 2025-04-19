@@ -58,7 +58,7 @@ export const PlayoffBracket: Command = {
 
                         return {
                             name: `${leaderEmoji} ${leader.abbrev} vs ${loser.abbrev} ${loserEmoji}`,
-                            value: `${description}\n${gameNum == 7 ? "Final" : `Game ${gameNum+1} - ${gameTime}\n${gameVenue}`}`, // TODO - add next game date
+                            value: `${description}\n${gameNum == 7 ? "Final" : `Game ${gameNum+1} - ${gameTime}\n${gameVenue}`}`,
                         };
                     })
                 );
