@@ -2,10 +2,12 @@ import { addHours, format, getUnixTime } from "date-fns";
 import { AutocompleteInteraction, SlashCommandStringOption } from "discord.js";
 import { mkdirSync, writeFileSync } from "fs";
 import { any, first } from "underscore";
-import { API } from "../service/API";
-import { PlayByPlayResponse } from "../service/models/responses/PlayByPlayResponse";
+import { API } from "../service/NHL/API";
+import { PlayByPlayResponse } from "../service/NHL/models/PlayByPlayResponse";
 import { Environment } from "./constants";
 import { ConferenceAbbrev, DivisionAbbrev, GameState, PeriodType, TeamTriCode } from "./enums";
+
+// TODO - split MLB and NHL into their own modules
 
 // credit: Typescript documentation, src
 // https://www.typescriptlang.org/docs/handbook/advanced-types.html#index-types
@@ -151,6 +153,8 @@ export const requiredConferenceOption = (option: SlashCommandStringOption) =>
 
 export const requiredTeamOption = (option: SlashCommandStringOption) =>
     option.setName("team").setDescription("Team abbreviation (SEA)").setAutocomplete(true).setRequired(true);
+export const optionalTeamOption = (option: SlashCommandStringOption) =>
+    option.setName("team").setDescription("Team abbreviation (SEA)").setAutocomplete(true).setRequired(false);
 export const requiredPlayerOption = (option: SlashCommandStringOption) =>
     option.setName("player").setDescription("Player query (Daccord)").setAutocomplete(true).setRequired(true);
 
@@ -186,8 +190,8 @@ export const getSituationCodeString = (situationCode?: string, homeScored: boole
         "1531": homeScored ? "Shorthanded 3-5" : "5-3 Power Play",
         "1341": homeScored ? "4-3 Power Play" : "Shorthanded 3-4",
         "1431": homeScored ? "Shorthanded 3-4" : "4-3 Power Play",
-        "1560": homeScored ? "Power Play (EN)" : "Empty Net",
-        "0651": homeScored ? "Empty Net" : "Power Play (EN)",
+        "1560": homeScored ? "Extra Attacker" : "Empty Net",
+        "0651": homeScored ? "Empty Net" : "Extra Attacker",
         "0551": homeScored ? "Empty Net" : "Even Strength (EN)",
         "1550": homeScored ? "Even Strength (EN)" : "Empty Net",
         "1460": homeScored ? "Power Play (EN)" : "Shorthanded",

@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import { GoalShotType, PenaltyType } from "./enums";
 dotenv.config();
 
+// TODO - separate MLB and NHL constants
 export namespace Config {
     export const TIME_ZONE = "America/Los_Angeles";
     export const BODY_DATE_FORMAT = `iii PP @ p`; // "Thu Dec 28, 2023 @ 4:16 PM"
@@ -9,7 +10,8 @@ export namespace Config {
 }
 
 export namespace Colors {
-    export const EMBED_COLOR = 39129;
+    export const KRAKEN_EMBED = 39129;
+    export const MARINERS = 0x00ff00;
 }
 
 export namespace RoleIds {
@@ -189,10 +191,11 @@ export enum StatsTypes {
     statsSingleSeasonPlayoffs = "statsSingleSeasonPlayoffs",
 }
 
-export namespace Kraken {
+export namespace TeamIds {
     // kraken is 55 plz don't forget
     // TODO - shift to KRAKEN_TEAM_ID / env var
-    export const TeamId: string = "55";
+    export const Kraken: string = "55";
+    export const Mariners: string = "136";
 }
 
 export interface Record {
@@ -202,114 +205,165 @@ export interface Record {
 }
 
 export namespace Paths {
-    /***
-     * All games today:               https://api-web.nhle.com/v1/schedule/now
-     * Calendar Schedule?:            https://api-web.nhle.com/v1/schedule-calendar/2023-12-21
-     * This week's kraken games:      https://api-web.nhle.com/v1/club-schedule/SEA/week/now
-     * This month's kraken games:     https://api-web.nhle.com/v1/club-schedule/SEA/month/now
-     * This season's kraken games:    https://api-web.nhle.com/v1/club-schedule-season/SEA/now
-     */
-    export const API_ENDPOINT = "https://api-web.nhle.com/v1";
-    export namespace Schedule {
-        const URL: string = `${API_ENDPOINT}/schedule`;
-        const CALENDAR_URL: string = `${URL}-calendar`;
+    export namespace NHL {
+        /***
+         * All games today:               https://api-web.nhle.com/v1/schedule/now
+         * Calendar Schedule?:            https://api-web.nhle.com/v1/schedule-calendar/2023-12-21
+         * This week's kraken games:      https://api-web.nhle.com/v1/club-schedule/SEA/week/now
+         * This month's kraken games:     https://api-web.nhle.com/v1/club-schedule/SEA/month/now
+         * This season's kraken games:    https://api-web.nhle.com/v1/club-schedule-season/SEA/now
+         */
+        export const API_ENDPOINT = "https://api-web.nhle.com/v1";
+        export namespace Schedule {
+            const URL: string = `${API_ENDPOINT}/schedule`;
+            const CALENDAR_URL: string = `${URL}-calendar`;
 
-        export const AllGames: (date?: string) => string = (date?) => `${URL}/${date || "now"}`;
+            export const AllGames: (date?: string) => string = (date?) => `${URL}/${date || "now"}`;
+            // TODO - API
+            export const ScheduleCalendar: (date?: string) => string = (date?) => `${CALENDAR_URL}/${date || "now"}`;
+            export const TeamWeeklySchedule: (abbreviation: string) => string = (abbreviation) =>
+                `${API_ENDPOINT}/club-schedule/${abbreviation}/week/now`;
+            export const TeamMonthlySchedule: (abbreviation: string) => string = (abbreviation) =>
+                `${API_ENDPOINT}/club-schedule/${abbreviation}/month/now`;
+            export const TeamSeasonSchedule: (abbreviation: string) => string = (abbreviation) =>
+                `${API_ENDPOINT}/club-schedule-season/${abbreviation}/now`;
+        }
+
+        export namespace Teams {
+            export const ROSTER_URL = `${API_ENDPOINT}/roster`;
+            export const SEASON_URL = `${API_ENDPOINT}/roster-season`;
+
+            // https://api-web.nhle.com/v1/roster-season/sea -> [20212022, 20222023, 20232024]
+            export const RosterSeasons = (team: string) => `${SEASON_URL}/${team}`;
+
+            // https://api-web.nhle.com/v1/roster/sea/20232024
+            export const Roster = (team: string, season: number) => `${URL}/${team}/${season}`;
+        }
         // TODO - API
-        export const ScheduleCalendar: (date?: string) => string = (date?) => `${CALENDAR_URL}/${date || "now"}`;
-        export const TeamWeeklySchedule: (abbreviation: string) => string = (abbreviation) =>
-            `${API_ENDPOINT}/club-schedule/${abbreviation}/week/now`;
-        export const TeamMonthlySchedule: (abbreviation: string) => string = (abbreviation) =>
-            `${API_ENDPOINT}/club-schedule/${abbreviation}/month/now`;
-        export const TeamSeasonSchedule: (abbreviation: string) => string = (abbreviation) =>
-            `${API_ENDPOINT}/club-schedule-season/${abbreviation}/now`;
-    }
+        export namespace Stats {
+            const STATS_URL = `${API_ENDPOINT}/club-stats`;
+            const SEASON_URL = `${API_ENDPOINT}/club-stats-season`;
 
-    export namespace Teams {
-        export const ROSTER_URL = `${API_ENDPOINT}/roster`;
-        export const SEASON_URL = `${API_ENDPOINT}/roster-season`;
+            // https://api-web.nhle.com/v1/club-stats-season/sea
+            export const StatSeasons = (team: string) => `${SEASON_URL}/${team}`;
 
-        // https://api-web.nhle.com/v1/roster-season/sea -> [20212022, 20222023, 20232024]
-        export const RosterSeasons = (team: string) => `${SEASON_URL}/${team}`;
+            // https://api-web.nhle.com/v1/club-stats/sea/now
+            export const TeamCurrentStats = (team: string) => `${STATS_URL}/${team}/now`;
 
-        // https://api-web.nhle.com/v1/roster/sea/20232024
-        export const Roster = (team: string, season: number) => `${URL}/${team}/${season}`;
-    }
-    // TODO - API
-    export namespace Stats {
-        const STATS_URL = `${API_ENDPOINT}/club-stats`;
-        const SEASON_URL = `${API_ENDPOINT}/club-stats-season`;
+            // https://api-web.nhle.com/v1/club-stats/sea/20232024/2
+            export const TeamSeasonPlayerStats = (team: string, season: string, playoffs?: boolean) =>
+                `${STATS_URL}/${team}/${season}/${playoffs ? 3 : 2}`;
 
-        // https://api-web.nhle.com/v1/club-stats-season/sea
-        export const StatSeasons = (team: string) => `${SEASON_URL}/${team}`;
+            // https://api-web.nhle.com/v1/player/8475831/landing
+            export const PlayerStatsSummary = (player: string) => `${API_ENDPOINT}/player/${player}/landing`;
+            // https://api-web.nhle.com/v1/player/8475831/game-log/now
+            export const PlayerGameLog = (player: string) => `${API_ENDPOINT}/player/${player}/game-log/now`;
+        }
+        export namespace Standings {
+            // `https://api-web.nhle.com/v1/standings-season`; // can be used for  different year's standings values, whether they allow ties / wildcards etc
+            // `https://api-web.nhle.com/v1/standings/now`;
+            const URL = `${API_ENDPOINT}/standings`;
+            export const CurrentStandings = `${URL}/now`;
+        }
+        export namespace Games {
+            const SCORE_URL = `${API_ENDPOINT}/score`;
+            const SCOREBOARD_URL = `${API_ENDPOINT}/scoreboard`;
 
-        // https://api-web.nhle.com/v1/club-stats/sea/now
-        export const TeamCurrentStats = (team: string) => `${STATS_URL}/${team}/now`;
-
-        // https://api-web.nhle.com/v1/club-stats/sea/20232024/2
-        export const TeamSeasonPlayerStats = (team: string, season: string, playoffs?: boolean) =>
-            `${STATS_URL}/${team}/${season}/${playoffs ? 3 : 2}`;
-
-        // https://api-web.nhle.com/v1/player/8475831/landing
-        export const PlayerStatsSummary = (player: string) => `${API_ENDPOINT}/player/${player}/landing`;
-        // https://api-web.nhle.com/v1/player/8475831/game-log/now
-        export const PlayerGameLog = (player: string) => `${API_ENDPOINT}/player/${player}/game-log/now`;
-    }
-    export namespace Standings {
-        // `https://api-web.nhle.com/v1/standings-season`; // can be used for  different year's standings values, whether they allow ties / wildcards etc
-        // `https://api-web.nhle.com/v1/standings/now`;
-        const URL = `${API_ENDPOINT}/standings`;
-        export const CurrentStandings = `${URL}/now`;
-    }
-    export namespace Games {
-        const SCORE_URL = `${API_ENDPOINT}/score`;
-        const SCOREBOARD_URL = `${API_ENDPOINT}/scoreboard`;
-
-        // https://api-web.nhle.com/v1/scoreboard/sea/now
-        export const Scoreboard = (team?: string) => `${SCOREBOARD_URL}/${team ?? ""}/now`;
-        // https://api-web.nhle.com/v1/wsc/game-story/2024020543
-        export const Story = (id: string) => `${API_ENDPOINT}/wsc/game-story/${id}`;
-        // Today's games: https://api-web.nhle.com/v1/score/now
-        // Dated games:   https://api-web.nhle.com/v1/score/2023-10-19
-        export const ByDate: (date?: string) => string = (date) => `${SCORE_URL}/${date || "now"}`;
-        export namespace Live {
-            export const URL = `${API_ENDPOINT}/gamecenter`;
-            export const Game = (id: string) => {
-                const GAME_URL = `${URL}/${id}`;
-                return {
-                    // https://api-web.nhle.com/v1/gamecenter/2023020495/boxscore
-                    BoxScore: `${GAME_URL}/boxscore`,
-                    // https://api-web.nhle.com/v1_1/gamecenter/2023020001/play-by-play/
-                    PlayByPlay: `${GAME_URL}/play-by-play`,
+            // https://api-web.nhle.com/v1/scoreboard/sea/now
+            export const Scoreboard = (team?: string) => `${SCOREBOARD_URL}/${team ?? ""}/now`;
+            // https://api-web.nhle.com/v1/wsc/game-story/2024020543
+            export const Story = (id: string) => `${API_ENDPOINT}/wsc/game-story/${id}`;
+            // Today's games: https://api-web.nhle.com/v1/score/now
+            // Dated games:   https://api-web.nhle.com/v1/score/2023-10-19
+            export const ByDate: (date?: string) => string = (date) => `${SCORE_URL}/${date || "now"}`;
+            export namespace Live {
+                export const URL = `${API_ENDPOINT}/gamecenter`;
+                export const Game = (id: string) => {
+                    const GAME_URL = `${URL}/${id}`;
+                    return {
+                        // https://api-web.nhle.com/v1/gamecenter/2023020495/boxscore
+                        BoxScore: `${GAME_URL}/boxscore`,
+                        // https://api-web.nhle.com/v1_1/gamecenter/2023020001/play-by-play/
+                        PlayByPlay: `${GAME_URL}/play-by-play`,
+                    };
                 };
-            };
+            }
+        }
+        export namespace Search {
+            const URL = "https://search.d3.nhle.com/api/v1/search";
+            // https://search.d3.nhle.com/api/v1/search/player?culture=en-us&limit=20&q=gir%2A&active=true
+            export const Player = (player: string) => `${URL}/player?culture=en-us&limit=25&q=${player}%2A&active=true`;
+        }
+
+        export namespace Rest {
+            const URL = `https://api.nhle.com/stats/rest/en`;
+            const teamEndpoint = `${URL}/team`;
+            export const TeamInfoByTriCode = (team: string) => `${teamEndpoint}/?cayenneExp=triCode="${team}"`;
+            export const AllTeamSummaries = (season: string) => `${teamEndpoint}/summary?cayenneExp=seasonId=${season}`;
+        }
+
+        export namespace Seasons {
+            const URL = `${API_ENDPOINT}/season`;
+            export const All = URL;
+        }
+
+        export namespace Playoffs {
+            // https://api-web.nhle.com/v1/playoff-series/carousel/20232024/
+            export const Carousel = (season: string) => `${API_ENDPOINT}/playoff-series/carousel/${season}`;
+            // https://api-web.nhle.com/v1/schedule/playoff-series/20232024/a
+            export const Series = (season: string, matchup: string) =>
+                `${API_ENDPOINT}/schedule/playoff-series/${season}/${matchup}`;
+            // https://api-web.nhle.com/v1/playoff-bracket/2022
+            export const Bracket = (year: string) => `${API_ENDPOINT}/playoff-bracket/${year}`;
         }
     }
-    export namespace Search {
-        const URL = "https://search.d3.nhle.com/api/v1/search";
-        // https://search.d3.nhle.com/api/v1/search/player?culture=en-us&limit=20&q=gir%2A&active=true
-        export const Player = (player: string) => `${URL}/player?culture=en-us&limit=25&q=${player}%2A&active=true`;
-    }
+    export namespace MLB {
+        const API_V1 = "https://statsapi.mlb.com/api/v1";
+        const API_V1_1 = "https://statsapi.mlb.com/api/v1.1";
+        const SPORT_ID = 1;
 
-    export namespace Rest {
-        const URL = `https://api.nhle.com/stats/rest/en`;
-        const teamEndpoint = `${URL}/team`;
-        export const TeamInfoByTriCode = (team: string) => `${teamEndpoint}/?cayenneExp=triCode="${team}"`;
-        export const AllTeamSummaries = (season: string) => `${teamEndpoint}/summary?cayenneExp=seasonId=${season}`;
-    }
+        export namespace Schedule {
+            export const All = `${API_V1}/schedule?sportId=${SPORT_ID}`;
 
-    export namespace Seasons {
-        const URL = `${API_ENDPOINT}/season`;
-        export const All = URL;
-    }
+            export interface ScheduleFilterParams {
+                date?: string;
+                teamId?: string;
+                seasonId?: string;
+                opponentId?: string;
+                startDate?: string;
+                endDate?: string;
+            }
 
-    export namespace Playoffs {
-        // https://api-web.nhle.com/v1/playoff-series/carousel/20232024/
-        export const Carousel = (season: string) => `${API_ENDPOINT}/playoff-series/carousel/${season}`;
-        // https://api-web.nhle.com/v1/schedule/playoff-series/20232024/a
-        export const Series = (season: string, matchup: string) =>
-            `${API_ENDPOINT}/schedule/playoff-series/${season}/${matchup}`;
-        // https://api-web.nhle.com/v1/playoff-bracket/2022
-        export const Bracket = (year: string) => `${API_ENDPOINT}/playoff-bracket/${year}`;
+            /**
+             *
+             * @param date - YYYY-MM-DD format (only show games for certain date)
+             * @param teamId - MLB team ID (only show games for certain team)
+             * @param season - YYYY format (all games for season)
+             * @returns URL for filtered schedule endpoint
+             */
+            export const Filtered = (params: ScheduleFilterParams) => {
+                const queryParams = Object.entries(params)
+                    .filter(([_, value]) => value !== undefined)
+                    .map(([key, value]) => `&${key}=${encodeURIComponent(value!)}`)
+                    .join("");
+
+                return `${All}${queryParams}`;
+            };
+            export const NextGames = (teamId: string) => {};
+        }
+
+        export namespace Teams {
+            export const All = `${API_V1}/teams`;
+            export const ById = (id: string) => `${API_V1}/teams/${id}`;
+        }
+
+        export namespace Standings {
+            export const Current = `${API_V1}/standings`;
+        }
+
+        export namespace Games {
+            export const ById = (id: string) => `${API_V1_1}/game/${id}/feed/live`;
+        }
+        export const Seasons = `${API_V1}/seasons?sportId=${SPORT_ID}`;
     }
 }

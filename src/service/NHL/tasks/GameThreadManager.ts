@@ -3,11 +3,11 @@ import { format, utcToZonedTime } from "date-fns-tz";
 import { TextChannel, ThreadChannel } from "discord.js";
 import { CronJob, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { contains } from "underscore";
-import { API } from "../service/API";
-import { Game } from "../service/models/responses/DaySchedule";
-import { Colors, Config, Kraken } from "../utils/constants";
-import { GameState } from "../utils/enums";
-import { ApiDateString, isGameOver, relativeDateString } from "../utils/helpers";
+import { API } from "../API";
+import { Game } from "../models/DaySchedule";
+import { Colors, Config, TeamIds } from "../../../utils/constants";
+import { GameState } from "../../../utils/enums";
+import { ApiDateString, isGameOver, relativeDateString } from "../../../utils/helpers";
 import { GameFeedManager } from "./GameFeedManager";
 
 let every_morning = "0 0 9 * * *";
@@ -64,7 +64,7 @@ class GameThreadManager {
 
         const games = await API.Schedule.GetDailySchedule();
         const krakenGames = games?.filter(
-            (game) => game.homeTeam.id == Kraken.TeamId || game.awayTeam.id == Kraken.TeamId
+            (game) => game.homeTeam.id == TeamIds.Kraken || game.awayTeam.id == TeamIds.Kraken
         );
         if (krakenGames.length > 0) {
             const game = krakenGames[0];
@@ -102,7 +102,7 @@ class GameThreadManager {
                 const gameStartEmbed = new EmbedBuilder()
                     .setTitle(title)
                     .setDescription(`Game start: ${gameStartTimeString} (${relativeDate})\n${game.venue.default}`)
-                    .setColor(Colors.EMBED_COLOR);
+                    .setColor(Colors.KRAKEN_EMBED);
                 // TODO - add more game details (game story?)
                 const message = await this.channel.send({ embeds: [gameStartEmbed] });
                 // create thread (title is imperative)
@@ -238,7 +238,7 @@ class GameThreadManager {
         const embed = new EmbedBuilder()
             .setTitle(title)
             .setDescription(`Puck drop: ${relativeDateString(startTimeUTC)} @ ${venue.default}`)
-            .setColor(Colors.EMBED_COLOR);
+            .setColor(Colors.KRAKEN_EMBED);
 
         await this?.thread?.send({ embeds: [embed] });
     };
@@ -247,7 +247,7 @@ class GameThreadManager {
 const generateThreadTitle = (game: Game) => {
     const { awayTeam, homeTeam, startTimeUTC } = game;
     const teamSegment = `${awayTeam.abbrev} @ ${homeTeam.abbrev}`;
-    const date = new Date(startTimeUTC);
+    const date = utcToZonedTime(startTimeUTC, Config.TIME_ZONE);
     const dateStr = ApiDateString(date);
     return `${teamSegment} - ${dateStr}`;
 };

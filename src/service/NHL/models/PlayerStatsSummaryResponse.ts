@@ -1,15 +1,15 @@
 import { LocalizedString } from "./Common";
 
-  export interface DraftDetails {
+export interface DraftDetails {
     year: number;
     teamAbbrev: string;
     round: number;
     pickInRound: number;
     overallPick: number;
-  }
+}
 
-    //featured stats.regularseason.subseason
-  export interface SubSeason {
+//featured stats.regularseason.subseason
+export interface SubSeason {
     gamesPlayed: number;
     // player stats
     goals?: number;
@@ -34,26 +34,26 @@ import { LocalizedString } from "./Common";
     shutouts?: number;
     goalsAgainstAvg?: number;
     savePctg?: number;
-  }
+}
 
-  //featured stats.regularseason.career
-  export interface Career {
+//featured stats.regularseason.career
+export interface Career {
     gamesPlayed: number;
 
     // player stats
-    goals?: number
-    assists?: number
-    points?: number
-    plusMinus?: number
-    pim?: number
-    gameWinningGoals?: number
-    otGoals?: number
-    shots?: number
-    shootingPctg?: number
-    powerPlayGoals?: number
-    powerPlayPoints?: number
-    shorthandedGoals?: number
-    shorthandedPoints?: number
+    goals?: number;
+    assists?: number;
+    points?: number;
+    plusMinus?: number;
+    pim?: number;
+    gameWinningGoals?: number;
+    otGoals?: number;
+    shots?: number;
+    shootingPctg?: number;
+    powerPlayGoals?: number;
+    powerPlayPoints?: number;
+    shorthandedGoals?: number;
+    shorthandedPoints?: number;
 
     // goalie stats
     wins?: number;
@@ -62,19 +62,19 @@ import { LocalizedString } from "./Common";
     shutouts?: number;
     goalsAgainstAvg?: number;
     savePctg?: number;
-  }
-  export interface RegularSeason {
+}
+export interface RegularSeason {
     subSeason: SubSeason;
     career: Career;
-  }
-  export interface FeaturedStats {
+}
+export interface FeaturedStats {
     season: number;
     regularSeason: RegularSeason;
-  }
+}
 
-  // careerTotals.regularSeason / careerTotals.playoffs
+// careerTotals.regularSeason / careerTotals.playoffs
 
-  export interface CareerStats {
+export interface CareerStats {
     gamesPlayed: number;
     goals: number;
     assists: number;
@@ -105,12 +105,12 @@ import { LocalizedString } from "./Common";
     savePctg?: number;
     shutouts?: number;
     timeOnIce?: string;
-  }
-  export interface CareerTotals {
+}
+export interface CareerTotals {
     regularSeason: CareerStats;
     playoffs: CareerStats;
-  }
-  export interface Last5Game {
+}
+export interface Last5Game {
     gameId: number;
     gameTypeId: number;
     teamAbbrev: string;
@@ -137,9 +137,9 @@ import { LocalizedString } from "./Common";
     savePctg?: number;
     penaltyMins?: number;
     decision?: string;
-  }
+}
 
-  export interface SeasonTotal {
+export interface SeasonTotal {
     season: number;
     gameTypeId: number;
     leagueAbbrev: string;
@@ -160,8 +160,8 @@ import { LocalizedString } from "./Common";
     otLosses?: number;
     shutouts?: number;
     pim?: number;
-  }
-  export interface Season {
+}
+export interface Season {
     seasonId: number;
     gamesPlayed: number;
     gameTypeId: number;
@@ -169,18 +169,18 @@ import { LocalizedString } from "./Common";
     losses: number;
     savePctg: number;
     gaa: number;
-  }
-  export interface Award {
+}
+export interface Award {
     trophy: LocalizedString;
     seasons: Season[];
-  }
-  export interface CurrentTeamRoster {
+}
+export interface CurrentTeamRoster {
     playerId: number;
     lastName: LocalizedString;
     firstName: LocalizedString;
     playerSlug: string;
-  }
-  export interface PlayerStatsSummary {
+}
+export interface PlayerStatsSummary {
     playerId: number;
     isActive: boolean;
     currentTeamId: number;
@@ -215,4 +215,4 @@ import { LocalizedString } from "./Common";
     seasonTotals: SeasonTotal[];
     awards: Award[];
     currentTeamRoster: CurrentTeamRoster[];
-  }
+}

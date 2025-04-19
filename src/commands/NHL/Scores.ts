@@ -1,17 +1,17 @@
-import { Command } from "../models/Command";
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { API } from "../service/API";
+import { format } from "date-fns";
+import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
+import { Command } from "../../models/Command";
+import { API } from "../../service/NHL/API";
+import { Game } from "../../service/NHL/models/ScoresResponse";
+import { Config } from "../../utils/constants";
+import { GameState, PeriodType } from "../../utils/enums";
 import {
     hasGameStarted,
     isGameOver,
     optionalDateOption,
     periodToStr,
     processLocalizedDateInput,
-} from "../utils/helpers";
-import { addHours, format } from "date-fns";
-import { Config } from "../utils/constants";
-import { Game } from "../service/models/responses/ScoresResponse";
-import { GameState, PeriodType } from "../utils/enums";
+} from "../../utils/helpers";
 
 export const GetScores: Command = {
     name: "scores",
@@ -39,8 +39,8 @@ export const GetScores: Command = {
 
         // filter games that have already started
         const liveGames = games.filter((game) => hasGameStarted(game.gameState));
-        if(!liveGames?.length) {
-            await interaction.followUp({content: "No live games found", ephemeral: true});
+        if (!liveGames?.length) {
+            await interaction.followUp({ content: "No live games found", ephemeral: true });
             return;
         }
         const fields = await Promise.all(
@@ -52,7 +52,7 @@ export const GetScores: Command = {
                 let detailsLineItems = [];
 
                 // pregame checks
-                if(gameState == GameState.pregame){
+                if (gameState == GameState.pregame) {
                     detailsLineItems.push(`Pregame`);
                 }
                 // any state but "future"
@@ -69,7 +69,7 @@ export const GetScores: Command = {
                 // gamestate of 'final, official', etc
                 if (isGameOver(gameState)) {
                     const { lastPeriodType } = gameOutcome;
-                    if( lastPeriodType != PeriodType.regulation){
+                    if (lastPeriodType != PeriodType.regulation) {
                         gameScoreLine += ` (${lastPeriodType})`;
                     }
                     if (game.threeMinRecap) {
@@ -83,7 +83,7 @@ export const GetScores: Command = {
                         gameScoreLine += ` (${clock.timeRemaining} ${periodToStr(number, periodType)})`;
                     }
                 }
-                const details = detailsLineItems.join('\n');
+                const details = detailsLineItems.join("\n");
                 return {
                     name: gameScoreLine,
                     value: details,

@@ -3,9 +3,10 @@ import { RESTPostAPIApplicationCommandsJSONBody, Routes } from "discord-api-type
 import { Channel, ChannelType, Client, Guild, Interaction, TextChannel } from "discord.js";
 import { createServer } from "http";
 import { exit } from "process";
-import { GetSchedule, GetScores, GetStandings, GetStats } from "./commands";
+import { Mariners } from "./commands/MLB";
+import { GetSchedule, GetScores, GetStandings, GetStats, PlayoffBracket } from "./commands/NHL";
 import { CommandDictionary } from "./models/Command";
-import GameThreadManager from "./tasks/GameThreadManager";
+import GameThreadManager from "./service/NHL/tasks/GameThreadManager";
 import { ChannelIds, Environment } from "./utils/constants";
 // @ts-ignore
 import LogTimestamp from "log-timestamp";
@@ -20,7 +21,14 @@ const client = new Client({
 
 //load commands
 
-const commands = [GetSchedule, GetScores, GetStats, GetStandings].reduce((map, obj) => {
+const commands = [
+    GetSchedule, // NHL commands
+    GetScores,
+    GetStats,
+    GetStandings,
+    PlayoffBracket,
+    Mariners, // MLB commands
+].reduce((map, obj) => {
     map[obj.name] = obj;
     return map;
 }, {} as CommandDictionary);
@@ -78,8 +86,21 @@ const startGameDayThreadChecker = async (guild: Guild) => {
 client.on("ready", async () => {
     console.log(`Logged in as ${client?.user?.tag}!`);
     // log the version from package.json
-    const packageJson = require("../package.json");
-    console.log(`Version: ${packageJson.version}`);
+    // try to get package.json from `../`, if not, use `../../`
+    let packageJsonPath = `../package.json`;
+    let packageVersion = "0.0.0";
+    try {
+        packageVersion = require(packageJsonPath)?.version;
+    } catch (e) {
+        // if not found, use the other path
+        packageJsonPath = `../../package.json`;
+        try {
+            packageVersion = require(packageJsonPath)?.version;
+        } catch (e) {
+            console.log(`Could not find package.json, using default version: ${packageVersion}`);
+        }
+    }
+    console.log(`Version: ${packageVersion}`);
     client.guilds.cache.forEach((guild: Guild) => {
         if (Environment.DEBUG) {
             //try to announce to servers when you go online

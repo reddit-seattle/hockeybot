@@ -4,22 +4,18 @@ import {
     SlashCommandSubcommandBuilder,
     SlashCommandSubcommandGroupBuilder,
 } from "@discordjs/builders";
-import {
-    requiredPlayerOption,
-    requiredTeamOption,
-    teamOrPlayerAutocomplete,
-} from "../utils/helpers";
-import { API } from "../service/API";
-import { Command } from "../models/Command";
-import { PlayerPosition, PlayerStatAbbrev } from "../utils/enums";
+import { table } from "table";
+import { Command } from "../../models/Command";
+import { API } from "../../service/NHL/API";
 import {
     Career,
     Last5Game,
     PlayerStatsSummary,
     SubSeason,
-} from "../service/models/responses/PlayerStatsSummaryResponse";
-import { table } from "table";
-import { TeamSummary } from "../service/models/responses/TeamSummaryResponse";
+} from "../../service/NHL/models/PlayerStatsSummaryResponse";
+import { TeamSummary } from "../../service/NHL/models/TeamSummaryResponse";
+import { PlayerPosition, PlayerStatAbbrev } from "../../utils/enums";
+import { requiredPlayerOption, requiredTeamOption, teamOrPlayerAutocomplete } from "../../utils/helpers";
 
 export const GetStats: Command = {
     name: "stats",
@@ -57,7 +53,7 @@ export const GetStats: Command = {
         ),
     async executeSlashCommand(interaction) {
         await interaction.deferReply();
-        
+
         // parse subcommand / group
         const subcommand = interaction.options.getSubcommand(true);
         const subcommandGroup = interaction.options.getSubcommandGroup(false);
@@ -71,24 +67,23 @@ export const GetStats: Command = {
                 });
                 return;
             }
-            
+
             // prepare embed
             let embed = new EmbedBuilder();
-            
-
 
             // /stats player last5
             if (subcommand == "last5") {
                 embed = await getPlayerLast5StatsEmbed(playerStats);
-            } else if (subcommand == "season") {  // /stats player season
+            } else if (subcommand == "season") {
+                // /stats player season
                 embed = await getPlayerStatsEmbed(playerStats, false);
-            } else if (subcommand == "career") {  // /stats player career
+            } else if (subcommand == "career") {
+                // /stats player career
                 embed = await getPlayerStatsEmbed(playerStats, true);
             }
 
             embed && (await interaction.followUp({ embeds: [embed] }));
-        }
-        else if(!subcommandGroup && subcommand == 'team') {
+        } else if (!subcommandGroup && subcommand == "team") {
             const team = interaction.options.getString("team", true);
             const summary = await API.Teams.GetTeamSummary(team);
             const embed = buildTeamStatsSummaryEmbed(summary);
@@ -143,60 +138,15 @@ const getPlayerStatsEmbed = async (playerStats: PlayerStatsSummary, career?: boo
 
     // not sure why, but using a ternary for assignment causes the wrong type inference
     let seasonStats: SubSeason | Career;
-    if(career) {
+    if (career) {
         seasonStats = stats.career;
-    }
-    else {
-        seasonStats = stats.subSeason
+    } else {
+        seasonStats = stats.subSeason;
     }
     const fields = getStatsEmbedFields(seasonStats, isGoalie);
 
     return new EmbedBuilder().setTitle(title).setDescription(description).setThumbnail(image).addFields(fields);
 };
-
-// /**
-//  * Gets an embed for a player's career stat summary
-//  * @param playerStats Regular season stats object
-//  * @returns embed with all stats as inline fields
-//  */
-// const getPlayerCareerStatsEmbed = async (playerStats: PlayerStatsSummary) => {
-//     const {
-//         firstName,
-//         lastName, // Philipp Grubauer
-//         sweaterNumber,
-//         fullTeamName,
-//         position,
-//         headshot,
-//         heightInInches,
-//         weightInPounds,
-//         birthDate,
-//         birthCity,
-//         birthCountry,
-//         shootsCatches,
-//         featuredStats,
-//     } = playerStats;
-//     const title = `${firstName.default} ${lastName.default} Career Stats`;
-//     const image = headshot;
-
-//     const isGoalie = position == PlayerPosition.goalie;
-//     const shootsCatchesDesc = isGoalie ? `Catches` : `Shoots`;
-//     const statLine = `Height: ${heightInInches} in, weight: ${weightInPounds} lbs`;
-//     const description = [
-//         `**#${sweaterNumber}** ${fullTeamName.default}`,
-//         `Position:  ${position}, ${shootsCatchesDesc} ${shootsCatches}`,
-//         `${bio}`,
-//         `${statLine}`,
-//     ].join("\n");
-
-//     const { regularSeason: stats } = featuredStats;
-//     const careerStats = stats.career;
-
-//     return new EmbedBuilder()
-//         .setTitle(title)
-//         .setDescription(description)
-//         .setThumbnail(image)
-//         .addFields(getStatsEmbedFields(careerStats, isGoalie));
-// };
 
 const getPlayerLast5StatsEmbed = async (playerStats: PlayerStatsSummary) => {
     const {
@@ -362,11 +312,17 @@ const buildTeamStatsSummaryEmbed = (summary: TeamSummary) => {
         penaltyKillPct,
         // pointPct,
         points,
-        powerPlayPct, regulationAndOtWins, shotsAgainstPerGame, shotsForPerGame, 
-        teamFullName, wins, winsInRegulation, winsInShootout
+        powerPlayPct,
+        regulationAndOtWins,
+        shotsAgainstPerGame,
+        shotsForPerGame,
+        teamFullName,
+        wins,
+        winsInRegulation,
+        winsInShootout,
     } = summary;
 
-    const title = `${teamFullName} Season Stats`
+    const title = `${teamFullName} Season Stats`;
 
     const mainStatFields = [
         [PlayerStatAbbrev.gamesPlayed, `${gamesPlayed ?? 0}`],
@@ -374,23 +330,23 @@ const buildTeamStatsSummaryEmbed = (summary: TeamSummary) => {
         [PlayerStatAbbrev.wins, `${wins ?? 0}`],
         [PlayerStatAbbrev.losses, `${losses ?? 0}`],
         [PlayerStatAbbrev.overtimeLosses, `${otLosses ?? 0}`],
-        ['RW', `${winsInRegulation ?? 0}`],
-        ['ROW', `${regulationAndOtWins ?? 0}`],
-        ['SOW', `${winsInShootout ?? 0}`],
+        ["RW", `${winsInRegulation ?? 0}`],
+        ["ROW", `${regulationAndOtWins ?? 0}`],
+        ["SOW", `${winsInShootout ?? 0}`],
     ].map((val: string[]) => {
         return {
             name: val[0],
             value: val[1],
-            inline: true
-        }
+            inline: true,
+        };
     });
 
-    const goalDiff = (goalsFor - goalsAgainst);
+    const goalDiff = goalsFor - goalsAgainst;
     const secondaryStatFields = [
         // goals
-        ['GF', `${goalsFor ?? 0}`],
+        ["GF", `${goalsFor ?? 0}`],
         [PlayerStatAbbrev.goalsAgainst, `${goalsAgainst ?? 0}`],
-        ['GDIFF', `${goalDiff ?? 0}`],
+        ["GDIFF", `${goalDiff ?? 0}`],
         [PlayerStatAbbrev.goalsForPerGamesPlayed, `${(goalsForPerGame ?? 0).toFixed(2)}`],
         [PlayerStatAbbrev.goalsAgainstPerGamesPlayed, `${(goalsAgainstPerGame ?? 0).toFixed(2)}`],
         // shots
@@ -404,15 +360,9 @@ const buildTeamStatsSummaryEmbed = (summary: TeamSummary) => {
         return {
             name: val[0],
             value: val[1],
-            inline: true
-        }
+            inline: true,
+        };
     });
 
-    return new EmbedBuilder()
-        .setTitle(title)
-        .addFields(
-            ...mainStatFields,
-            ...secondaryStatFields
-        )
-}
-
+    return new EmbedBuilder().setTitle(title).addFields(...mainStatFields, ...secondaryStatFields);
+};

@@ -1,11 +1,8 @@
 # Use the official Node.js 22 image as the base image
 FROM node:22 AS base
 
-# Set the working directory inside the container
-WORKDIR /app
-
 # Copy the package.json and package-lock.json files to the working directory
-COPY package*.json ./
+COPY package.json package-lock.json ./
 
 # TSConfig for build
 COPY ./tsconfig.json ./
@@ -19,13 +16,12 @@ RUN npm ci && npm run tsc
 # Put app in new image
 FROM node:22-slim AS app
 
-WORKDIR /app
-# Copy the package.json and package-lock.json files to the working directory
-COPY package*.json ./
 # Copy the transpiled app from the base image
-COPY --from=base /app/dist /app/dist
+COPY --from=base ./dist dist/
+# Copy the package.json and package-lock.json files
+COPY --from=base ./package.json ./package.json
 # Copy the node_modules from the base image
-COPY --from=base /app/node_modules /app/node_modules
+COPY --from=base ./node_modules ./node_modules
 
 # Expose the necessary ports
 EXPOSE 8080

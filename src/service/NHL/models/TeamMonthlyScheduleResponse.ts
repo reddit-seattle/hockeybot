@@ -1,48 +1,53 @@
 import { LocalizedString } from "./Common";
 
-  export interface TvBroadcast {
+export interface TvBroadcast {
     id: number;
     market: string;
     countryCode: string;
     network: string;
-  }
-  export interface AwayTeam {
+}
+export interface AwayTeam {
     id: number;
     placeName: LocalizedString;
     abbrev: string;
     logo: string;
     darkLogo: string;
     awaySplitSquad: boolean;
-    airlineLink: string;
-    airlineDesc: string;
+    airlineLink?: string;
+    airlineDesc?: string;
     score?: number;
+    hotelLink?: string;
+    hotelDesc?: string;
     radioLink?: string;
-  }
-  export interface HomeTeam {
+}
+export interface HomeTeam {
     id: number;
     placeName: LocalizedString;
     abbrev: string;
     logo: string;
     darkLogo: string;
     homeSplitSquad: boolean;
-    score?: number;
-    radioLink?: string;
     hotelLink?: string;
     hotelDesc?: string;
-  }
-  export interface PeriodDescriptor {
+    score?: number;
+    airlineLink?: string;
+    airlineDesc?: string;
+    radioLink?: string;
+}
+export interface PeriodDescriptor {
     number?: number;
     periodType?: string;
-  }
-  export interface GameOutcome {
+}
+export interface GameOutcome {
     lastPeriodType: string;
-  }
-  export interface WinningGoalie {
+}
+
+export interface WinningGoalie {
     playerId: number;
     firstInitial: LocalizedString;
     lastName: LocalizedString;
-  }
-  export interface Game {
+}
+export interface Game {
     id: number;
     season: number;
     gameType: number;
@@ -62,16 +67,17 @@ import { LocalizedString } from "./Common";
     gameOutcome?: GameOutcome;
     winningGoalie?: WinningGoalie;
     winningGoalScorer?: WinningGoalie;
-    gameCenterLink: string;
-    ticketsLink?: string;
     threeMinRecap?: string;
     threeMinRecapFr?: string;
-  }
-  export interface TeamWeeklyScheduleResponse {
-    previousStartDate: string;
-    nextStartDate: string;
+    gameCenterLink: string;
+    ticketsLink?: string;
+}
+export interface TeamMonthlyScheduleResponse {
+    previousMonth: string;
+    currentMonth: string;
+    nextMonth: string;
     calendarUrl: string;
     clubTimezone: string;
     clubUTCOffset: string;
     games: Game[];
-  }
+}

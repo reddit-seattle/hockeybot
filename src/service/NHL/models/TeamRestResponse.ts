@@ -2,11 +2,11 @@ export interface Team {
     id: number;
     fullName: string;
     leagueId: number;
-    rawTricode: string
+    rawTricode: string;
     triCode: string;
 }
 
 export interface TeamRestResponse {
-    data: Team[]
+    data: Team[];
     total: number;
 }
