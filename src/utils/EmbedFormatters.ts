@@ -113,7 +113,7 @@ export class GameFeedEmbedFormatter {
             .setDescription(`${description}\n${secondaryDescription}`)
             .addFields([...fields, { name: "Event id:", value: `${eventId}` }])
             .setFooter({ text: timeRemainingString })
-            .setColor(Colors.EMBED_COLOR);
+            .setColor(Colors.KRAKEN_EMBED);
     };
     createPenaltyEmbed = (penalty: Play) => {
         const { details } = penalty;
@@ -171,7 +171,7 @@ export class GameFeedEmbedFormatter {
             .setThumbnail(penaltyPlayer?.headshot ?? "")
             .addFields(fields)
             .setFooter({ text: timeRemainingString })
-            .setColor(Colors.EMBED_COLOR);
+            .setColor(Colors.KRAKEN_EMBED);
     };
     // todo - different intermission embeds per period
     // 1st period started - show teams with points line / maybe starting goaltenders or odds?
@@ -205,7 +205,7 @@ export class GameFeedEmbedFormatter {
                     },
                 ])
                 .setFooter({ text: "Game Start" })
-                .setColor(Colors.EMBED_COLOR);
+                .setColor(Colors.KRAKEN_EMBED);
         }
 
         const scoreFields = [
@@ -225,7 +225,7 @@ export class GameFeedEmbedFormatter {
             .setTitle(title)
             .addFields(scoreFields)
             .setFooter({ text: title })
-            .setColor(Colors.EMBED_COLOR);
+            .setColor(Colors.KRAKEN_EMBED);
     };
     updateIntermissionEmbed = (periodEvent: Play, existingEmbed: Embed) => {
         // TODO - ensure intermission end messages show up based on timing
@@ -270,6 +270,6 @@ export class GameFeedEmbedFormatter {
                 inline: true,
             },
         ];
-        return new EmbedBuilder().setTitle(title).addFields(scoreFields).setColor(Colors.EMBED_COLOR);
+        return new EmbedBuilder().setTitle(title).addFields(scoreFields).setColor(Colors.KRAKEN_EMBED);
     };
 }

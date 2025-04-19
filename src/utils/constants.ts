@@ -2,7 +2,6 @@ import dotenv from "dotenv";
 import { GoalShotType, PenaltyType } from "./enums";
 dotenv.config();
 
-
 // TODO - separate MLB and NHL constants
 export namespace Config {
     export const TIME_ZONE = "America/Los_Angeles";
@@ -11,7 +10,8 @@ export namespace Config {
 }
 
 export namespace Colors {
-    export const EMBED_COLOR = 39129;
+    export const KRAKEN_EMBED = 39129;
+    export const MARINERS = 0x00ff00;
 }
 
 export namespace RoleIds {
@@ -324,11 +324,32 @@ export namespace Paths {
 
         export namespace Schedule {
             export const All = `${API_V1}/schedule?sportId=${SPORT_ID}`;
-            export const Custom = (date?: string, teamId?: string) => {
-                const dateParam = date ? `&date=${date}` : "";
-                const teamParam = teamId ? `&teamId=${teamId}` : "";
-                return `${All}${dateParam}${teamParam}`;
+
+            export interface ScheduleFilterParams {
+                date?: string;
+                teamId?: string;
+                seasonId?: string;
+                opponentId?: string;
+                startDate?: string;
+                endDate?: string;
+            }
+
+            /**
+             *
+             * @param date - YYYY-MM-DD format (only show games for certain date)
+             * @param teamId - MLB team ID (only show games for certain team)
+             * @param season - YYYY format (all games for season)
+             * @returns URL for filtered schedule endpoint
+             */
+            export const Filtered = (params: ScheduleFilterParams) => {
+                const queryParams = Object.entries(params)
+                    .filter(([_, value]) => value !== undefined)
+                    .map(([key, value]) => `&${key}=${encodeURIComponent(value!)}`)
+                    .join("");
+
+                return `${All}${queryParams}`;
             };
+            export const NextGames = (teamId: string) => {};
         }
 
         export namespace Teams {
@@ -343,5 +364,6 @@ export namespace Paths {
         export namespace Games {
             export const ById = (id: string) => `${API_V1_1}/game/${id}/feed/live`;
         }
+        export const Seasons = `${API_V1}/seasons?sportId=${SPORT_ID}`;
     }
 }

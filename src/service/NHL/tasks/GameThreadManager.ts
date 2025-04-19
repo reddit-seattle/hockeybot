@@ -102,7 +102,7 @@ class GameThreadManager {
                 const gameStartEmbed = new EmbedBuilder()
                     .setTitle(title)
                     .setDescription(`Game start: ${gameStartTimeString} (${relativeDate})\n${game.venue.default}`)
-                    .setColor(Colors.EMBED_COLOR);
+                    .setColor(Colors.KRAKEN_EMBED);
                 // TODO - add more game details (game story?)
                 const message = await this.channel.send({ embeds: [gameStartEmbed] });
                 // create thread (title is imperative)
@@ -238,7 +238,7 @@ class GameThreadManager {
         const embed = new EmbedBuilder()
             .setTitle(title)
             .setDescription(`Puck drop: ${relativeDateString(startTimeUTC)} @ ${venue.default}`)
-            .setColor(Colors.EMBED_COLOR);
+            .setColor(Colors.KRAKEN_EMBED);
 
         await this?.thread?.send({ embeds: [embed] });
     };
@@ -247,7 +247,7 @@ class GameThreadManager {
 const generateThreadTitle = (game: Game) => {
     const { awayTeam, homeTeam, startTimeUTC } = game;
     const teamSegment = `${awayTeam.abbrev} @ ${homeTeam.abbrev}`;
-    const date = new Date(startTimeUTC);
+    const date = utcToZonedTime(startTimeUTC, Config.TIME_ZONE);
     const dateStr = ApiDateString(date);
     return `${teamSegment} - ${dateStr}`;
 };
