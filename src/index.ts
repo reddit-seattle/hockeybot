@@ -86,8 +86,21 @@ const startGameDayThreadChecker = async (guild: Guild) => {
 client.on("ready", async () => {
     console.log(`Logged in as ${client?.user?.tag}!`);
     // log the version from package.json
-    const packageJson = require("../package.json");
-    console.log(`Version: ${packageJson.version}`);
+    // try to get package.json from `../`, if not, use `../../`
+    let packageJsonPath = `../package.json`;
+    let packageVersion = "0.0.0";
+    try {
+        packageVersion = require(packageJsonPath)?.version;
+    } catch (e) {
+        // if not found, use the other path
+        packageJsonPath = `../../package.json`;
+        try {
+            packageVersion = require(packageJsonPath)?.version;
+        } catch (e) {
+            console.log(`Could not find package.json, using default version: ${packageVersion}`);
+        }
+    }
+    console.log(`Version: ${packageVersion}`);
     client.guilds.cache.forEach((guild: Guild) => {
         if (Environment.DEBUG) {
             //try to announce to servers when you go online
