@@ -1,7 +1,8 @@
 import { EmbedBuilder, SlashCommandBuilder } from "@discordjs/builders";
+import { utcToZonedTime } from "date-fns-tz";
 import { Command } from "../../models/Command";
 import { API } from "../../service/MLB/API";
-import { Colors, TeamIds } from "../../utils/constants";
+import { Colors, Config, TeamIds } from "../../utils/constants";
 
 export const Mariners: Command = {
     name: "mariners",
@@ -68,7 +69,7 @@ export const Mariners: Command = {
                     .setDescription(
                         nextGames
                             .map((game) => {
-                                const date = new Date(game.gameDate);
+                                const date = utcToZonedTime(game.gameDate, Config.TIME_ZONE);
                                 const isHomeGame = game.teams.home.team.id == TeamIds.Mariners;
                                 const vsString = isHomeGame ? "vs" : " @";
                                 const opponent = isHomeGame ? game.teams.away.team.name : game.teams.home.team.name;
@@ -112,7 +113,7 @@ export const Mariners: Command = {
                 const gamesEmbed = new EmbedBuilder()
                     .setTitle(`Today's ${allTeams ? "MLB" : "Mariners"} Scores`)
                     .setDescription(
-                        new Date().toLocaleString("en-US", {
+                        utcToZonedTime(new Date(), Config.TIME_ZONE).toLocaleString("en-US", {
                             weekday: "long",
                             month: "long",
                             day: "numeric",
