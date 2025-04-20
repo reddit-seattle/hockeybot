@@ -8,6 +8,7 @@ import { Game as TeamWeeklyScheduleGame } from "../service/NHL/models/TeamWeekly
 import { Colors, Config, Strings, TeamIds } from "./constants";
 import { EventTypeCode } from "./enums";
 import { getSituationCodeString, periodToStr, relativeDateString } from "./helpers";
+import { API } from "../service/NHL/API";
 export class GameFeedEmbedFormatter {
     private teamsMap: Map<string, Team> = new Map<string, Team>();
     private roster: Map<string, RosterPlayer> = new Map<string, RosterPlayer>();
@@ -273,6 +274,16 @@ export class GameFeedEmbedFormatter {
         return new EmbedBuilder().setTitle(title).addFields(scoreFields).setColor(Colors.KRAKEN_EMBED);
     };
 }
+
+export const GameAnnouncementEmbedBuilder = async (gameId: string) => {
+    const boxScore = await API.Games.GetBoxScore(gameId);
+    const { homeTeam, awayTeam, venue, startTimeUTC } = boxScore;
+    const title = `Pregame: ${homeTeam.commonName.default} vs ${awayTeam.commonName.default}`;
+    return new EmbedBuilder()
+        .setTitle(title)
+        .setDescription(`Puck drop: ${relativeDateString(startTimeUTC)} @ ${venue.default}`)
+        .setColor(Colors.KRAKEN_EMBED);
+};
 
 export const ScheduleEmbedBuilder = (
     schedule: (DayScheduleGame | TeamWeeklyScheduleGame | TeamMonthlyScheduleGame)[],

@@ -9,6 +9,7 @@ import { EventTypeCode } from "../../../utils/enums";
 import { isGameOver } from "../../../utils/helpers";
 import { API } from "../API";
 import { Play, PlayByPlayResponse } from "../models/PlayByPlayResponse";
+import { Logger } from "../../../utils/Logger";
 
 /**
  * TODOs
@@ -60,8 +61,7 @@ export class GameFeedManager {
         const release = await this.eventsMutex.acquire();
         try {
             if (this.gameOver) {
-                console.log("Game is already over, skipping checkGameStatus");
-                return;
+                return Logger.info("Game is already over, skipping checkGameStatus");
             }
             const { gameState, awayTeam, homeTeam, clock, periodDescriptor } = await API.Games.GetBoxScore(this.gameId);
             const periodNumber = periodDescriptor?.number || 1;
@@ -69,7 +69,7 @@ export class GameFeedManager {
             // state / iteration unique key
             const stateKey = uniqueId(`${this.gameId}-${periodNumber}-${clock.timeRemaining}`);
             // log main game loop
-            console.log(
+            Logger.debug(
                 `{${stateKey}} CheckGameStatus - Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${
                     homeTeam.commonName.default
                 } ${homeTeam?.score || 0} - ${clock.timeRemaining} - ${
@@ -79,7 +79,7 @@ export class GameFeedManager {
             // check if game is over
             if (isGameOver(gameState)) {
                 this.gameOver = true;
-                console.log("Game is over, stopping game feed");
+                Logger.info("Game is over, stopping game feed");
                 const scoreEmbed = this.embedFormatter.createGameEndEmbed();
                 await this?.thread?.send({ embeds: [scoreEmbed] });
                 await this?.thread?.setArchived(true, "game over").catch(console.error);
@@ -94,7 +94,7 @@ export class GameFeedManager {
 
             // filter out plays that are not in the tracked types (once)
             const trackedPlays = allPlays.filter((play) => tracked_types.includes(play.typeCode));
-            console.log(
+            Logger.debug(
                 `{${stateKey}} Tracking ${trackedPlays.length} plays: [${trackedPlays
                     .map((play) => play.eventId)
                     .join(", ")}]`
@@ -140,7 +140,7 @@ export class GameFeedManager {
                             // send a new message
                             const message = await this.thread?.send(messageOpts);
                             this.trackedEvents.set(eventId, { message, play });
-                            console.log(`New message for event ${eventId} - ${typeDescKey} - ${message.url}`);
+                            Logger.debug(`New message for event ${eventId} - ${typeDescKey} - ${message.url}`);
                         } else {
                             // otherwise, see if we need to update the message
                             const existingEvent = this.trackedEvents.get(eventId);

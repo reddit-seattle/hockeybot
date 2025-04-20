@@ -6,20 +6,21 @@ import { API } from "../service/NHL/API";
 import { PlayByPlayResponse } from "../service/NHL/models/PlayByPlayResponse";
 import { Environment } from "./constants";
 import { ConferenceAbbrev, DivisionAbbrev, GameState, PeriodType, TeamTriCode } from "./enums";
+import { Logger } from "./Logger";
 
 // TODO - split MLB and NHL into their own modules
 
 export const getPackageVersion = () => {
-        let packageJsonPath = `../package.json`;
+        let packageJsonPath = `../../package.json`;
         let packageVersion = "0.0.0";
         try {
             packageVersion = require(packageJsonPath)?.version;
         } catch (e) {
-            packageJsonPath = `../../package.json`;
+            packageJsonPath = `../../../package.json`;
             try {
                 packageVersion = require(packageJsonPath)?.version;
             } catch (e) {
-                console.log(`Could not find package.json, using default version: ${packageVersion}`);
+                Logger.warn(`Could not find package.json, using default version: ${packageVersion}`);
             }
         }
         return packageVersion;
@@ -218,7 +219,6 @@ export const getSituationCodeString = (situationCode?: string, homeScored: boole
         "1330": homeScored ? "3 on 3 (EN)" : "Empty Net (3-3)", // are these possible?
         "0331": homeScored ? "Empty Net (3-3)" : "3 on 3 (EN)", // are these possible?
     };
-    // console.log(`SITUATIONCODE: ${situationCode} -> ${SITUATION_TYPE_DICT?.[situationCode]}`);
     return situationCode in SITUATION_TYPE_DICT ? `${SITUATION_TYPE_DICT[situationCode]} ` : undefined;
 };
 
