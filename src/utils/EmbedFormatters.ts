@@ -1,10 +1,13 @@
+import { format, utcToZonedTime } from "date-fns-tz";
 import { Embed, EmbedBuilder } from "discord.js";
 import { contains } from "underscore";
+import { Game as DayScheduleGame } from "../service/NHL/models/DaySchedule";
 import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/NHL/models/PlayByPlayResponse";
-import { Colors, TeamIds, Strings } from "./constants";
+import { Game as TeamMonthlyScheduleGame } from "../service/NHL/models/TeamMonthlyScheduleResponse";
+import { Game as TeamWeeklyScheduleGame } from "../service/NHL/models/TeamWeeklyScheduleResponse";
+import { Colors, Config, Strings, TeamIds } from "./constants";
 import { EventTypeCode } from "./enums";
-import { getSituationCodeString, periodToStr } from "./helpers";
-
+import { getSituationCodeString, periodToStr, relativeDateString } from "./helpers";
 export class GameFeedEmbedFormatter {
     private teamsMap: Map<string, Team> = new Map<string, Team>();
     private roster: Map<string, RosterPlayer> = new Map<string, RosterPlayer>();
@@ -228,13 +231,10 @@ export class GameFeedEmbedFormatter {
             .setColor(Colors.KRAKEN_EMBED);
     };
     updateIntermissionEmbed = (periodEvent: Play, existingEmbed: Embed) => {
-        // TODO - ensure intermission end messages show up based on timing
-        // use these values to ensure we always are using the play's intermission / period value
+        // only update current intermission object
         const { periodDescriptor, typeCode } = periodEvent;
         const playPeriod = periodDescriptor?.number || 1;
         const playPeriodOrdinal = periodToStr(playPeriod, periodDescriptor?.periodType || "REG");
-
-        // are we updating the current intermission's value? or just writing that it's ended
         const feed = this.feed;
         const isCurrentIntermission = feed.periodDescriptor.number == playPeriod;
 
@@ -273,3 +273,35 @@ export class GameFeedEmbedFormatter {
         return new EmbedBuilder().setTitle(title).addFields(scoreFields).setColor(Colors.KRAKEN_EMBED);
     };
 }
+
+export const ScheduleEmbedBuilder = (
+    schedule: (DayScheduleGame | TeamWeeklyScheduleGame | TeamMonthlyScheduleGame)[],
+    scheduleTypeDisplay: string
+) => {
+    return new EmbedBuilder().setTitle(`${scheduleTypeDisplay} Schedule`).addFields(
+        schedule.map((item) => {
+            const { startTimeUTC, venue, awayTeam, homeTeam } = item;
+            const dateSlug = relativeDateString(startTimeUTC);
+            const dateStr = `${format(
+                utcToZonedTime(startTimeUTC, Config.TIME_ZONE),
+                Config.BODY_DATE_FORMAT
+            )} (${dateSlug})`;
+            const venuStr = `Venue: ${venue.default}`;
+            let output = `${dateStr}\n${venuStr}`;
+            // only show radio links if available
+            const { radioLink: awayAudio } = awayTeam;
+            const { radioLink: homeAudio } = homeTeam;
+            const homeRadioStr = homeAudio && `[${homeTeam.abbrev}](${homeAudio})`;
+            const awayRadioStr = awayAudio && `[${awayTeam.abbrev}](${awayAudio})`;
+            if (homeRadioStr || awayRadioStr) {
+                output += `\nListen: ${[homeRadioStr, awayRadioStr].filter((x) => x != undefined).join(" - ")}`;
+            }
+
+            return {
+                name: `${awayTeam.abbrev} @ ${homeTeam.abbrev}`,
+                value: output,
+                inline: false,
+            };
+        })
+    );
+};

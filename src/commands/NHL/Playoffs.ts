@@ -1,10 +1,10 @@
+import utcToZonedTime from "date-fns-tz/utcToZonedTime";
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import { max, min } from "underscore";
 import { Command } from "../../models/Command";
 import { API } from "../../service/NHL/API";
 import { Seed } from "../../service/NHL/models/PlayoffCarouselResponse";
 import { Colors, Config } from "../../utils/constants";
-import utcToZonedTime from "date-fns-tz/utcToZonedTime";
 
 export const PlayoffBracket: Command = {
     name: "playoffs",
@@ -58,7 +58,9 @@ export const PlayoffBracket: Command = {
 
                         return {
                             name: `${leaderEmoji} ${leader.abbrev} vs ${loser.abbrev} ${loserEmoji}`,
-                            value: `${description}\n${gameNum == 7 ? "Final" : `Game ${gameNum+1} - ${gameTime}\n${gameVenue}`}`,
+                            value: `${description}\n${
+                                gameNum == 7 ? "Final" : `Game ${gameNum + 1} - ${gameTime}\n${gameVenue}`
+                            }`,
                         };
                     })
                 );

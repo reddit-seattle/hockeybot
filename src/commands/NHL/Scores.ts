@@ -45,7 +45,7 @@ export const GetScores: Command = {
         }
         const fields = await Promise.all(
             liveGames.map(async (game) => {
-                const { id, gameState, awayTeam, homeTeam, gameOutcome } = game;
+                const { gameState, awayTeam, homeTeam, gameOutcome } = game;
                 const away = `${awayTeam.abbrev}${awayTeam.score == undefined ? `` : ` - ${awayTeam.score ?? 0}`}`;
                 const home = `${homeTeam.abbrev}${homeTeam.score == undefined ? `` : ` - ${homeTeam.score ?? 0}`}`;
                 let gameScoreLine = `${away} @ ${home}`;

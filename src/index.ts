@@ -10,6 +10,7 @@ import GameThreadManager from "./service/NHL/tasks/GameThreadManager";
 import { ChannelIds, Environment } from "./utils/constants";
 // @ts-ignore
 import LogTimestamp from "log-timestamp";
+import { getPackageVersion } from "./utils/helpers";
 
 if (Environment.LOCAL_RUN) {
     LogTimestamp();
@@ -85,25 +86,9 @@ const startGameDayThreadChecker = async (guild: Guild) => {
 
 client.on("ready", async () => {
     console.log(`Logged in as ${client?.user?.tag}!`);
-    // log the version from package.json
-    // try to get package.json from `../`, if not, use `../../`
-    let packageJsonPath = `../package.json`;
-    let packageVersion = "0.0.0";
-    try {
-        packageVersion = require(packageJsonPath)?.version;
-    } catch (e) {
-        // if not found, use the other path
-        packageJsonPath = `../../package.json`;
-        try {
-            packageVersion = require(packageJsonPath)?.version;
-        } catch (e) {
-            console.log(`Could not find package.json, using default version: ${packageVersion}`);
-        }
-    }
-    console.log(`Version: ${packageVersion}`);
+    console.log(`Version: ${getPackageVersion()}`);
     client.guilds.cache.forEach((guild: Guild) => {
         if (Environment.DEBUG) {
-            //try to announce to servers when you go online
             try {
                 const debugChannel = guild.channels.cache.find(
                     (ch: Channel) => ch.id == ChannelIds.DEBUG
@@ -142,5 +127,7 @@ client.on("interactionCreate", async (interaction: Interaction) => {
 createServer(function (req, res) {
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.write("FERDA");
+    res.write("- Hockeybot v" + getPackageVersion() + "\n");
+    res.write("tell burn I said hi" + "\n");
     res.end();
 }).listen(8080);

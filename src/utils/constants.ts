@@ -133,6 +133,7 @@ export enum MEDIA_FORMAT {
 export enum EventTypes {
     Goal = "GOAL",
 }
+
 export enum GameStates {
     FINAL = "7",
     ALMOST_FINAL = "6",
@@ -144,6 +145,7 @@ export enum GameStates {
     PREVIEW_TBD = "8",
     PREVIEW = "1",
 }
+
 export enum GameTypes {
     PRESEASON = "PR",
     REGULAR = "R",

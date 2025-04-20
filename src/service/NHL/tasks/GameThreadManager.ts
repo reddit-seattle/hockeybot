@@ -163,7 +163,6 @@ class GameThreadManager {
             },
             new Task("daily kraken game day thread checker", this.createKrakenGameDayThread),
             {
-                // TODO - may need to be false, depending if old task cleans up correctly
                 preventOverrun: true,
             }
         );
