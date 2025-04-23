@@ -5,6 +5,7 @@ import { GameFeedResponse } from "./models/GameFeed";
 import { ScheduleResponse } from "./models/Schedule";
 import { SeasonResponse } from "./models/Season";
 import exp from "constants";
+import { TeamResponse } from "./models/Team";
 
 export namespace API {
     export namespace Schedule {
@@ -41,10 +42,10 @@ export namespace API {
     export namespace LiveGames {
         export const ById = async (id: string) => get<GameFeedResponse>(Paths.MLB.Games.ById(id));
     }
-    // TODO - types
+
     export namespace Teams {
-        export const ById = async (id: string) => get<any>(Paths.MLB.Teams.ById(id));
-        export const All = async () => get<any>(Paths.MLB.Teams.All);
+        export const ById = async (id: string) => get<TeamResponse>(Paths.MLB.Teams.ById(id));
+        export const All = async () => get<TeamResponse>(Paths.MLB.Teams.All);
     }
 
     export const Season = async () => {
@@ -58,7 +59,7 @@ export namespace API {
         // 103 = AL, 104 = NL
         export const Current = async () => {
             const response = await get<any>(Paths.MLB.Standings.Current);
-            return response
+            return response;
         };
     }
 }

@@ -6,8 +6,26 @@ import { API } from "../service/NHL/API";
 import { PlayByPlayResponse } from "../service/NHL/models/PlayByPlayResponse";
 import { Environment } from "./constants";
 import { ConferenceAbbrev, DivisionAbbrev, GameState, PeriodType, TeamTriCode } from "./enums";
+import { Logger } from "./Logger";
 
 // TODO - split MLB and NHL into their own modules
+
+export const getPackageVersion = () => {
+        let packageJsonPath = `../../package.json`;
+        let packageVersion = "0.0.0";
+        try {
+            packageVersion = require(packageJsonPath)?.version;
+        } catch (e) {
+            packageJsonPath = `../../../package.json`;
+            try {
+                packageVersion = require(packageJsonPath)?.version;
+            } catch (e) {
+                Logger.warn(`Could not find package.json, using default version: ${packageVersion}`);
+            }
+        }
+        return packageVersion;
+    }
+
 
 // credit: Typescript documentation, src
 // https://www.typescriptlang.org/docs/handbook/advanced-types.html#index-types
@@ -121,8 +139,6 @@ export const isGameOver = (gameState: string) => {
     return ([GameState.hardFinal, GameState.softFinal, GameState.official] as string[]).includes(gameState);
 };
 export const hasGameStarted = (gameState: string) => {
-    // TODO - is pre-game considered started?
-    // I believe this happens ~30mins prior to actual game start
     return gameState != GameState.future;
 };
 
@@ -171,12 +187,8 @@ export const processLocalizedDateInput = (input?: string | Date | null) => {
     return addHours(new Date(input), 8);
 };
 
-/**
- * TODO - This is absolutely ridiculous
- *
- */
+// TODO - This is absolutely ridiculous
 export const getSituationCodeString = (situationCode?: string, homeScored: boolean = false) => {
-    // console.log(`PROCESSING SITUATIONCODE: ${situationCode}`);
     if (!situationCode) {
         return undefined;
     }
@@ -186,6 +198,7 @@ export const getSituationCodeString = (situationCode?: string, homeScored: boole
         "1331": "3 on 3",
         "1451": homeScored ? "Power Play" : "Shorthanded",
         "1541": homeScored ? "Shorthanded" : "Power Play",
+        "1460": homeScored ? "Power Play (EN)" : "Shorthanded",
         "1351": homeScored ? "5-3 Power Play" : "Shorthanded 3-5",
         "1531": homeScored ? "Shorthanded 3-5" : "5-3 Power Play",
         "1341": homeScored ? "4-3 Power Play" : "Shorthanded 3-4",
@@ -194,7 +207,6 @@ export const getSituationCodeString = (situationCode?: string, homeScored: boole
         "0651": homeScored ? "Empty Net" : "Extra Attacker",
         "0551": homeScored ? "Empty Net" : "Even Strength (EN)",
         "1550": homeScored ? "Even Strength (EN)" : "Empty Net",
-        "1460": homeScored ? "Power Play (EN)" : "Shorthanded",
         "0641": homeScored ? "Shorthanded" : "Power Play (EN)",
         "1450": homeScored ? "Power Play" : "Empty Net (SH)", // this one feels weird
         "0541": homeScored ? "Empty Net (SH)" : "Power Play", // this one feels weird
@@ -207,7 +219,6 @@ export const getSituationCodeString = (situationCode?: string, homeScored: boole
         "1330": homeScored ? "3 on 3 (EN)" : "Empty Net (3-3)", // are these possible?
         "0331": homeScored ? "Empty Net (3-3)" : "3 on 3 (EN)", // are these possible?
     };
-    // console.log(`SITUATIONCODE: ${situationCode} -> ${SITUATION_TYPE_DICT?.[situationCode]}`);
     return situationCode in SITUATION_TYPE_DICT ? `${SITUATION_TYPE_DICT[situationCode]} ` : undefined;
 };
 

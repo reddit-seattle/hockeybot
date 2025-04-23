@@ -7,12 +7,7 @@ import {
 import { table } from "table";
 import { Command } from "../../models/Command";
 import { API } from "../../service/NHL/API";
-import {
-    Career,
-    Last5Game,
-    PlayerStatsSummary,
-    SubSeason,
-} from "../../service/NHL/models/PlayerStatsSummaryResponse";
+import { Career, Last5Game, PlayerStatsSummary, SubSeason } from "../../service/NHL/models/PlayerStatsSummaryResponse";
 import { TeamSummary } from "../../service/NHL/models/TeamSummaryResponse";
 import { PlayerPosition, PlayerStatAbbrev } from "../../utils/enums";
 import { requiredPlayerOption, requiredTeamOption, teamOrPlayerAutocomplete } from "../../utils/helpers";

@@ -1,15 +1,12 @@
-import { EmbedBuilder, SlashCommandBuilder, SlashCommandSubcommandBuilder } from "@discordjs/builders";
-import { format, utcToZonedTime } from "date-fns-tz";
+import { SlashCommandBuilder, SlashCommandSubcommandBuilder } from "@discordjs/builders";
+import { format } from "date-fns-tz";
 import { Command } from "../../models/Command";
 import { API } from "../../service/NHL/API";
-import { Game as DayScheduleGame } from "../../service/NHL/models/DaySchedule";
-import { Game as TeamMonthlyScheduleGame } from "../../service/NHL/models/TeamMonthlyScheduleResponse";
-import { Game as TeamWeeklyScheduleGame } from "../../service/NHL/models/TeamWeeklyScheduleResponse";
 import { Config } from "../../utils/constants";
+import { ScheduleEmbedBuilder } from "../../utils/EmbedFormatters";
 import {
     optionalDateOption,
     processLocalizedDateInput,
-    relativeDateString,
     requiredTeamOption,
     teamOrPlayerAutocomplete,
     validTeamName,
@@ -37,6 +34,8 @@ export const GetSchedule: Command = {
         .addSubcommand(leagueScheduleSubgroupCommand)
         .addSubcommand(teamScheduleSubgroupCommand),
     executeSlashCommand: async (interaction) => {
+        await interaction.deferReply();
+        const appEmojis = await interaction.client.application.emojis.fetch();
         const subcommand = interaction.options.getSubcommand();
         if (subcommand == "team") {
             const team = interaction.options.getString("team", true);
@@ -44,56 +43,28 @@ export const GetSchedule: Command = {
                 interaction.reply("That's not an NHL team name buddy");
                 return;
             }
-            await interaction.deferReply();
+
             const monthly = interaction.options.getString("type") == "monthly";
             const schedule = monthly
                 ? await API.Schedule.GetTeamMonthlySchedule(team)
                 : await API.Schedule.GetTeamWeeklySchedule(team);
             await interaction.followUp({
-                embeds: [ScheduleEmbedBuilder(schedule, `${team} ${monthly ? "Monthly" : "Weekly"}`)],
+                embeds: [await ScheduleEmbedBuilder(schedule, `${team} ${monthly ? "Monthly" : "Weekly"}`, appEmojis)],
             });
-        } /*if (subcommand = 'all') */ else {
-            await interaction.deferReply();
+        } else {
             const dateInput = interaction.options.getString("date", false);
             const adjustedDate = processLocalizedDateInput(dateInput);
             const schedule = await API.Schedule.GetDailySchedule(adjustedDate);
             await interaction.followUp({
-                embeds: [ScheduleEmbedBuilder(schedule, format(adjustedDate ?? new Date(), Config.TITLE_DATE_FORMAT))],
+                embeds: [
+                    await ScheduleEmbedBuilder(
+                        schedule,
+                        format(adjustedDate ?? new Date(), Config.TITLE_DATE_FORMAT),
+                        appEmojis
+                    ),
+                ],
             });
         }
     },
     autocomplete: teamOrPlayerAutocomplete,
-};
-
-// TODO - EmbedBuilders module
-const ScheduleEmbedBuilder = (
-    schedule: (DayScheduleGame | TeamWeeklyScheduleGame | TeamMonthlyScheduleGame)[],
-    scheduleTypeDisplay: string
-) => {
-    return new EmbedBuilder().setTitle(`${scheduleTypeDisplay} Schedule`).addFields(
-        schedule.map((item) => {
-            const { startTimeUTC, venue, awayTeam, homeTeam } = item;
-            const dateSlug = relativeDateString(startTimeUTC);
-            const dateStr = `${format(
-                utcToZonedTime(startTimeUTC, Config.TIME_ZONE),
-                Config.BODY_DATE_FORMAT
-            )} (${dateSlug})`;
-            const venuStr = `Venue: ${venue.default}`;
-            let output = `${dateStr}\n${venuStr}`;
-            // only show radio links if available
-            const { radioLink: awayAudio } = awayTeam;
-            const { radioLink: homeAudio } = homeTeam;
-            const homeRadioStr = homeAudio && `[${homeTeam.abbrev}](${homeAudio})`;
-            const awayRadioStr = awayAudio && `[${awayTeam.abbrev}](${awayAudio})`;
-            if (homeRadioStr || awayRadioStr) {
-                output += `\nListen: ${[homeRadioStr, awayRadioStr].filter((x) => x != undefined).join(" - ")}`;
-            }
-
-            return {
-                name: `${awayTeam.abbrev} @ ${homeTeam.abbrev}`,
-                value: output,
-                inline: false,
-            };
-        })
-    );
 };

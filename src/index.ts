@@ -10,6 +10,8 @@ import GameThreadManager from "./service/NHL/tasks/GameThreadManager";
 import { ChannelIds, Environment } from "./utils/constants";
 // @ts-ignore
 import LogTimestamp from "log-timestamp";
+import { getPackageVersion } from "./utils/helpers";
+import { Logger } from "./utils/Logger";
 
 if (Environment.LOCAL_RUN) {
     LogTimestamp();
@@ -20,7 +22,6 @@ const client = new Client({
 });
 
 //load commands
-
 const commands = [
     GetSchedule, // NHL commands
     GetScores,
@@ -36,7 +37,7 @@ const commands = [
 const { botToken } = Environment;
 // MAIN
 if (!botToken || botToken == "") {
-    console.log(`Please set an environment variable "bot_token" with your bot's token`);
+    Logger.error(`Please set an environment variable "bot_token" with your bot's token`);
     exit(1);
 } else {
     //login and go
@@ -51,7 +52,7 @@ const registerAllSlashCommands = async (client: Client) => {
         const slashCommands: RESTPostAPIApplicationCommandsJSONBody[] = [];
         for (const commandName in commands) {
             const command = commands[commandName];
-            console.log(`adding ${command.name} slash command registration`);
+            Logger.debug(`adding ${command.name} slash command registration`);
             const desc = command.slashCommandDescription.setName(command.name).setDescription(command.description);
             if (desc?.toJSON) {
                 try {
@@ -72,45 +73,29 @@ const registerAllSlashCommands = async (client: Client) => {
 
 const startGameDayThreadChecker = async (guild: Guild) => {
     if (!Environment.KRAKENCHANNEL) {
-        console.log("Kraken channel ID env var (KRAKEN_CHANNEL_ID) not set. Game day thread checker will not start.");
+        Logger.warn("Kraken channel ID env var (KRAKEN_CHANNEL_ID) not set. Game day thread checker will not start.");
         return;
     }
     const krakenChannel = await guild.channels.fetch(Environment.KRAKENCHANNEL);
     if (!(krakenChannel?.type == ChannelType.GuildText)) {
-        console.log("Kraken channel not found, or not a text channel. Game day thread checker will not start.");
+        Logger.warn("Kraken channel not found, or not a text channel. Game day thread checker will not start.");
         return;
     }
     new GameThreadManager(krakenChannel).initialize();
 };
 
 client.on("ready", async () => {
-    console.log(`Logged in as ${client?.user?.tag}!`);
-    // log the version from package.json
-    // try to get package.json from `../`, if not, use `../../`
-    let packageJsonPath = `../package.json`;
-    let packageVersion = "0.0.0";
-    try {
-        packageVersion = require(packageJsonPath)?.version;
-    } catch (e) {
-        // if not found, use the other path
-        packageJsonPath = `../../package.json`;
-        try {
-            packageVersion = require(packageJsonPath)?.version;
-        } catch (e) {
-            console.log(`Could not find package.json, using default version: ${packageVersion}`);
-        }
-    }
-    console.log(`Version: ${packageVersion}`);
+    Logger.info(`Logged in as ${client?.user?.tag}!`);
+    Logger.debug(`Version: ${getPackageVersion()}`);
     client.guilds.cache.forEach((guild: Guild) => {
         if (Environment.DEBUG) {
-            //try to announce to servers when you go online
             try {
                 const debugChannel = guild.channels.cache.find(
                     (ch: Channel) => ch.id == ChannelIds.DEBUG
                 ) as TextChannel;
                 debugChannel?.send("HockeyBot, reporting for duty!");
             } catch (e) {
-                console.log(e);
+                Logger.error(e);
             }
         }
         // start the game day thread checker for this guild
@@ -127,7 +112,7 @@ client.on("interactionCreate", async (interaction: Interaction) => {
             try {
                 command.executeSlashCommand?.(interaction);
             } catch (e) {
-                console.error(e);
+                Logger.error(e);
             }
         }
     } else if (interaction.isAutocomplete()) {
@@ -142,5 +127,7 @@ client.on("interactionCreate", async (interaction: Interaction) => {
 createServer(function (req, res) {
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.write("FERDA");
+    res.write("- Hockeybot v" + getPackageVersion() + "\n");
+    res.write("tell burn I said hi" + "\n");
     res.end();
 }).listen(8080);

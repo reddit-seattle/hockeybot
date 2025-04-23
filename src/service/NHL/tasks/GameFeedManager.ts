@@ -2,13 +2,14 @@ import { EmbedBuilder } from "@discordjs/builders";
 import { Mutex } from "async-mutex";
 import { Message, ThreadChannel } from "discord.js";
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
-import { all, isEqual, omit, uniqueId } from "underscore";
-import { API } from "../API";
-import { Play, PlayByPlayResponse } from "../models/PlayByPlayResponse";
+import { all, isEqual, uniqueId } from "underscore";
 import { Environment } from "../../../utils/constants";
 import { GameFeedEmbedFormatter } from "../../../utils/EmbedFormatters";
 import { EventTypeCode } from "../../../utils/enums";
-import { isGameOver, logDiff } from "../../../utils/helpers";
+import { isGameOver } from "../../../utils/helpers";
+import { Logger } from "../../../utils/Logger";
+import { API } from "../API";
+import { Play, PlayByPlayResponse } from "../models/PlayByPlayResponse";
 
 /**
  * TODOs
@@ -35,7 +36,7 @@ export class GameFeedManager {
     private gameOver: boolean = false;
     private eventsMutex: Mutex = new Mutex();
 
-    private events: Map<string, PlayMessageContainer> = new Map<string, PlayMessageContainer>();
+    private trackedEvents: Map<string, PlayMessageContainer> = new Map<string, PlayMessageContainer>();
 
     constructor(thread: ThreadChannel, feed: PlayByPlayResponse) {
         this.thread = thread;
@@ -55,13 +56,12 @@ export class GameFeedManager {
         this.scheduler.addSimpleIntervalJob(gameStatusChecker);
     }
 
-    // TODO - refactor and clean up this function
+    // TODO - pull out some consolidated logic
     private checkGameStatus = async () => {
         const release = await this.eventsMutex.acquire();
         try {
             if (this.gameOver) {
-                console.log("Game is already over, skipping checkGameStatus");
-                return;
+                return Logger.info("Game is already over, skipping checkGameStatus");
             }
             const { gameState, awayTeam, homeTeam, clock, periodDescriptor } = await API.Games.GetBoxScore(this.gameId);
             const periodNumber = periodDescriptor?.number || 1;
@@ -69,7 +69,7 @@ export class GameFeedManager {
             // state / iteration unique key
             const stateKey = uniqueId(`${this.gameId}-${periodNumber}-${clock.timeRemaining}`);
             // log main game loop
-            console.log(
+            Logger.debug(
                 `{${stateKey}} CheckGameStatus - Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${
                     homeTeam.commonName.default
                 } ${homeTeam?.score || 0} - ${clock.timeRemaining} - ${
@@ -77,58 +77,51 @@ export class GameFeedManager {
                 } ${periodNumber} - (${gameState})`
             );
             // check if game is over
+            // TODO - separate game end states (CRIT, FINAL, etc)
+            // TODO - track game end message on creation and update with landing info (how long after buzzer does this take to populate?)
+            // https://api-web.nhle.com/v1/wsc/game-story/2024020543 - three stars, game stats for intermission info, etc
+            // landing or story page
             if (isGameOver(gameState)) {
-                console.log("Writing Game Over message");
-                const scoreEmbed = this.embedFormatter.createGameEndEmbed();
-                this.gameOver == false &&
-                    (await this?.thread?.send({
-                        embeds: [scoreEmbed],
-                    }));
-
-                console.log("Game is over, stopping game feed");
                 this.gameOver = true;
-
-                console.log("Archiving thread");
+                Logger.info("Game is over, stopping game feed");
+                const scoreEmbed = this.embedFormatter.createGameEndEmbed();
+                // TODO - update response with postgame data
+                // const story = await API.Games.GetStory(this.gameId);
+                await this?.thread?.send({ embeds: [scoreEmbed] });
                 await this?.thread?.setArchived(true, "game over").catch(console.error);
-                // console.log("Deleting all events");
-                // this.events.clear();
-                console.log("Stopping game feed scheduler");
                 this.Stop();
                 return;
             }
             // map old game event ids
-            const trackedEvents = Array.from(this.events.keys());
+            const trackedEventIds = Array.from(this.trackedEvents.keys());
 
             // game feed update
             const { plays: allPlays } = await this.getFeed(true);
 
             // filter out plays that are not in the tracked types (once)
-            const plays = allPlays.filter((play) => tracked_types.includes(play.typeCode));
-            console.log(
-                `{${stateKey}} Processing ${plays.length} plays: [${plays.map((play) => play.eventId).join(", ")}]`
+            const trackedPlays = allPlays.filter((play) => tracked_types.includes(play.typeCode));
+            Logger.debug(
+                `{${stateKey}} Tracking ${trackedPlays.length} plays: [${trackedPlays
+                    .map((play) => play.eventId)
+                    .join(", ")}]`
             );
 
             // remove any events that are no longer in the feed
-            const newEventIds = plays.map((play) => play.eventId);
-            const removedEventIds = trackedEvents.filter((eventId) => !newEventIds.includes(eventId));
+            const newEventIds = trackedPlays.map((play) => play.eventId);
+            const removedEventIds = trackedEventIds.filter((eventId) => !newEventIds.includes(eventId));
 
             // remove them from the tracked events
-            for (const eventId of removedEventIds) {
-                if (this.events.has(eventId)) {
-                    const event = this.events.get(eventId);
-                    // if the event has a message, delete it
-                    console.log(
-                        `{${stateKey}} Deleting removed event ${eventId} - ${event?.play.typeDescKey} - message link: ${event?.message?.url}`
-                    );
-                    await event?.message?.delete();
-                    this.events.delete(eventId);
+            for (const removedEventId of removedEventIds) {
+                if (this.trackedEvents.has(removedEventId)) {
+                    const removeEvent = this.trackedEvents.get(removedEventId);
+                    await removeEvent?.message?.delete();
+                    this.trackedEvents.delete(removedEventId);
                 }
             }
 
-            // re-process each play and update message
+            // process each play and update message
             await Promise.all(
-                plays.map(async (play) => {
-                    const startTime = Date.now();
+                trackedPlays.map(async (play) => {
                     let embed: EmbedBuilder | undefined;
                     switch (play.typeCode) {
                         case EventTypeCode.goal:
@@ -139,29 +132,25 @@ export class GameFeedManager {
                             break;
                         case EventTypeCode.periodStart:
                         case EventTypeCode.periodEnd:
-                            const existingEmbed = this.events.get(play.eventId)?.message?.embeds?.[0];
+                            const existingEmbed = this.trackedEvents.get(play.eventId)?.message?.embeds?.[0];
                             embed = existingEmbed
                                 ? this.embedFormatter.updateIntermissionEmbed(play, existingEmbed)
                                 : this.embedFormatter.createIntermissionEmbed(play);
                             break;
                     }
-                    const embedDuration = Date.now() - startTime;
                     if (embed) {
-                        const { eventId } = play;
+                        const { eventId, typeDescKey } = play;
                         const messageOpts = { embeds: [embed] };
                         // if we're not tracking this event
-                        if (!this.events.has(eventId)) {
+                        if (!this.trackedEvents.has(eventId)) {
                             // send a new message
                             const message = await this.thread?.send(messageOpts);
-                            this.events.set(eventId, { message: message, play: play });
-                            console.log(
-                                `${eventId} not found in tracked events, created new message for event ${eventId} - ${play.typeDescKey} - ${message.url}`
-                            );
+                            this.trackedEvents.set(eventId, { message, play });
+                            Logger.debug(`New message for event ${eventId} - ${typeDescKey} - ${message.url}`);
                         } else {
                             // otherwise, see if we need to update the message
-                            const existingEvent = this.events.get(eventId);
+                            const existingEvent = this.trackedEvents.get(eventId);
                             const existingMessage = existingEvent?.message;
-                            // TODO - optimize by only checking relevant props)
                             // check if the play details have changed
                             if (
                                 !isEqual(existingEvent?.play?.details, play.details) ||
@@ -174,37 +163,12 @@ export class GameFeedManager {
                             ) {
                                 // if so, edit the message and update with new details
                                 const editedMessage = await existingMessage?.edit(messageOpts);
-                                this.events.set(eventId, { message: editedMessage ?? existingMessage, play });
-                                console.log(
-                                    `{${stateKey}} Updated event ${eventId} - ${play.typeDescKey} - ${existingMessage?.url}`
-                                );
-                                // try to log difference between old and new play details
-                                try {
-                                    const diff = omit(
-                                        play?.details,
-                                        (value, key) =>
-                                            existingEvent?.play?.details?.[key as keyof typeof play.details] === value
-                                    );
-                                    console.log(`diff:\n${JSON.stringify(diff)}`);
-                                } catch (error) {
-                                    console.error("Error logging diff", error);
-                                }
-                            } else {
-                                console.log(
-                                    `{${stateKey}} Skipping update for event ${eventId} - ${play.typeDescKey} - ${existingMessage?.url}`
-                                );
+                                this.trackedEvents.set(eventId, { message: editedMessage ?? existingMessage, play });
                             }
                         }
                     }
-                    const finishedTime = Date.now();
-                    const totalDuration = finishedTime - startTime;
-                    const messageDuration = totalDuration - embedDuration;
-                    console.log(
-                        `Processed embed for event ${play.eventId} (${play.typeCode}): ${embedDuration}ms (embed), ${messageDuration}ms (message) - total: ${totalDuration}ms`
-                    );
                 })
             );
-            console.log(`{${stateKey}} Finished processing, events: [${Array.from(this.events.keys()).join(", ")}]`);
         } catch (error) {
             console.error("Error in checkGameStatus", error);
         } finally {
@@ -212,24 +176,17 @@ export class GameFeedManager {
         }
     };
 
-    // Maybe we could use https://api-web.nhle.com/v1/gamecenter/2023020204/landing
-    // to get the game state and other info? rather than a huge list of plays and parsing them
-    // todo - determine delays / performance of each option - does landing mean we don't need to poll for updates, will we get things too delayed?
     private getFeed = async (force: boolean = false): Promise<PlayByPlayResponse> => {
         if (force || !this.feed) {
             const newFeed = await API.Games.GetPlays(this.gameId);
-            // first time we're setting feed, mark all previous plays as tracked, but with no message to update
-            // TODO - flip with env var for testing
-            if (this.feed === undefined) {
+            // first time we're setting feed, local_run switch will replay all messages for debugging purposes
+            if (this.feed === undefined || Environment.LOCAL_RUN) {
                 for (const play of newFeed.plays) {
-                    if (tracked_types.includes(play.typeCode) && !this.events.has(play.eventId)) {
-                        this.events.set(play.eventId, { message: undefined, play: play });
+                    // mark all previous plays as tracked, no message
+                    if (tracked_types.includes(play.typeCode) && !this.trackedEvents.has(play.eventId)) {
+                        this.trackedEvents.set(play.eventId, { message: undefined, play: play });
                     }
                 }
-            }
-            // log the diff of the plays (time consuming?)
-            if (Environment.LOCAL_RUN) {
-                logDiff(this.feed, newFeed);
             }
             // update the feed
             this.feed = newFeed;

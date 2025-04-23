@@ -1,10 +1,14 @@
-import { Embed, EmbedBuilder } from "discord.js";
+import { format, utcToZonedTime } from "date-fns-tz";
+import { ApplicationEmoji, Collection, Embed, EmbedBuilder } from "discord.js";
 import { contains } from "underscore";
+import { API } from "../service/NHL/API";
+import { Game as DayScheduleGame } from "../service/NHL/models/DaySchedule";
 import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/NHL/models/PlayByPlayResponse";
-import { Colors, TeamIds, Strings } from "./constants";
+import { Game as TeamMonthlyScheduleGame } from "../service/NHL/models/TeamMonthlyScheduleResponse";
+import { Game as TeamWeeklyScheduleGame } from "../service/NHL/models/TeamWeeklyScheduleResponse";
+import { Colors, Config, Strings, TeamIds } from "./constants";
 import { EventTypeCode } from "./enums";
-import { getSituationCodeString, periodToStr } from "./helpers";
-
+import { getSituationCodeString, periodToStr, relativeDateString } from "./helpers";
 export class GameFeedEmbedFormatter {
     private teamsMap: Map<string, Team> = new Map<string, Team>();
     private roster: Map<string, RosterPlayer> = new Map<string, RosterPlayer>();
@@ -228,13 +232,10 @@ export class GameFeedEmbedFormatter {
             .setColor(Colors.KRAKEN_EMBED);
     };
     updateIntermissionEmbed = (periodEvent: Play, existingEmbed: Embed) => {
-        // TODO - ensure intermission end messages show up based on timing
-        // use these values to ensure we always are using the play's intermission / period value
+        // only update current intermission object
         const { periodDescriptor, typeCode } = periodEvent;
         const playPeriod = periodDescriptor?.number || 1;
         const playPeriodOrdinal = periodToStr(playPeriod, periodDescriptor?.periodType || "REG");
-
-        // are we updating the current intermission's value? or just writing that it's ended
         const feed = this.feed;
         const isCurrentIntermission = feed.periodDescriptor.number == playPeriod;
 
@@ -273,3 +274,57 @@ export class GameFeedEmbedFormatter {
         return new EmbedBuilder().setTitle(title).addFields(scoreFields).setColor(Colors.KRAKEN_EMBED);
     };
 }
+
+export const GameAnnouncementEmbedBuilder = async (gameId: string) => {
+    const boxScore = await API.Games.GetBoxScore(gameId);
+    const { homeTeam, awayTeam, venue, startTimeUTC } = boxScore;
+    const title = `Pregame: ${homeTeam.commonName.default} vs ${awayTeam.commonName.default}`;
+    return new EmbedBuilder()
+        .setTitle(title)
+        .setDescription(`Puck drop: ${relativeDateString(startTimeUTC)} @ ${venue.default}`)
+        .setColor(Colors.KRAKEN_EMBED);
+};
+
+// TODO - move appemojis to a static module and load them once
+export const ScheduleEmbedBuilder = async (
+    schedule: (DayScheduleGame | TeamWeeklyScheduleGame | TeamMonthlyScheduleGame)[],
+    scheduleTypeDisplay: string,
+    emojis?: Collection<string, ApplicationEmoji>
+) => {
+    const fields = await Promise.all(
+        schedule.map(async (item) => {
+            const { startTimeUTC, venue, awayTeam, homeTeam } = item;
+            const dateSlug = relativeDateString(startTimeUTC);
+            const dateStr = `${format(
+                utcToZonedTime(startTimeUTC, Config.TIME_ZONE),
+                Config.BODY_DATE_FORMAT
+            )} (${dateSlug})`;
+            const venuStr = `Venue: ${venue.default}`;
+            let output = `${dateStr}\n${venuStr}`;
+            // only show radio links if available
+            const { radioLink: awayAudio } = awayTeam;
+            const { radioLink: homeAudio } = homeTeam;
+            const homeRadioStr = homeAudio && `[${homeTeam.abbrev}](${homeAudio})`;
+            const awayRadioStr = awayAudio && `[${awayTeam.abbrev}](${awayAudio})`;
+            if (homeRadioStr || awayRadioStr) {
+                output += `\nListen: ${[homeRadioStr, awayRadioStr].filter((x) => x != undefined).join(" - ")}`;
+            }
+            let title = `${awayTeam.abbrev} vs ${homeTeam.abbrev}`;
+            if (emojis) {
+                const awayEmoji = emojis.find((emoji) => emoji.name === awayTeam.abbrev.toUpperCase());
+                const homeEmoji = emojis.find((emoji) => emoji.name === homeTeam.abbrev.toUpperCase());
+                title = `${awayEmoji} ${awayTeam.abbrev} vs ${homeTeam.abbrev} ${homeEmoji}`;
+            }
+
+            return {
+                name: title,
+                value: output,
+                inline: false,
+            };
+        })
+    );
+    return new EmbedBuilder()
+        .setTitle(`${scheduleTypeDisplay} Schedule`)
+        .setFields(fields)
+        .setColor(Colors.KRAKEN_EMBED);
+};
