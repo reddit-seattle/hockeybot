@@ -34,6 +34,8 @@ export const GetSchedule: Command = {
         .addSubcommand(leagueScheduleSubgroupCommand)
         .addSubcommand(teamScheduleSubgroupCommand),
     executeSlashCommand: async (interaction) => {
+        await interaction.deferReply();
+        const appEmojis = await interaction.client.application.emojis.fetch();
         const subcommand = interaction.options.getSubcommand();
         if (subcommand == "team") {
             const team = interaction.options.getString("team", true);
@@ -41,21 +43,26 @@ export const GetSchedule: Command = {
                 interaction.reply("That's not an NHL team name buddy");
                 return;
             }
-            await interaction.deferReply();
+
             const monthly = interaction.options.getString("type") == "monthly";
             const schedule = monthly
                 ? await API.Schedule.GetTeamMonthlySchedule(team)
                 : await API.Schedule.GetTeamWeeklySchedule(team);
             await interaction.followUp({
-                embeds: [ScheduleEmbedBuilder(schedule, `${team} ${monthly ? "Monthly" : "Weekly"}`)],
+                embeds: [await ScheduleEmbedBuilder(schedule, `${team} ${monthly ? "Monthly" : "Weekly"}`, appEmojis)],
             });
-        } /*if (subcommand = 'all') */ else {
-            await interaction.deferReply();
+        } else {
             const dateInput = interaction.options.getString("date", false);
             const adjustedDate = processLocalizedDateInput(dateInput);
             const schedule = await API.Schedule.GetDailySchedule(adjustedDate);
             await interaction.followUp({
-                embeds: [ScheduleEmbedBuilder(schedule, format(adjustedDate ?? new Date(), Config.TITLE_DATE_FORMAT))],
+                embeds: [
+                    await ScheduleEmbedBuilder(
+                        schedule,
+                        format(adjustedDate ?? new Date(), Config.TITLE_DATE_FORMAT),
+                        appEmojis
+                    ),
+                ],
             });
         }
     },

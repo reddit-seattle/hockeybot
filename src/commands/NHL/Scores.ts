@@ -46,9 +46,20 @@ export const GetScores: Command = {
         const fields = await Promise.all(
             liveGames.map(async (game) => {
                 const { gameState, awayTeam, homeTeam, gameOutcome } = game;
-                const away = `${awayTeam.abbrev}${awayTeam.score == undefined ? `` : ` - ${awayTeam.score ?? 0}`}`;
-                const home = `${homeTeam.abbrev}${homeTeam.score == undefined ? `` : ` - ${homeTeam.score ?? 0}`}`;
-                let gameScoreLine = `${away} @ ${home}`;
+                const appEmojis = await interaction.client.application.emojis.fetch();
+                const awayTeamEmoji =
+                    appEmojis.find((emoji) => emoji.name === awayTeam.abbrev.toUpperCase()) ?? awayTeam.abbrev;
+                const homeTeaEmoji =
+                    appEmojis.find((emoji) => emoji.name === homeTeam.abbrev.toUpperCase()) ?? homeTeam.abbrev;
+                // score is undefined ? 'teamname teamemoji' : 'score - teamname teamemoji'
+                const away = `${awayTeamEmoji} ${awayTeam.abbrev}${
+                    game.awayTeam.score == undefined ? "" : ` - ${game.awayTeam.score}`
+                }`;
+                const home = `${homeTeaEmoji} ${homeTeam.abbrev}${
+                    game.homeTeam.score == undefined ? "" : ` - ${game.homeTeam.score}`
+                }`;
+
+                const gameScoreLine = `${away}\n${home}`;
                 let detailsLineItems = [];
 
                 // pregame checks
@@ -70,7 +81,7 @@ export const GetScores: Command = {
                 if (isGameOver(gameState)) {
                     const { lastPeriodType } = gameOutcome;
                     if (lastPeriodType != PeriodType.regulation) {
-                        gameScoreLine += ` (${lastPeriodType})`;
+                        detailsLineItems = [`Final (${lastPeriodType})`, ...detailsLineItems];
                     }
                     if (game.threeMinRecap) {
                         detailsLineItems.push(`[Video Recap](https://nhl.com${game.threeMinRecap})`);
@@ -80,7 +91,10 @@ export const GetScores: Command = {
                     if (periodDescriptor) {
                         const { number, periodType } = periodDescriptor;
 
-                        gameScoreLine += ` (${clock.timeRemaining} ${periodToStr(number, periodType)})`;
+                        detailsLineItems = [
+                            ` (${clock.timeRemaining} ${periodToStr(number, periodType)})`,
+                            ...detailsLineItems,
+                        ];
                     }
                 }
                 const details = detailsLineItems.join("\n");

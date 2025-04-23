@@ -1,6 +1,7 @@
 import { format, utcToZonedTime } from "date-fns-tz";
-import { Embed, EmbedBuilder } from "discord.js";
+import { ApplicationEmoji, Collection, Embed, EmbedBuilder } from "discord.js";
 import { contains } from "underscore";
+import { API } from "../service/NHL/API";
 import { Game as DayScheduleGame } from "../service/NHL/models/DaySchedule";
 import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/NHL/models/PlayByPlayResponse";
 import { Game as TeamMonthlyScheduleGame } from "../service/NHL/models/TeamMonthlyScheduleResponse";
@@ -8,7 +9,6 @@ import { Game as TeamWeeklyScheduleGame } from "../service/NHL/models/TeamWeekly
 import { Colors, Config, Strings, TeamIds } from "./constants";
 import { EventTypeCode } from "./enums";
 import { getSituationCodeString, periodToStr, relativeDateString } from "./helpers";
-import { API } from "../service/NHL/API";
 export class GameFeedEmbedFormatter {
     private teamsMap: Map<string, Team> = new Map<string, Team>();
     private roster: Map<string, RosterPlayer> = new Map<string, RosterPlayer>();
@@ -285,12 +285,14 @@ export const GameAnnouncementEmbedBuilder = async (gameId: string) => {
         .setColor(Colors.KRAKEN_EMBED);
 };
 
-export const ScheduleEmbedBuilder = (
+// TODO - move appemojis to a static module and load them once
+export const ScheduleEmbedBuilder = async (
     schedule: (DayScheduleGame | TeamWeeklyScheduleGame | TeamMonthlyScheduleGame)[],
-    scheduleTypeDisplay: string
+    scheduleTypeDisplay: string,
+    emojis?: Collection<string, ApplicationEmoji>
 ) => {
-    return new EmbedBuilder().setTitle(`${scheduleTypeDisplay} Schedule`).addFields(
-        schedule.map((item) => {
+    const fields = await Promise.all(
+        schedule.map(async (item) => {
             const { startTimeUTC, venue, awayTeam, homeTeam } = item;
             const dateSlug = relativeDateString(startTimeUTC);
             const dateStr = `${format(
@@ -307,12 +309,22 @@ export const ScheduleEmbedBuilder = (
             if (homeRadioStr || awayRadioStr) {
                 output += `\nListen: ${[homeRadioStr, awayRadioStr].filter((x) => x != undefined).join(" - ")}`;
             }
+            let title = `${awayTeam.abbrev} vs ${homeTeam.abbrev}`;
+            if (emojis) {
+                const awayEmoji = emojis.find((emoji) => emoji.name === awayTeam.abbrev.toUpperCase());
+                const homeEmoji = emojis.find((emoji) => emoji.name === homeTeam.abbrev.toUpperCase());
+                title = `${awayEmoji} ${awayTeam.abbrev} vs ${homeTeam.abbrev} ${homeEmoji}`;
+            }
 
             return {
-                name: `${awayTeam.abbrev} @ ${homeTeam.abbrev}`,
+                name: title,
                 value: output,
                 inline: false,
             };
         })
     );
+    return new EmbedBuilder()
+        .setTitle(`${scheduleTypeDisplay} Schedule`)
+        .setFields(fields)
+        .setColor(Colors.KRAKEN_EMBED);
 };

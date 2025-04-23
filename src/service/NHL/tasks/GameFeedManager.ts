@@ -7,9 +7,9 @@ import { Environment } from "../../../utils/constants";
 import { GameFeedEmbedFormatter } from "../../../utils/EmbedFormatters";
 import { EventTypeCode } from "../../../utils/enums";
 import { isGameOver } from "../../../utils/helpers";
+import { Logger } from "../../../utils/Logger";
 import { API } from "../API";
 import { Play, PlayByPlayResponse } from "../models/PlayByPlayResponse";
-import { Logger } from "../../../utils/Logger";
 
 /**
  * TODOs
@@ -77,10 +77,16 @@ export class GameFeedManager {
                 } ${periodNumber} - (${gameState})`
             );
             // check if game is over
+            // TODO - separate game end states (CRIT, FINAL, etc)
+            // TODO - track game end message on creation and update with landing info (how long after buzzer does this take to populate?)
+            // https://api-web.nhle.com/v1/wsc/game-story/2024020543 - three stars, game stats for intermission info, etc
+            // landing or story page
             if (isGameOver(gameState)) {
                 this.gameOver = true;
                 Logger.info("Game is over, stopping game feed");
                 const scoreEmbed = this.embedFormatter.createGameEndEmbed();
+                // TODO - update response with postgame data
+                // const story = await API.Games.GetStory(this.gameId);
                 await this?.thread?.send({ embeds: [scoreEmbed] });
                 await this?.thread?.setArchived(true, "game over").catch(console.error);
                 this.Stop();
