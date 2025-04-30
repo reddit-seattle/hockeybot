@@ -311,8 +311,8 @@ export const ScheduleEmbedBuilder = async (
             }
             let title = `${awayTeam.abbrev} vs ${homeTeam.abbrev}`;
             if (emojis) {
-                const awayEmoji = emojis.find((emoji) => emoji.name === awayTeam.abbrev.toUpperCase());
-                const homeEmoji = emojis.find((emoji) => emoji.name === homeTeam.abbrev.toUpperCase());
+                const awayEmoji = emojis.find((emoji) => emoji.name === awayTeam.abbrev.toUpperCase()) || "";
+                const homeEmoji = emojis.find((emoji) => emoji.name === homeTeam.abbrev.toUpperCase()) || "";
                 title = `${awayEmoji} ${awayTeam.abbrev} vs ${homeTeam.abbrev} ${homeEmoji}`;
             }
 
