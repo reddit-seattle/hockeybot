@@ -72,7 +72,7 @@ export const PlayoffBracket: Command = {
 
                 return {
                     name: `${leaderEmoji} ${leader.abbrev} vs ${loser.abbrev} ${loserEmoji}`,
-                    value: `${description}\nGame ${gameNum + 1} - ${gameTime}\n${gameVenue}`,
+                    value: `${description}\nGame ${gameNum} - ${gameTime}\n${gameVenue}`,
                 };
             })
         );
