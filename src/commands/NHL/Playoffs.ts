@@ -1,6 +1,6 @@
 import utcToZonedTime from "date-fns-tz/utcToZonedTime";
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { max, min } from "underscore";
+import { max } from "underscore";
 import { Command } from "../../models/Command";
 import { API } from "../../service/NHL/API";
 import { Seed } from "../../service/NHL/models/PlayoffCarouselResponse";
@@ -16,39 +16,49 @@ export const PlayoffBracket: Command = {
         const season = await API.Seasons.GetLatest();
         // carousel
         const playoffs = await API.Playoffs.GetPlayoffCarousel(`${season}`);
+        const { rounds, currentRound: currentRoundNumber } = playoffs;
+        // team emojis
+        const appEmojis = await interaction.client.application.emojis.fetch();
+
         const currentRound =
-            playoffs.rounds.find((round) => round.roundNumber === playoffs.currentRound) ??
-            playoffs.rounds[playoffs.rounds.length - 1];
+            rounds.find((round) => round.roundNumber === currentRoundNumber) ?? rounds[playoffs.rounds.length - 1];
         const { series } = currentRound;
         const fields = await Promise.all(
             series.map(async (series) => {
-                const { bottomSeed, topSeed } = series;
+                const { bottomSeed, topSeed, seriesLetter } = series;
                 const leader = max([topSeed, bottomSeed], (seed) => seed.wins) as Seed;
                 const loser = topSeed.id === leader.id ? bottomSeed : topSeed;
 
-                const description =
-                    series.bottomSeed.wins === series.topSeed.wins
-                        ? `Series tied ${topSeed.wins} - ${bottomSeed.wins}`
-                        : `${leader.abbrev} ${leader.wins === 4 ? "Wins" : "Leads"} ${leader.wins} - ${loser.wins}`;
-                const appEmojis = await interaction.client.application.emojis.fetch();
-                const leaderEmoji =
-                    appEmojis.find((emoji) => emoji.name === leader.abbrev.toUpperCase()) ?? leader.abbrev;
-                const loserEmoji = appEmojis.find((emoji) => emoji.name === loser.abbrev.toUpperCase()) ?? loser.abbrev;
+                const leaderEmoji = appEmojis.find((emoji) => emoji.name === leader.abbrev.toUpperCase()) || "";
+                const loserEmoji = appEmojis.find((emoji) => emoji.name === loser.abbrev.toUpperCase()) || "";
 
-                const seriesDetails = await API.Playoffs.GetPlayoffSeries(
-                    `${season}`,
-                    series.seriesLetter.toLowerCase()
-                );
-                const gameNum = leader.wins + loser.wins;
-                const game = seriesDetails.games[min([gameNum, 6])];
+                const description =
+                    bottomSeed.wins === topSeed.wins
+                        ? `Series tied ${topSeed.wins} - ${bottomSeed.wins}`
+                        : `${leader.abbrev} ${leader.wins === 4 ? "Wins" : "leads"} ${leader.wins} - ${loser.wins}`;
+
+                // series over
+                if (leader.wins === 4) {
+                    return {
+                        name: `${leaderEmoji} ${leader.abbrev} vs ${loser.abbrev} ${loserEmoji}`,
+                        value: `**${description}**`,
+                    };
+                }
+
+                const seriesDetails = await API.Playoffs.GetPlayoffSeries(`${season}`, seriesLetter.toLowerCase());
+                const gameNum = loser.wins + leader.wins + 1;
+                const { games } = seriesDetails;
+                const game = games.find((game) => game.gameNumber === gameNum) ?? games[games.length - 1];
+
+                // in case games is empty
                 if (!game) {
                     return {
                         name: `${leaderEmoji} ${leader.abbrev} vs ${loser.abbrev} ${loserEmoji}`,
-                        value: `${description}\nGame ${gameNum + 1} - TBD`,
+                        value: `**${description}**\nGame ${gameNum} - TBD`,
                     };
                 }
+
                 const gameDate = utcToZonedTime(game.startTimeUTC, Config.TIME_ZONE);
-                // sat. 2/23 @ 2:00 pm, climate arena
                 const gameDateString = gameDate.toLocaleString("en-US", {
                     weekday: "short",
                     month: "numeric",
@@ -62,17 +72,14 @@ export const PlayoffBracket: Command = {
 
                 return {
                     name: `${leaderEmoji} ${leader.abbrev} vs ${loser.abbrev} ${loserEmoji}`,
-                    value:
-                        leader.wins == 4
-                            ? `**${description}**`
-                            : `${description}\nGame ${gameNum + 1} - ${gameTime}\n${gameVenue}`,
+                    value: `${description}\nGame ${gameNum + 1} - ${gameTime}\n${gameVenue}`,
                 };
             })
         );
 
         const embed = new EmbedBuilder()
             .setTitle(`NHL Playoffs`)
-            .setDescription(`Round ${playoffs.currentRound}`)
+            .setDescription(`Round ${currentRoundNumber}`)
             .addFields(fields)
             .setColor(Colors.KRAKEN_EMBED);
         await interaction.followUp({
