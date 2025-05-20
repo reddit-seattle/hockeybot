@@ -6,13 +6,15 @@ import { Game as DayScheduleGame } from "../service/NHL/models/DaySchedule";
 import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/NHL/models/PlayByPlayResponse";
 import { Game as TeamMonthlyScheduleGame } from "../service/NHL/models/TeamMonthlyScheduleResponse";
 import { Game as TeamWeeklyScheduleGame } from "../service/NHL/models/TeamWeeklyScheduleResponse";
-import { Colors, Config, Strings, TeamIds } from "./constants";
+import { Colors, Config, Environment, Strings } from "./constants";
 import { EventTypeCode } from "./enums";
 import { getSituationCodeString, periodToStr, relativeDateString } from "./helpers";
 export class GameFeedEmbedFormatter {
     private teamsMap: Map<string, Team> = new Map<string, Team>();
     private roster: Map<string, RosterPlayer> = new Map<string, RosterPlayer>();
     private feed: PlayByPlayResponse;
+    // TODO - pipe in this value to init or from config
+    private teamId: string = Environment.KRAKEN_TEAM_ID;
     constructor(feed: PlayByPlayResponse) {
         this.feed = feed;
         const { awayTeam, homeTeam, rosterSpots } = this.feed;
@@ -40,8 +42,9 @@ export class GameFeedEmbedFormatter {
 
         const scoringTeam = this.teamsMap.get(goal.details?.eventOwnerTeamId ?? "");
         const { id: scoringTeamId } = scoringTeam ?? {};
-        // we like the kraken
-        const excitement = scoringTeamId == TeamIds.Kraken;
+
+        // we like one team better
+        const excitement = scoringTeamId == this.teamId;
         const goalString = `goal${excitement ? "!" : ""}`;
 
         const homeTeamId = this.feed.homeTeam.id;
@@ -124,14 +127,12 @@ export class GameFeedEmbedFormatter {
         if (!details) {
             return;
         }
-        // we like the kraken (reverse penalty edition)
-        const excitement = details?.eventOwnerTeamId != TeamIds.Kraken;
+        // we like one team more (reverse penalty edition)
+        const excitement = details?.eventOwnerTeamId != this.teamId;
         const { committedByPlayerId, servedByPlayerId, drawnByPlayerId, eventOwnerTeamId, descKey } = details ?? {};
         const penaltyPlayer = this.roster.get(committedByPlayerId ?? servedByPlayerId ?? "");
         const drawnByPlayer = this.roster.get(drawnByPlayerId ?? "");
         const penaltyTeam = this.teamsMap.get(eventOwnerTeamId ?? "");
-
-        // Seattle Kraken penalty(!)
 
         const title = `${penaltyTeam?.placeName.default} ${penaltyTeam?.commonName.default} penalty${
             excitement ? "!" : ""

@@ -3,12 +3,14 @@ import { GoalShotType, PenaltyType } from "./enums";
 dotenv.config();
 
 // TODO - separate MLB and NHL constants
+// TODO - move to env vars / customization
 export namespace Config {
     export const TIME_ZONE = "America/Los_Angeles";
     export const BODY_DATE_FORMAT = `iii PP @ p`; // "Thu Dec 28, 2023 @ 4:16 PM"
     export const TITLE_DATE_FORMAT = `iii PP`;
 }
 
+// TODO - move to env vars / customization
 export namespace Colors {
     export const KRAKEN_EMBED = 39129;
     export const MARINERS = 0x00ff00;
@@ -18,19 +20,21 @@ export namespace RoleIds {
     export const MOD = "370946173902520342";
 }
 
+// TODO - move to env vars / customization
 export namespace ChannelIds {
     export const DEBUG = "541322708844281867";
     export const KRAKEN = "389864168926216193";
     export const KRAKEN_TEST = "994014273888063547";
 }
 
+// TODO - move to env vars / customization
 export namespace GuildIds {
     export const SEATTLE = "370945003566006272";
     export const TEST = "994014272013205554";
 }
 
 export namespace Strings {
-    export const KRAKEN_GAMEDAY_THREAD_TITLE = "Kraken Game Day Thread";
+    export const GAMEDAY_THREAD_TITLE = "Game Day Thread";
     export const REDLIGHT_EMBED = "<a:redlight:892194335951581247>";
     export const ZERO_WIDTH_SPACE = "​";
     export const PENALTY_STRINGS = {
@@ -114,7 +118,7 @@ export namespace Environment {
     export const DEBUG = process.env["hockeybotDEBUG"] ? true : false;
     export const KRAKENCHANNEL = process.env["KRAKEN_CHANNEL_ID"] || undefined;
     export const LOCAL_RUN = process.env["local_run"] ? true : false;
-    export const KRAKEN_TEAM_ID = process.env["KRAKEN_TEAM_ID"] ?? "55";
+    export const KRAKEN_TEAM_ID = process.env["KRAKEN_TEAM_ID"] ?? TeamIds.Kraken;
 }
 
 export enum MEDIA_FORMAT {
@@ -194,8 +198,6 @@ export enum StatsTypes {
 }
 
 export namespace TeamIds {
-    // kraken is 55 plz don't forget
-    // TODO - shift to KRAKEN_TEAM_ID / env var
     export const Kraken: string = "55";
     export const Mariners: string = "136";
 }
