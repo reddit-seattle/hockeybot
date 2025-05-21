@@ -91,7 +91,9 @@ class GameThreadManager {
                 const relativeDate = relativeDateString(startTimeUTC);
                 const startDateZoned = utcToZonedTime(startTimeUTC, Config.TIME_ZONE);
                 const gameStartTimeString = format(startDateZoned, Config.BODY_DATE_FORMAT);
-                const title = `Kraken game today!`;
+                const team = awayTeam.id == this.teamId ? awayTeam : homeTeam;
+                const { commonName } = team;
+                const title = `${commonName.default} game today!`;
                 const gameStartEmbed = new EmbedBuilder()
                     .setTitle(title)
                     .setDescription(`Game start: ${gameStartTimeString} (${relativeDate})\n${game.venue.default}`)
