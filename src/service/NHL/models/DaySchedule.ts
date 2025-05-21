@@ -7,28 +7,20 @@ export interface TvBroadcast {
     network: string;
 }
 
-export interface AwayTeam {
+export interface Team {
     id: string;
+    commonName: LocalizedString;
     placeName: LocalizedString;
+    placeNameWithPreposition: LocalizedString;
     abbrev: string;
     logo: string;
     darkLogo: string;
     awaySplitSquad: boolean;
-    radioLink: string;
+    radioLink?: string;
     odds?: Odd[];
     score?: number;
 }
 
-export interface HomeTeam {
-    id: string;
-    placeName: LocalizedString;
-    abbrev: string;
-    logo: string;
-    darkLogo: string;
-    homeSplitSquad: boolean;
-    radioLink: string;
-    odds?: Odd[];
-}
 export interface PeriodDescriptor {
     number?: number;
     periodType?: string;
@@ -52,8 +44,8 @@ export interface Game {
     gameState: string;
     gameScheduleState: string;
     tvBroadcasts: TvBroadcast[];
-    awayTeam: AwayTeam;
-    homeTeam: HomeTeam;
+    awayTeam: Team;
+    homeTeam: Team;
     periodDescriptor: PeriodDescriptor;
     gameCenterLink: string;
     ticketsLink?: string;

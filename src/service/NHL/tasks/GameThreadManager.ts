@@ -3,7 +3,7 @@ import { format, utcToZonedTime } from "date-fns-tz";
 import { TextChannel, ThreadChannel } from "discord.js";
 import { CronJob, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { contains } from "underscore";
-import { Colors, Config, TeamIds } from "../../../utils/constants";
+import { Colors, Config, Environment } from "../../../utils/constants";
 import { GameAnnouncementEmbedBuilder } from "../../../utils/EmbedFormatters";
 import { GameState } from "../../../utils/enums";
 import { ApiDateString, isGameOver, relativeDateString } from "../../../utils/helpers";
@@ -37,6 +37,7 @@ const startedStates = [GameState.pregame, GameState.live, GameState.critical];
  */
 class GameThreadManager {
     private channel: TextChannel;
+    private teamId: string = Environment.KRAKEN_TEAM_ID;
     private gameId?: string;
     private thread?: ThreadChannel;
     private scheduler: ToadScheduler = new ToadScheduler();
@@ -63,9 +64,7 @@ class GameThreadManager {
         this.StopExistingCheckers();
 
         const games = await API.Schedule.GetDailySchedule();
-        const krakenGames = games?.filter(
-            (game) => game.homeTeam.id == TeamIds.Kraken || game.awayTeam.id == TeamIds.Kraken
-        );
+        const krakenGames = games?.filter((game) => game.homeTeam.id == this.teamId || game.awayTeam.id == this.teamId);
         if (krakenGames.length > 0) {
             const game = krakenGames[0];
             this.gameId = game.id;
@@ -92,7 +91,9 @@ class GameThreadManager {
                 const relativeDate = relativeDateString(startTimeUTC);
                 const startDateZoned = utcToZonedTime(startTimeUTC, Config.TIME_ZONE);
                 const gameStartTimeString = format(startDateZoned, Config.BODY_DATE_FORMAT);
-                const title = `Kraken game today!`;
+                const team = awayTeam.id == this.teamId ? awayTeam : homeTeam;
+                const { commonName } = team;
+                const title = `${commonName.default} game today!`;
                 const gameStartEmbed = new EmbedBuilder()
                     .setTitle(title)
                     .setDescription(`Game start: ${gameStartTimeString} (${relativeDate})\n${game.venue.default}`)
