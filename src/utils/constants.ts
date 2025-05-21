@@ -113,6 +113,12 @@ export namespace Strings {
         [GoalShotType.BETWEEN_LEGS]: "Between-the-legs",
     };
 }
+
+export namespace TeamIds {
+    export const Kraken: string = "55";
+    export const Mariners: string = "136";
+}
+
 export namespace Environment {
     export const botToken = process.env["bot_token"] || undefined;
     export const DEBUG = process.env["hockeybotDEBUG"] ? true : false;
@@ -195,11 +201,6 @@ export enum StatsTypes {
     goalsByGameSituationPlayoffs = "goalsByGameSituationPlayoffs",
     statsSingleSeason = "statsSingleSeason",
     statsSingleSeasonPlayoffs = "statsSingleSeasonPlayoffs",
-}
-
-export namespace TeamIds {
-    export const Kraken: string = "55";
-    export const Mariners: string = "136";
 }
 
 export interface Record {
