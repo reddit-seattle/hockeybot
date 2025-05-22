@@ -35,7 +35,7 @@ export const GetSchedule: Command = {
         .addSubcommand(teamScheduleSubgroupCommand),
     executeSlashCommand: async (interaction) => {
         await interaction.deferReply();
-        const appEmojis = await interaction.client.application.emojis.fetch();
+
         const subcommand = interaction.options.getSubcommand();
         if (subcommand == "team") {
             const team = interaction.options.getString("team", true);
@@ -49,7 +49,7 @@ export const GetSchedule: Command = {
                 ? await API.Schedule.GetTeamMonthlySchedule(team)
                 : await API.Schedule.GetTeamWeeklySchedule(team);
             await interaction.followUp({
-                embeds: [await ScheduleEmbedBuilder(schedule, `${team} ${monthly ? "Monthly" : "Weekly"}`, appEmojis)],
+                embeds: [await ScheduleEmbedBuilder(schedule, `${team} ${monthly ? "Monthly" : "Weekly"}`)],
             });
         } else {
             const dateInput = interaction.options.getString("date", false);
@@ -57,11 +57,7 @@ export const GetSchedule: Command = {
             const schedule = await API.Schedule.GetDailySchedule(adjustedDate);
             await interaction.followUp({
                 embeds: [
-                    await ScheduleEmbedBuilder(
-                        schedule,
-                        format(adjustedDate ?? new Date(), Config.TITLE_DATE_FORMAT),
-                        appEmojis
-                    ),
+                    await ScheduleEmbedBuilder(schedule, format(adjustedDate ?? new Date(), Config.TITLE_DATE_FORMAT)),
                 ],
             });
         }

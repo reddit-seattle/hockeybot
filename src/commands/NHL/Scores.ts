@@ -4,9 +4,11 @@ import { Command } from "../../models/Command";
 import { API } from "../../service/NHL/API";
 import { Game } from "../../service/NHL/models/ScoresResponse";
 import { Config } from "../../utils/constants";
+import { EmojiCache } from "../../utils/EmojiCache";
 import { GameState, PeriodType } from "../../utils/enums";
 import {
     hasGameStarted,
+    isGameInProgress,
     isGameOver,
     optionalDateOption,
     periodToStr,
@@ -46,18 +48,17 @@ export const GetScores: Command = {
         const fields = await Promise.all(
             liveGames.map(async (game) => {
                 const { gameState, awayTeam, homeTeam, gameOutcome } = game;
-                const appEmojis = await interaction.client.application.emojis.fetch();
-                const awayTeamEmoji =
-                    appEmojis.find((emoji) => emoji.name === awayTeam.abbrev.toUpperCase()) ?? awayTeam.abbrev;
-                const homeTeaEmoji =
-                    appEmojis.find((emoji) => emoji.name === homeTeam.abbrev.toUpperCase()) ?? homeTeam.abbrev;
-                // score is undefined ? 'teamname teamemoji' : 'score - teamname teamemoji'
-                const away = `${awayTeamEmoji} ${awayTeam.abbrev}${
-                    game.awayTeam.score == undefined ? "" : ` - ${game.awayTeam.score}`
-                }`;
-                const home = `${homeTeaEmoji} ${homeTeam.abbrev}${
-                    game.homeTeam.score == undefined ? "" : ` - ${game.homeTeam.score}`
-                }`;
+                const awayTeamEmoji = EmojiCache.getTeamEmoji(awayTeam.abbrev);
+                const homeTeamEmoji = EmojiCache.getTeamEmoji(homeTeam.abbrev);
+                // emoji formatting
+                const awayTeamString = awayTeamEmoji ? `${awayTeamEmoji} ${awayTeam.abbrev}` : awayTeam.abbrev;
+                const homeTeamString = homeTeamEmoji ? `${homeTeamEmoji} ${homeTeam.abbrev}` : homeTeam.abbrev;
+                // scores are undefined for pregame, so no need to show them
+                const awayScoreString = awayTeam.score == undefined ? "" : ` - ${awayTeam.score}`;
+                const homeScoreString = homeTeam.score == undefined ? "" : ` - ${homeTeam.score}`;
+
+                const away = `${awayTeamString}${awayScoreString}`;
+                const home = `${homeTeamString}${homeScoreString}`;
 
                 const gameScoreLine = `${away}\n${home}`;
                 let detailsLineItems = [];
@@ -65,12 +66,10 @@ export const GetScores: Command = {
                 // pregame checks
                 if (gameState == GameState.pregame) {
                     detailsLineItems.push(`Pregame`);
-                }
-                // any state but "future"
-                else if (hasGameStarted(gameState)) {
-                    const away = `${game.awayTeam.abbrev}: ${game.awayTeam.sog ?? 0}`;
-                    const home = `${game.homeTeam.abbrev}: ${game.homeTeam.sog ?? 0}`;
-                    const shotline = `Shots - ${away}, ${home}`;
+                } else if (isGameInProgress(gameState)) {
+                    const awayShots = `${awayTeamEmoji || homeTeam.abbrev} ${game.awayTeam.sog ?? 0}`;
+                    const homeShots = `${homeTeamEmoji || homeTeam.abbrev} ${game.homeTeam.sog ?? 0}`;
+                    const shotline = `Shots: ${awayShots} ${homeShots}`;
                     detailsLineItems.push(shotline);
                 }
 

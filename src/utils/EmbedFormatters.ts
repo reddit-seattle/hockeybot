@@ -1,5 +1,5 @@
 import { format, utcToZonedTime } from "date-fns-tz";
-import { ApplicationEmoji, Collection, Embed, EmbedBuilder } from "discord.js";
+import { ApplicationEmoji, Embed, EmbedBuilder } from "discord.js";
 import { contains } from "underscore";
 import { API } from "../service/NHL/API";
 import { Game as DayScheduleGame } from "../service/NHL/models/DaySchedule";
@@ -7,25 +7,41 @@ import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/NHL/mod
 import { Game as TeamMonthlyScheduleGame } from "../service/NHL/models/TeamMonthlyScheduleResponse";
 import { Game as TeamWeeklyScheduleGame } from "../service/NHL/models/TeamWeeklyScheduleResponse";
 import { Colors, Config, Environment, Strings } from "./constants";
+import { EmojiCache } from "./EmojiCache";
 import { EventTypeCode } from "./enums";
 import { getSituationCodeString, periodToStr, relativeDateString } from "./helpers";
+
 export class GameFeedEmbedFormatter {
     private teamsMap: Map<string, Team> = new Map<string, Team>();
     private roster: Map<string, RosterPlayer> = new Map<string, RosterPlayer>();
     private feed: PlayByPlayResponse;
     // TODO - pipe in this value to init or from config
     private teamId: string = Environment.KRAKEN_TEAM_ID;
+    private awayTeamEmoji?: string | ApplicationEmoji;
+    private homeTeamEmoji?: string | ApplicationEmoji;
     constructor(feed: PlayByPlayResponse) {
         this.feed = feed;
         const { awayTeam, homeTeam, rosterSpots } = this.feed;
         this.teamsMap.set(awayTeam.id, awayTeam);
         this.teamsMap.set(homeTeam.id, homeTeam);
+        this.homeTeamEmoji = EmojiCache.getTeamEmoji(homeTeam.abbrev);
+        this.awayTeamEmoji = EmojiCache.getTeamEmoji(awayTeam.abbrev);
+
         rosterSpots.forEach((player) => {
             this.roster.set(player.playerId, player);
         });
     }
     updateFeed = (feed: PlayByPlayResponse) => {
         this.feed = feed;
+    };
+
+    // Helper methods for formatting team emojis
+    private formatAwayTeamEmoji = () => {
+        return this.awayTeamEmoji ? `${this.awayTeamEmoji} ` : "";
+    };
+
+    private formatHomeTeamEmoji = () => {
+        return this.homeTeamEmoji ? `${this.homeTeamEmoji} ` : "";
     };
 
     createGoalEmbed = (goal: Play) => {
@@ -88,17 +104,17 @@ export class GameFeedEmbedFormatter {
                 value: `${assist2?.firstName.default} ${assist2?.lastName.default} (${goal.details?.assist2PlayerTotal})`,
             });
         }
-        const awaySOG = this.feed?.awayTeam.sog ?? 0;
-        const homeSOG = this.feed?.homeTeam.sog ?? 0;
+        const awaySOG = this.feed.awayTeam.sog ?? 0;
+        const homeSOG = this.feed.homeTeam.sog ?? 0;
 
         fields.push(
             {
-                name: `**${awayTeam?.commonName.default ?? "Away"}**`,
+                name: `${this.formatAwayTeamEmoji()}**${awayTeam?.commonName.default ?? "Away"}**`,
                 value: `Goals: **${awayScore}**\nShots: ${awaySOG}`,
                 inline: true,
             },
             {
-                name: `**${homeTeam?.commonName.default ?? "Home"}**`,
+                name: `${this.formatHomeTeamEmoji()}**${homeTeam?.commonName.default ?? "Home"}**`,
                 value: `Goals: **${homeScore}**\nShots: ${homeSOG}`,
                 inline: true,
             }
@@ -193,6 +209,10 @@ export class GameFeedEmbedFormatter {
         const title = `${periodOrdinal} period has ${
             periodEvent.typeCode == EventTypeCode.periodEnd ? "ended" : "started"
         }.`;
+
+        const awayString = `${this.formatAwayTeamEmoji()}${away.commonName.default}`;
+        const homeString = `${this.formatHomeTeamEmoji()}${home.commonName.default}`;
+
         if (periodEvent.typeCode == EventTypeCode.periodStart && periodDescriptor?.number == 1) {
             return new EmbedBuilder()
                 .setTitle(title)
@@ -200,12 +220,12 @@ export class GameFeedEmbedFormatter {
                 .addFields([
                     {
                         name: `**${away.commonName.default}**`,
-                        value: away?.radioLink ? `[${away.abbrev} Audio](${away.radioLink})` : "No radio link",
+                        value: away?.radioLink ? `[${away.placeName.default} Audio](${away.radioLink})` : "No radio link",
                         inline: true,
                     },
                     {
                         name: `**${home.commonName.default}**`,
-                        value: home?.radioLink ? `[${home.abbrev} Audio](${home.radioLink})` : "No radio link",
+                        value: home?.radioLink ? `[${home.placeName.default} Audio](${home.radioLink})` : "No radio link",
                         inline: true,
                     },
                 ])
@@ -215,12 +235,12 @@ export class GameFeedEmbedFormatter {
 
         const scoreFields = [
             {
-                name: `**${away.commonName.default}**`,
+                name: `**${awayString}**`,
                 value: `Goals: **${awayScore ?? 0}**\nShots: ${awaySOG ?? 0}`,
                 inline: true,
             },
             {
-                name: `**${home.commonName.default}**`,
+                name: `**${homeString}**`,
                 value: `Goals: **${homeScore ?? 0}**\nShots: ${homeSOG ?? 0}`,
                 inline: true,
             },
@@ -259,15 +279,18 @@ export class GameFeedEmbedFormatter {
         const { score: homeScore, sog: homeSOG } = home;
         const { score: awayScore, sog: awaySOG } = away;
 
+        const awayTeamDisplay = `${this.formatAwayTeamEmoji()}${away.commonName.default}`;
+        const homeTeamDisplay = `${this.formatHomeTeamEmoji()}${home.commonName.default}`;
+
         const title = `Game Over!`;
         const scoreFields = [
             {
-                name: `**${away.commonName.default}**`,
+                name: `**${awayTeamDisplay}**`,
                 value: `Goals: **${awayScore ?? 0}**\nShots: ${awaySOG ?? 0}`,
                 inline: true,
             },
             {
-                name: `**${home.commonName.default}**`,
+                name: `**${homeTeamDisplay}**`,
                 value: `Goals: **${homeScore ?? 0}**\nShots: ${homeSOG ?? 0}`,
                 inline: true,
             },
@@ -286,11 +309,9 @@ export const GameAnnouncementEmbedBuilder = async (gameId: string) => {
         .setColor(Colors.KRAKEN_EMBED);
 };
 
-// TODO - move appemojis to a static module and load them once
 export const ScheduleEmbedBuilder = async (
     schedule: (DayScheduleGame | TeamWeeklyScheduleGame | TeamMonthlyScheduleGame)[],
-    scheduleTypeDisplay: string,
-    emojis?: Collection<string, ApplicationEmoji>
+    scheduleTypeDisplay: string
 ) => {
     const fields = await Promise.all(
         schedule.map(async (item) => {
@@ -310,13 +331,11 @@ export const ScheduleEmbedBuilder = async (
             if (homeRadioStr || awayRadioStr) {
                 output += `\nListen: ${[homeRadioStr, awayRadioStr].filter((x) => x != undefined).join(" - ")}`;
             }
-            let title = `${awayTeam.abbrev} vs ${homeTeam.abbrev}`;
-            if (emojis) {
-                const awayEmoji = emojis.find((emoji) => emoji.name === awayTeam.abbrev.toUpperCase()) || "";
-                const homeEmoji = emojis.find((emoji) => emoji.name === homeTeam.abbrev.toUpperCase()) || "";
-                title = `${awayEmoji} ${awayTeam.abbrev} vs ${homeTeam.abbrev} ${homeEmoji}`;
-            }
-
+            const awayEmoji = EmojiCache.getTeamEmoji(awayTeam.abbrev);
+            const homeEmoji = EmojiCache.getTeamEmoji(homeTeam.abbrev);
+            const awayString = `${awayEmoji ? `${awayEmoji} ` : ""}${awayTeam.abbrev}`;
+            const homeString = `${homeTeam.abbrev}${homeEmoji ? ` ${homeEmoji}` : ""}`;
+            const title = `${awayString} vs ${homeString}`;
             return {
                 name: title,
                 value: output,

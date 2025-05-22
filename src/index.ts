@@ -12,6 +12,7 @@ import { ChannelIds, Environment } from "./utils/constants";
 import LogTimestamp from "log-timestamp";
 import { getPackageVersion } from "./utils/helpers";
 import { Logger } from "./utils/Logger";
+import { EmojiCache } from "./utils/EmojiCache";
 
 if (Environment.LOCAL_RUN) {
     LogTimestamp();
@@ -84,7 +85,7 @@ const startGameDayThreadChecker = async (guild: Guild) => {
     new GameThreadManager(krakenChannel).initialize();
 };
 
-client.on("ready", async () => {
+client.once("ready", async () => {
     Logger.info(`Logged in as ${client?.user?.tag}!`);
     Logger.debug(`Version: ${getPackageVersion()}`);
     client.guilds.cache.forEach((guild: Guild) => {
@@ -103,6 +104,8 @@ client.on("ready", async () => {
     });
     // keep this out of the loop, this actually loops through guilds
     registerAllSlashCommands(client);
+    // Initialize emoji cache
+    await EmojiCache.initialize(client);
 });
 
 client.on("interactionCreate", async (interaction: Interaction) => {

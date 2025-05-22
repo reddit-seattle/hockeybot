@@ -11,6 +11,7 @@ import { Logger } from "../../../utils/Logger";
 import { API } from "../API";
 import { Game } from "../models/DaySchedule";
 import { GameFeedManager } from "./GameFeedManager";
+import { EmojiCache } from "../../../utils/EmojiCache";
 
 let every_morning = "0 0 9 * * *";
 
@@ -93,7 +94,9 @@ class GameThreadManager {
                 const gameStartTimeString = format(startDateZoned, Config.BODY_DATE_FORMAT);
                 const team = awayTeam.id == this.teamId ? awayTeam : homeTeam;
                 const { commonName } = team;
-                const title = `${commonName.default} game today!`;
+                const teamEmoji = EmojiCache.getEmoji(commonName.default.toUpperCase());
+                const teamEmojiString = teamEmoji ? `${teamEmoji} ` : "";
+                const title = `${teamEmojiString}${commonName.default} game today!`;
                 const gameStartEmbed = new EmbedBuilder()
                     .setTitle(title)
                     .setDescription(`Game start: ${gameStartTimeString} (${relativeDate})\n${game.venue.default}`)

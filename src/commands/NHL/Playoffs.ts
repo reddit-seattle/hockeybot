@@ -5,6 +5,7 @@ import { Command } from "../../models/Command";
 import { API } from "../../service/NHL/API";
 import { Seed } from "../../service/NHL/models/PlayoffCarouselResponse";
 import { Colors, Config } from "../../utils/constants";
+import { EmojiCache } from "../../utils/EmojiCache";
 
 export const PlayoffBracket: Command = {
     name: "playoffs",
@@ -17,8 +18,6 @@ export const PlayoffBracket: Command = {
         // carousel
         const playoffs = await API.Playoffs.GetPlayoffCarousel(`${season}`);
         const { rounds, currentRound: currentRoundNumber } = playoffs;
-        // team emojis
-        const appEmojis = await interaction.client.application.emojis.fetch();
 
         const currentRound =
             rounds.find((round) => round.roundNumber === currentRoundNumber) ?? rounds[playoffs.rounds.length - 1];
@@ -29,8 +28,8 @@ export const PlayoffBracket: Command = {
                 const leader = max([topSeed, bottomSeed], (seed) => seed.wins) as Seed;
                 const loser = topSeed.id === leader.id ? bottomSeed : topSeed;
 
-                const leaderEmoji = appEmojis.find((emoji) => emoji.name === leader.abbrev.toUpperCase()) || "";
-                const loserEmoji = appEmojis.find((emoji) => emoji.name === loser.abbrev.toUpperCase()) || "";
+                const leaderEmoji = EmojiCache.getTeamEmoji(leader.abbrev) || "";
+                const loserEmoji = EmojiCache.getTeamEmoji(loser.abbrev) || "";
 
                 const description =
                     bottomSeed.wins === topSeed.wins
