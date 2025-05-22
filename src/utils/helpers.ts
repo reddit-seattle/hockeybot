@@ -141,6 +141,9 @@ export const isGameOver = (gameState: string) => {
 export const hasGameStarted = (gameState: string) => {
     return gameState != GameState.future;
 };
+export const isGameInProgress = (gameState: string) => {
+    return ([GameState.live, GameState.critical] as string[]).includes(gameState);
+};
 
 export const optionalDateOption = (option: SlashCommandStringOption) =>
     option.setName("date").setDescription("YYYY-MM-DD please").setRequired(false);
