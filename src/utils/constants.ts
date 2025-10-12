@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { GoalShotType, PenaltyType } from "./enums";
+import { EventTypeCode, GoalShotType, PenaltyType } from "./enums";
 dotenv.config();
 
 // TODO - separate MLB and NHL constants
@@ -8,29 +8,30 @@ export namespace Config {
     export const TIME_ZONE = "America/Los_Angeles";
     export const BODY_DATE_FORMAT = `iii PP @ p`; // "Thu Dec 28, 2023 @ 4:16 PM"
     export const TITLE_DATE_FORMAT = `iii PP`;
+    export const TRACKED_EVENT_TYPES = [
+        EventTypeCode.goal,
+        EventTypeCode.penalty,
+        EventTypeCode.periodStart,
+        EventTypeCode.periodEnd
+    ];
+}
+export namespace StoryStatCategories {
+    export const FACEOFF_WIN_PCT = 'faceoffWinningPctg';
+    export const POWER_PLAY = 'powerPlay';
+    export const POWER_PLAY_PCT = 'powerPlayPctg';
+    export const PIM = 'pim';
+    export const HITS = 'hits';
+    export const BLOCKED_SHOTS = 'blockedShots';
+    export const GIVEAWAYS = 'giveaways';
+    export const TAKEAWAYS = 'takeaways';
+    export const SHOTS = 'sog';
+    export const TIME_ON_PUCK = 'timeOnPuck';
 }
 
 // TODO - move to env vars / customization
 export namespace Colors {
     export const KRAKEN_EMBED = 39129;
     export const MARINERS = 0x00ff00;
-}
-
-export namespace RoleIds {
-    export const MOD = "370946173902520342";
-}
-
-// TODO - move to env vars / customization
-export namespace ChannelIds {
-    export const DEBUG = "541322708844281867";
-    export const KRAKEN = "389864168926216193";
-    export const KRAKEN_TEST = "994014273888063547";
-}
-
-// TODO - move to env vars / customization
-export namespace GuildIds {
-    export const SEATTLE = "370945003566006272";
-    export const TEST = "994014272013205554";
 }
 
 export namespace Strings {
@@ -120,25 +121,14 @@ export namespace TeamIds {
 }
 
 export namespace Environment {
+    // Token
     export const botToken = process.env["bot_token"] || undefined;
-    export const DEBUG = process.env["hockeybotDEBUG"] ? true : false;
     export const KRAKENCHANNEL = process.env["KRAKEN_CHANNEL_ID"] || undefined;
+    export const DEBUGCHANNEL = process.env["DEBUG_CHANNEL_ID"] || undefined;
     export const LOCAL_RUN = process.env["local_run"] ? true : false;
-    export const KRAKEN_TEAM_ID = process.env["KRAKEN_TEAM_ID"] ?? TeamIds.Kraken;
+    export const KRAKEN_TEAM_ID = process.env["KRAKEN_TEAM_ID"]
 }
 
-export enum MEDIA_FORMAT {
-    FLASH_192K_320X180 = "FLASH_192K_320X180",
-    FLASH_450K_384x216 = "FLASH_450K_384x216",
-    FLASH_1200K_640X360 = "FLASH_1200K_640X360",
-    FLASH_1800K_896x504 = "FLASH_1800K_896x504",
-    HTTP_CLOUD_MOBILE = "HTTP_CLOUD_MOBILE",
-    HTTP_CLOUD_TABLET = "HTTP_CLOUD_TABLET",
-    HTTP_CLOUD_TABLET_60 = "HTTP_CLOUD_TABLET_60",
-    HTTP_CLOUD_WIRED = "HTTP_CLOUD_WIRED",
-    HTTP_CLOUD_WIRED_60 = "HTTP_CLOUD_WIRED_60",
-    HTTP_CLOUD_WIRED_WEB = "HTTP_CLOUD_WIRED_WEB",
-}
 
 export enum EventTypes {
     Goal = "GOAL",
@@ -171,37 +161,6 @@ export enum PlayerTypes {
     Goalie = "Goalie",
 }
 
-export enum StatsTypes {
-    yearByYear = "yearByYear",
-    yearByYearRank = "yearByYearRank",
-    yearByYearPlayoffs = "yearByYearPlayoffs",
-    yearByYearPlayoffsRank = "yearByYearPlayoffsRank",
-    careerRegularSeason = "careerRegularSeason",
-    careerPlayoffs = "careerPlayoffs",
-    gameLog = "gameLog",
-    playoffGameLog = "playoffGameLog",
-    vsTeam = "vsTeam",
-    vsTeamPlayoffs = "vsTeamPlayoffs",
-    vsDivision = "vsDivision",
-    vsDivisionPlayoffs = "vsDivisionPlayoffs",
-    vsConference = "vsConference",
-    vsConferencePlayoffs = "vsConferencePlayoffs",
-    byMonth = "byMonth",
-    byMonthPlayoffs = "byMonthPlayoffs",
-    byDayOfWeek = "byDayOfWeek",
-    byDayOfWeekPlayoffs = "byDayOfWeekPlayoffs",
-    homeAndAway = "homeAndAway",
-    homeAndAwayPlayoffs = "homeAndAwayPlayoffs",
-    winLoss = "winLoss",
-    winLossPlayoffs = "winLossPlayoffs",
-    onPaceRegularSeason = "onPaceRegularSeason",
-    regularSeasonStatRankings = "regularSeasonStatRankings",
-    playoffStatRankings = "playoffStatRankings",
-    goalsByGameSituation = "goalsByGameSituation",
-    goalsByGameSituationPlayoffs = "goalsByGameSituationPlayoffs",
-    statsSingleSeason = "statsSingleSeason",
-    statsSingleSeasonPlayoffs = "statsSingleSeasonPlayoffs",
-}
 
 export interface Record {
     Wins: number;
@@ -354,7 +313,7 @@ export namespace Paths {
 
                 return `${All}${queryParams}`;
             };
-            export const NextGames = (teamId: string) => {};
+            export const NextGames = (teamId: string) => { };
         }
 
         export namespace Teams {

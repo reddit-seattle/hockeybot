@@ -3,7 +3,7 @@ import { Mutex } from "async-mutex";
 import { Message, ThreadChannel } from "discord.js";
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { all, isEqual, uniqueId } from "underscore";
-import { Environment } from "../../../utils/constants";
+import { Config, Environment } from "../../../utils/constants";
 import { GameFeedEmbedFormatter } from "../../../utils/EmbedFormatters";
 import { EventTypeCode } from "../../../utils/enums";
 import { isGameOver } from "../../../utils/helpers";
@@ -20,8 +20,6 @@ import { Play, PlayByPlayResponse } from "../models/PlayByPlayResponse";
  * Handle goalie changes
  */
 
-const tracked_types = [EventTypeCode.goal, EventTypeCode.penalty, EventTypeCode.periodStart, EventTypeCode.periodEnd];
-
 interface PlayMessageContainer {
     message?: Message;
     play: Play;
@@ -35,13 +33,15 @@ export class GameFeedManager {
     private embedFormatter: GameFeedEmbedFormatter;
     private gameOver: boolean = false;
     private eventsMutex: Mutex = new Mutex();
+    private onGameComplete?: () => void;
 
     private trackedEvents: Map<string, PlayMessageContainer> = new Map<string, PlayMessageContainer>();
 
-    constructor(thread: ThreadChannel, feed: PlayByPlayResponse) {
+    constructor(thread: ThreadChannel, feed: PlayByPlayResponse, onGameComplete?: () => void) {
         this.thread = thread;
         this.gameId = feed.id;
         this.embedFormatter = new GameFeedEmbedFormatter(feed);
+        this.onGameComplete = onGameComplete;
         const gameStatusChecker = new SimpleIntervalJob(
             {
                 seconds: 10,
@@ -70,10 +70,8 @@ export class GameFeedManager {
             const stateKey = uniqueId(`${this.gameId}-${periodNumber}-${clock.timeRemaining}`);
             // log main game loop
             Logger.debug(
-                `{${stateKey}} CheckGameStatus - Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${
-                    homeTeam.commonName.default
-                } ${homeTeam?.score || 0} - ${clock.timeRemaining} - ${
-                    clock.inIntermission ? "Intermission" : "Period"
+                `{${stateKey}} CheckGameStatus - Score: ${awayTeam.commonName.default} ${awayTeam?.score || 0}, ${homeTeam.commonName.default
+                } ${homeTeam?.score || 0} - ${clock.timeRemaining} - ${clock.inIntermission ? "Intermission" : "Period"
                 } ${periodNumber} - (${gameState})`
             );
             // check if game is over
@@ -82,14 +80,7 @@ export class GameFeedManager {
             // https://api-web.nhle.com/v1/wsc/game-story/2024020543 - three stars, game stats for intermission info, etc
             // landing or story page
             if (isGameOver(gameState)) {
-                this.gameOver = true;
-                Logger.info("Game is over, stopping game feed");
-                const scoreEmbed = this.embedFormatter.createGameEndEmbed();
-                // TODO - update response with postgame data
-                // const story = await API.Games.GetStory(this.gameId);
-                await this?.thread?.send({ embeds: [scoreEmbed] });
-                await this?.thread?.setArchived(true, "game over").catch(console.error);
-                this.Stop();
+                await this.handleGameEnd(gameState);
                 return;
             }
             // map old game event ids
@@ -99,7 +90,7 @@ export class GameFeedManager {
             const { plays: allPlays } = await this.getFeed(true);
 
             // filter out plays that are not in the tracked types (once)
-            const trackedPlays = allPlays.filter((play) => tracked_types.includes(play.typeCode));
+            const trackedPlays = allPlays.filter((play) => Config.TRACKED_EVENT_TYPES.includes(play.typeCode));
             Logger.debug(
                 `{${stateKey}} Tracking ${trackedPlays.length} plays: [${trackedPlays
                     .map((play) => play.eventId)
@@ -176,6 +167,21 @@ export class GameFeedManager {
         }
     };
 
+    private handleGameEnd = async (gameState: string) => {
+        this.gameOver = true;
+        try {
+            const boxScore = await API.Games.GetBoxScore(this.gameId);
+        } catch (error) {
+        }
+
+        // Create initial game end embed
+        const scoreEmbed = this.embedFormatter.createGameEndEmbed();
+        const gameEndMessage = await this?.thread?.send({ embeds: [scoreEmbed] });
+
+        this.Stop();
+    };
+
+
     private getFeed = async (force: boolean = false): Promise<PlayByPlayResponse> => {
         if (force || !this.feed) {
             const newFeed = await API.Games.GetPlays(this.gameId);
@@ -183,7 +189,7 @@ export class GameFeedManager {
             if (this.feed === undefined || Environment.LOCAL_RUN) {
                 for (const play of newFeed.plays) {
                     // mark all previous plays as tracked, no message
-                    if (tracked_types.includes(play.typeCode) && !this.trackedEvents.has(play.eventId)) {
+                    if (Config.TRACKED_EVENT_TYPES.includes(play.typeCode) && !this.trackedEvents.has(play.eventId)) {
                         this.trackedEvents.set(play.eventId, { message: undefined, play: play });
                     }
                 }

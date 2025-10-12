@@ -1,12 +1,12 @@
 import { EmbedBuilder } from "@discordjs/builders";
 import { format, utcToZonedTime } from "date-fns-tz";
-import { TextChannel, ThreadChannel } from "discord.js";
+import { TextChannel, ThreadAutoArchiveDuration, ThreadChannel } from "discord.js";
 import { CronJob, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { contains } from "underscore";
 import { Colors, Config, Environment } from "../../../utils/constants";
 import { GameAnnouncementEmbedBuilder } from "../../../utils/EmbedFormatters";
 import { GameState } from "../../../utils/enums";
-import { ApiDateString, isGameOver, relativeDateString } from "../../../utils/helpers";
+import { ApiDateString, isGameOfficiallyOver, relativeDateString } from "../../../utils/helpers";
 import { Logger } from "../../../utils/Logger";
 import { API } from "../API";
 import { Game } from "../models/DaySchedule";
@@ -38,7 +38,7 @@ const startedStates = [GameState.pregame, GameState.live, GameState.critical];
  */
 class GameThreadManager {
     private channel: TextChannel;
-    private teamId: string = Environment.KRAKEN_TEAM_ID;
+    private teamId?: string = Environment.KRAKEN_TEAM_ID;
     private gameId?: string;
     private thread?: ThreadChannel;
     private scheduler: ToadScheduler = new ToadScheduler();
@@ -71,9 +71,10 @@ class GameThreadManager {
             this.gameId = game.id;
             const { awayTeam, homeTeam, startTimeUTC, id, gameState } = game;
 
-            // if the game is over
-            if (isGameOver(gameState)) {
-                Logger.info("Game over, stopping/skipping pregame checker...");
+            // Don't start new game threads for games that are already over
+            // GameFeedManager will handle completion and cleanup for in-progress/ending games
+            if (isGameOfficiallyOver(gameState)) {
+                Logger.info("Game officially over, skipping game thread creation...");
                 this.StopExistingCheckers();
                 return;
             }
@@ -107,6 +108,7 @@ class GameThreadManager {
                 // the thread title is the game thread private key, essentially
                 this.thread = await this.channel.threads.create({
                     name: threadTitle,
+                    autoArchiveDuration: ThreadAutoArchiveDuration.OneHour,
                     reason: "Creating Kraken Game Day Thread",
                     startMessage: message,
                 });
@@ -187,7 +189,11 @@ class GameThreadManager {
                 `PREGAME STARTED FOR ID: ${this.gameId}, (${awayTeam.abbrev} at ${homeTeam.abbrev}) @ ${gameDate}`
             );
             const feed = await API.Games.GetPlays(this.gameId);
-            this.gameFeedManager = new GameFeedManager(this.thread, feed);
+            // Pass callback to notify when game is fully complete (after story updates)
+            this.gameFeedManager = new GameFeedManager(this.thread, feed, () => {
+                Logger.info(`📢 [GAME THREAD MGR] Game ${this.gameId} fully complete, stopping all checkers`);
+                this.StopExistingCheckers();
+            });
             // check if the game start is in the past or future (don't re-announce)
             if (new Date(startTimeUTC) > new Date()) {
                 const embed = await GameAnnouncementEmbedBuilder(this.gameId);
@@ -197,9 +203,6 @@ class GameThreadManager {
             if (this.scheduler.existsById(PREGAME_CHECKER_ID)) {
                 await this.scheduler.stopById(PREGAME_CHECKER_ID);
             }
-        }
-        if (isGameOver(gameState)) {
-            this.StopExistingCheckers();
         }
     };
 }

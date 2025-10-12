@@ -1,5 +1,5 @@
 import { addHours, format, getUnixTime } from "date-fns";
-import { AutocompleteInteraction, SlashCommandStringOption } from "discord.js";
+import { AutocompleteInteraction, Channel, ChannelType, SlashCommandStringOption, TextChannel } from "discord.js";
 import { mkdirSync, writeFileSync } from "fs";
 import { any, first } from "underscore";
 import { API } from "../service/NHL/API";
@@ -11,20 +11,20 @@ import { Logger } from "./Logger";
 // TODO - split MLB and NHL into their own modules
 
 export const getPackageVersion = () => {
-        let packageJsonPath = `../../package.json`;
-        let packageVersion = "0.0.0";
+    let packageJsonPath = `../../package.json`;
+    let packageVersion = "0.0.0";
+    try {
+        packageVersion = require(packageJsonPath)?.version;
+    } catch (e) {
+        packageJsonPath = `../../../package.json`;
         try {
             packageVersion = require(packageJsonPath)?.version;
         } catch (e) {
-            packageJsonPath = `../../../package.json`;
-            try {
-                packageVersion = require(packageJsonPath)?.version;
-            } catch (e) {
-                Logger.warn(`Could not find package.json, using default version: ${packageVersion}`);
-            }
+            Logger.warn(`Could not find package.json, using default version: ${packageVersion}`);
         }
-        return packageVersion;
     }
+    return packageVersion;
+}
 
 
 // credit: Typescript documentation, src
@@ -72,12 +72,12 @@ export const teamOrPlayerAutocomplete = async (interaction: AutocompleteInteract
         await interaction.respond(
             choices
                 ? first(
-                      choices.map((choice) => ({
-                          name: `${choice.name} [${choice.teamAbbrev}]`,
-                          value: choice.playerId,
-                      })),
-                      25
-                  )
+                    choices.map((choice) => ({
+                        name: `${choice.name} [${choice.teamAbbrev}]`,
+                        value: choice.playerId,
+                    })),
+                    25
+                )
                 : []
         );
         return;
@@ -136,7 +136,10 @@ export const periodToStr = (number: number, periodType: string) => {
 };
 
 export const isGameOver = (gameState: string) => {
-    return ([GameState.hardFinal, GameState.softFinal, GameState.official] as string[]).includes(gameState);
+    return ([GameState.softFinal, GameState.hardFinal, GameState.official] as string[]).includes(gameState);
+};
+export const isGameOfficiallyOver = (gameState: string) => {
+    return ([GameState.official] as string[]).includes(gameState);
 };
 export const hasGameStarted = (gameState: string) => {
     return gameState != GameState.future;
@@ -279,3 +282,11 @@ export const logDiff = (oldFeed: PlayByPlayResponse | undefined, newFeed: PlayBy
     }
     return diff;
 };
+
+export function isGuildTextChannel(channel: Channel | null): channel is TextChannel {
+    return !!channel && channel?.type === ChannelType.GuildText;
+}
+
+export function delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}

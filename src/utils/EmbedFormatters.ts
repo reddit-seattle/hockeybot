@@ -4,9 +4,10 @@ import { contains } from "underscore";
 import { API } from "../service/NHL/API";
 import { Game as DayScheduleGame } from "../service/NHL/models/DaySchedule";
 import { Play, PlayByPlayResponse, RosterPlayer, Team } from "../service/NHL/models/PlayByPlayResponse";
+import { StoryResponse } from "../service/NHL/models/StoryResponse";
 import { Game as TeamMonthlyScheduleGame } from "../service/NHL/models/TeamMonthlyScheduleResponse";
 import { Game as TeamWeeklyScheduleGame } from "../service/NHL/models/TeamWeeklyScheduleResponse";
-import { Colors, Config, Environment, Strings } from "./constants";
+import { Colors, Config, Environment, StoryStatCategories, Strings } from "./constants";
 import { EmojiCache } from "./EmojiCache";
 import { EventTypeCode } from "./enums";
 import { getSituationCodeString, periodToStr, relativeDateString } from "./helpers";
@@ -16,7 +17,7 @@ export class GameFeedEmbedFormatter {
     private roster: Map<string, RosterPlayer> = new Map<string, RosterPlayer>();
     private feed: PlayByPlayResponse;
     // TODO - pipe in this value to init or from config
-    private teamId: string = Environment.KRAKEN_TEAM_ID;
+    private teamId?: string = Environment.KRAKEN_TEAM_ID;
     private awayTeamEmoji?: string | ApplicationEmoji;
     private homeTeamEmoji?: string | ApplicationEmoji;
     constructor(feed: PlayByPlayResponse) {
@@ -77,9 +78,7 @@ export class GameFeedEmbedFormatter {
         }
         const unassisted = !assist1 && !assist2;
         const description = scorer
-            ? `${excitement ? "### " : ""}${scorer.firstName.default} ${scorer.lastName.default} (${
-                  goal.details?.scoringPlayerTotal
-              })`
+            ? `${excitement ? "### " : ""}${scorer.firstName.default} ${scorer.lastName.default} (${goal.details?.scoringPlayerTotal})`
             : "Unknown player";
         const shotType = goal.details?.shotType;
         const goalTypeKeys = Object.keys(Strings.GOAL_TYPE_STRINGS);
@@ -87,9 +86,7 @@ export class GameFeedEmbedFormatter {
             shotType && contains(goalTypeKeys, shotType)
                 ? Strings.GOAL_TYPE_STRINGS[shotType as keyof typeof Strings.GOAL_TYPE_STRINGS]
                 : "Unknown shot type";
-        let secondaryDescription = `${shotTypeString}${unassisted ? ` - Unassisted` : ""}${
-            goalphrase ? ` - ${goalphrase}` : ""
-        }`;
+        let secondaryDescription = `${shotTypeString}${unassisted ? ` - Unassisted` : ""}${goalphrase ? ` - ${goalphrase}` : ""}`;
 
         const fields = [];
         if (assist1) {
@@ -134,7 +131,7 @@ export class GameFeedEmbedFormatter {
             .setTitle(title)
             .setThumbnail(scorer?.headshot ?? "")
             .setDescription(`${description}\n${secondaryDescription}`)
-            .addFields([...fields, { name: "Event id:", value: `${eventId}` }])
+            .addFields(fields)
             .setFooter({ text: timeRemainingString })
             .setColor(Colors.KRAKEN_EMBED);
     };
@@ -150,9 +147,7 @@ export class GameFeedEmbedFormatter {
         const drawnByPlayer = this.roster.get(drawnByPlayerId ?? "");
         const penaltyTeam = this.teamsMap.get(eventOwnerTeamId ?? "");
 
-        const title = `${penaltyTeam?.placeName.default} ${penaltyTeam?.commonName.default} penalty${
-            excitement ? "!" : ""
-        }`;
+        const title = `${penaltyTeam?.placeName.default} ${penaltyTeam?.commonName.default} penalty${excitement ? "!" : ""}`;
         const fields = [];
         // Penalty Description
         const penaltyTypeKeys = Object.keys(Strings.PENALTY_STRINGS);
@@ -188,7 +183,6 @@ export class GameFeedEmbedFormatter {
 
         return new EmbedBuilder()
             .setTitle(title)
-            .setDescription(`Event id: ${penalty.eventId}`)
             .setThumbnail(penaltyPlayer?.headshot ?? "")
             .addFields(fields)
             .setFooter({ text: timeRemainingString })
@@ -206,9 +200,8 @@ export class GameFeedEmbedFormatter {
 
         const { periodDescriptor } = periodEvent;
         const periodOrdinal = periodToStr(periodDescriptor?.number || 1, periodDescriptor?.periodType || "REG");
-        const title = `${periodOrdinal} period has ${
-            periodEvent.typeCode == EventTypeCode.periodEnd ? "ended" : "started"
-        }.`;
+        const title = `${periodOrdinal} period has ${periodEvent.typeCode == EventTypeCode.periodEnd ? "ended" : "started"
+            }.`;
 
         const awayString = `${this.formatAwayTeamEmoji()}${away.commonName.default}`;
         const homeString = `${this.formatHomeTeamEmoji()}${home.commonName.default}`;
@@ -272,9 +265,7 @@ export class GameFeedEmbedFormatter {
         });
     };
     createGameEndEmbed = () => {
-        // TODO - kraken win additions
         // TODO - add highlight videos after the game
-        // TODO - three stars of the game
         const { awayTeam: away, homeTeam: home } = this.feed;
         const { score: homeScore, sog: homeSOG } = home;
         const { score: awayScore, sog: awaySOG } = away;
@@ -297,6 +288,174 @@ export class GameFeedEmbedFormatter {
         ];
         return new EmbedBuilder().setTitle(title).addFields(scoreFields).setColor(Colors.KRAKEN_EMBED);
     };
+
+    /**
+     * Post-game (three stars etc.)
+     */
+    createStoryEmbed = (story: StoryResponse) => {
+        const { awayTeam: away, homeTeam: home } = this.feed;
+        const { score: homeScore, sog: homeSOG } = home;
+        const { score: awayScore, sog: awaySOG } = away;
+
+        const awayTeamDisplay = `${this.formatAwayTeamEmoji()}${away.commonName.default}`;
+        const homeTeamDisplay = `${this.formatHomeTeamEmoji()}${home.commonName.default}`;
+
+        const winner = homeScore && awayScore ? (homeScore > awayScore ? home : away) : null;
+        const krakenWin = `${winner?.id}` == this.teamId;
+        const title = krakenWin ? "🦑 SEATTLE KRAKEN WIN! 🦑" : "Game Summary";
+
+        const scoreFields = [
+            {
+                name: `**${awayTeamDisplay}**`,
+                value: `Goals: **${awayScore ?? 0}**\nShots: ${awaySOG ?? 0}`,
+                inline: true,
+            },
+            {
+                name: `**${homeTeamDisplay}**`,
+                value: `Goals: **${homeScore ?? 0}**\nShots: ${homeSOG ?? 0}`,
+                inline: true,
+            },
+        ];
+
+        // Add three stars if available
+        if (story.summary?.threeStars?.length > 0) {
+            const threeStarsField = {
+                name: "⭐ Three Stars",
+                value: story.summary.threeStars
+                    .slice(0, 3) // Ensure we only get 3 stars
+                    .map((star, index) => {
+                        const starDisplay = ["⭐", "⭐⭐", "⭐⭐⭐"][index];
+                        const points = star.points > 0 ? ` (${star.goals}G ${star.assists}A)` : "";
+                        return `${starDisplay} **${star.name}** ${star.teamAbbrev}${points}`;
+                    })
+                    .join("\n"),
+                inline: false,
+            };
+            scoreFields.push(threeStarsField);
+        }
+
+        // Add highlight videos if available
+        if (story.summary?.scoring?.length > 0) {
+            // Collect all goals from all periods
+            const allGoals: any[] = [];
+            story.summary.scoring.forEach(periodScoring => {
+                allGoals.push(...periodScoring.goals);
+            });
+
+            const goalsWithHighlights = allGoals.filter((goal: any) => goal.highlightClipSharingUrl);
+
+            if (goalsWithHighlights.length > 0) {
+                const highlightLinks = goalsWithHighlights
+                    .map((goal: any) => {
+                        const scorer = goal.name?.default || `${goal.firstName.default} ${goal.lastName.default}`;
+                        const periodScoring = story.summary.scoring.find((p: any) => p.goals.includes(goal));
+                        const period = `P${periodScoring?.periodDescriptor.number || '?'}`;
+                        return `[${goal.teamAbbrev.default} - ${scorer} (${period})](${goal.highlightClipSharingUrl})`;
+                    })
+                    .join(" • ");
+
+                scoreFields.push({
+                    name: "🎥 Highlights",
+                    value: highlightLinks,
+                    inline: false,
+                });
+            }
+        }
+
+        // Add key game stats if available
+        if (story.summary?.teamGameStats?.length > 0) {
+            // Team emoji/abbrev line for clarity
+            const awayEmoji = this.formatAwayTeamEmoji();
+            const homeEmoji = this.formatHomeTeamEmoji();
+            const awayAbbrev = this.feed.awayTeam.abbrev;
+            const homeAbbrev = this.feed.homeTeam.abbrev;
+            const teamLine = `${awayEmoji}${awayAbbrev} | ${homeAbbrev}${homeEmoji}`;
+
+            // Define stats to display (order matters)
+            const statsConfig: Array<{ category: string; label: string; formatter?: (val: string) => string }> = [
+                { category: StoryStatCategories.FACEOFF_WIN_PCT, label: 'Faceoffs', formatter: (val) => this.formatStatValue(StoryStatCategories.FACEOFF_WIN_PCT, val) },
+                { category: StoryStatCategories.POWER_PLAY, label: 'PP' },
+                { category: StoryStatCategories.PIM, label: 'PIM' },
+                { category: StoryStatCategories.HITS, label: 'Hits' },
+                { category: StoryStatCategories.BLOCKED_SHOTS, label: 'Blocked Shots' },
+                { category: StoryStatCategories.GIVEAWAYS, label: 'Giveaways' },
+                { category: StoryStatCategories.TAKEAWAYS, label: 'Takeaways' },
+            ];
+
+            // Find stats for each team
+            const getStat = (cat: string) => story.summary.teamGameStats.find(stat => stat.category === cat);
+
+            // Build stat lines from config
+            const statLines = statsConfig
+                .map(config => {
+                    const stat = getStat(config.category);
+                    if (!stat) return null;
+
+                    const awayValue = config.formatter ? config.formatter(stat.awayValue) : stat.awayValue;
+                    const homeValue = config.formatter ? config.formatter(stat.homeValue) : stat.homeValue;
+
+                    return `**${config.label}:** ${awayValue} - ${homeValue}`;
+                })
+                .filter(line => line !== null);
+
+            if (statLines.length > 0) {
+                const statsField = {
+                    name: "Game Stats",
+                    value: `${teamLine}\n${statLines.join("\n")}`,
+                    inline: false,
+                };
+                scoreFields.push(statsField);
+            }
+        }
+
+        return new EmbedBuilder()
+            .setTitle(title)
+            .addFields(scoreFields)
+            .setFooter({ text: "Final" })
+            .setColor(krakenWin ? 0x006d75 : Colors.KRAKEN_EMBED); // Special color for Kraken wins
+    };
+
+    /**
+     * Formats stat values appropriately
+     */
+    private formatStatValue = (category: string, value: string): string => {
+        // Format percentages: decimal (e.g. .40543) -> integer percent (e.g. 41%)
+        if (category === StoryStatCategories.FACEOFF_WIN_PCT || category === StoryStatCategories.POWER_PLAY_PCT) {
+            const numValue = parseFloat(value);
+            if (!isNaN(numValue)) {
+                return `${Math.round(numValue * 100)}%`;
+            }
+        }
+
+        // Format time on puck (mm:ss)
+        if (category === StoryStatCategories.TIME_ON_PUCK) {
+            // Value is in seconds, format to mm:ss
+            const seconds = parseInt(value, 10);
+            if (!isNaN(seconds)) {
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = seconds % 60;
+                return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        return value;
+    };
+
+    public createEmbedForPlay(play: Play): EmbedBuilder | undefined {
+        if (!play) return undefined;
+
+        switch (play.typeCode) {
+            case EventTypeCode.goal:
+                return this.createGoalEmbed(play);
+            case EventTypeCode.penalty:
+                return this.createPenaltyEmbed(play);
+            case EventTypeCode.periodStart:
+            case EventTypeCode.periodEnd:
+                return this.createIntermissionEmbed(play);
+            default:
+                return undefined;
+        }
+    }
 }
 
 export const GameAnnouncementEmbedBuilder = async (gameId: string) => {

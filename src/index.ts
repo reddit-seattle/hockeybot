@@ -1,13 +1,13 @@
 import { REST } from "@discordjs/rest";
 import { RESTPostAPIApplicationCommandsJSONBody, Routes } from "discord-api-types/v10";
-import { Channel, ChannelType, Client, Guild, Interaction, TextChannel } from "discord.js";
+import {  ChannelType, Client, Guild, Interaction } from "discord.js";
 import { createServer } from "http";
 import { exit } from "process";
 import { Mariners } from "./commands/MLB";
-import { GetSchedule, GetScores, GetStandings, GetStats, PlayoffBracket } from "./commands/NHL";
+import { GetSchedule, GetScores, GetStandings, GetStats, PlayoffBracket, ReplayGame } from "./commands/NHL";
 import { CommandDictionary } from "./models/Command";
 import GameThreadManager from "./service/NHL/tasks/GameThreadManager";
-import { ChannelIds, Environment } from "./utils/constants";
+import { Environment } from "./utils/constants";
 // @ts-ignore
 import LogTimestamp from "log-timestamp";
 import { getPackageVersion } from "./utils/helpers";
@@ -29,6 +29,7 @@ const commands = [
     GetStats,
     GetStandings,
     PlayoffBracket,
+    ReplayGame,
     Mariners, // MLB commands
 ].reduce((map, obj) => {
     map[obj.name] = obj;
@@ -89,16 +90,6 @@ client.once("ready", async () => {
     Logger.info(`Logged in as ${client?.user?.tag}!`);
     Logger.debug(`Version: ${getPackageVersion()}`);
     client.guilds.cache.forEach((guild: Guild) => {
-        if (Environment.DEBUG) {
-            try {
-                const debugChannel = guild.channels.cache.find(
-                    (ch: Channel) => ch.id == ChannelIds.DEBUG
-                ) as TextChannel;
-                debugChannel?.send("HockeyBot, reporting for duty!");
-            } catch (e) {
-                Logger.error(e);
-            }
-        }
         // start the game day thread checker for this guild
         startGameDayThreadChecker(guild);
     });
