@@ -5,7 +5,7 @@ import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { all, isEqual, uniqueId } from "underscore";
 import { Config, Environment } from "../../../utils/constants";
 import { GameFeedEmbedFormatter } from "../../../utils/EmbedFormatters";
-import { EventTypeCode } from "../../../utils/enums";
+import { EventTypeCode, GameState } from "../../../utils/enums";
 import { isGameOver } from "../../../utils/helpers";
 import { Logger } from "../../../utils/Logger";
 import { API } from "../API";
@@ -75,12 +75,8 @@ export class GameFeedManager {
                 } ${periodNumber} - (${gameState})`
             );
             // check if game is over
-            // TODO - separate game end states (CRIT, FINAL, etc)
-            // TODO - track game end message on creation and update with landing info (how long after buzzer does this take to populate?)
-            // https://api-web.nhle.com/v1/wsc/game-story/2024020543 - three stars, game stats for intermission info, etc
-            // landing or story page
             if (isGameOver(gameState)) {
-                await this.handleGameEnd(gameState);
+                await this.handleGameEnd();
                 return;
             }
             // map old game event ids
@@ -167,20 +163,88 @@ export class GameFeedManager {
         }
     };
 
-    private handleGameEnd = async (gameState: string) => {
+    private handleGameEnd = async () => {
         this.gameOver = true;
-        try {
-            const boxScore = await API.Games.GetBoxScore(this.gameId);
-        } catch (error) {
-        }
 
         // Create initial game end embed
         const scoreEmbed = this.embedFormatter.createGameEndEmbed();
         const gameEndMessage = await this?.thread?.send({ embeds: [scoreEmbed] });
 
+        // Start polling for story updates
+        this.startStoryPolling(gameEndMessage);
+
+        // Stop main game status checker
         this.Stop();
     };
 
+    /**
+     * Polls for story updates, tracking state transitions and updating the embed with new data
+     * Continues until OFFICIAL state, then polls for 5 more minutes before cleanup
+     */
+    private startStoryPolling = (gameEndMessage: Message) => {
+        let lastSeenState: string | null = null;
+        let officialStateReached = false;
+        let officialStateTime: number | null = null;
+        const POLL_INTERVAL_MS = 1000 * 30; // 30 seconds
+        const POLLING_AFTER_OFFICIAL_MS = 1000 * 60 * 5; // 5 minutes
+        const POLLING_DELAY_MS = 1000 * 60; // 1 minute
+
+        const pollStory = async (): Promise<void> => {
+            const boxScore = await API.Games.GetBoxScore(this.gameId);
+            const currentState = boxScore.gameState;
+
+            // TODO - remove debug logging later
+            // Log state transitions
+            if (currentState !== lastSeenState) {
+                Logger.info(`[GAME END] State transition: ${lastSeenState || 'INITIAL'} -> ${currentState}`);
+                lastSeenState = currentState;
+            }
+
+            // Check if (and when) we've reached official end state
+            if (currentState === GameState.official && !officialStateReached) {
+                Logger.info(`[GAME END] Game reached OFFICIAL state`);
+                officialStateReached = true;
+                officialStateTime = Date.now();
+            }
+
+            // Try to get story data and update embed
+            const story = await API.Games.GetStory(this.gameId);
+
+            if (story?.summary) {
+                // Log what's available
+                const threeStars = story.summary.threeStars?.length || 0;
+                const gameStats = story.summary.teamGameStats?.length || 0;
+                // Update embed if we have meaningful data
+                if (threeStars > 0 || gameStats > 0) {
+                    const updatedEmbed = this.embedFormatter.createStoryEmbed(story);
+                    await gameEndMessage.edit({ embeds: [updatedEmbed] });
+                }
+            }
+
+            // Determine if we should continue polling
+            const shouldContinue = !officialStateReached ||
+                (Date.now() - (officialStateTime || 0)) < POLLING_AFTER_OFFICIAL_MS;
+
+            if (shouldContinue) {
+                setTimeout(pollStory, POLL_INTERVAL_MS);
+            } else {
+                Logger.info(`[GAME END] Polling complete for game ${this.gameId}`);
+                this.finalizeGameThread();
+            }
+        };
+        // Start polling after 1 minute
+        setTimeout(pollStory, POLLING_DELAY_MS);
+    };
+
+    /**
+     * Cleanup after game is complete
+     */
+    private finalizeGameThread = () => {
+        Logger.info(`[GAME END] Finalizing game ${this.gameId}`);
+        if (this.onGameComplete) {
+            this.onGameComplete();
+        }
+    };
 
     private getFeed = async (force: boolean = false): Promise<PlayByPlayResponse> => {
         if (force || !this.feed) {

@@ -355,7 +355,7 @@ export class GameFeedEmbedFormatter {
                     .join(" • ");
 
                 scoreFields.push({
-                    name: "🎥 Highlights",
+                    name: "Highlights",
                     value: highlightLinks,
                     inline: false,
                 });
