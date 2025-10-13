@@ -84,6 +84,37 @@ export const teamOrPlayerAutocomplete = async (interaction: AutocompleteInteract
     }
 };
 
+export const activeGameAutocomplete = async (interaction: AutocompleteInteraction) => {
+    try {
+        const focusedValue = interaction.options.getFocused();
+
+        // Get today's schedule
+        const games = await API.Schedule.GetDailySchedule();
+
+        if (!games || games.length === 0) {
+            await interaction.respond([]);
+            return;
+        }
+
+        // Format games as "AWAY @ HOME" with game ID as value
+        const choices = games.map((game) => ({
+            name: `${game.awayTeam.abbrev} @ ${game.homeTeam.abbrev}`,
+            value: String(game.id), // Ensure it's a string
+        }));
+
+        // Filter based on user input
+        const filtered = choices.filter((choice) =>
+            choice.name.toLowerCase().includes(focusedValue.toLowerCase())
+        );
+
+        // Discord allows max 25 autocomplete options
+        await interaction.respond(filtered.slice(0, 25));
+    } catch (error) {
+        Logger.error("Error fetching games for autocomplete:", error);
+        await interaction.respond([]);
+    }
+};
+
 export const validTeamName = (team: string) => {
     return (
         Object.keys(TeamTriCode)

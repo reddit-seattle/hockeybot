@@ -1,18 +1,19 @@
 import { REST } from "@discordjs/rest";
 import { RESTPostAPIApplicationCommandsJSONBody, Routes } from "discord-api-types/v10";
-import {  ChannelType, Client, Guild, Interaction } from "discord.js";
+import { ChannelType, Client, Guild, Interaction } from "discord.js";
 import { createServer } from "http";
 import { exit } from "process";
 import { Mariners } from "./commands/MLB";
-import { GetSchedule, GetScores, GetStandings, GetStats, PlayoffBracket, ReplayGame } from "./commands/NHL";
+import { GetSchedule, GetScores, GetStandings, GetStats, PlayoffBracket, ReplayGame, GameThread } from "./commands/NHL";
 import { CommandDictionary } from "./models/Command";
-import GameThreadManager from "./service/NHL/tasks/GameThreadManager";
+import { GameScheduleMonitor } from "./service/NHL/tasks/GameScheduleMonitor";
 import { Environment } from "./utils/constants";
 // @ts-ignore
 import LogTimestamp from "log-timestamp";
+import { scheduleMonitorService } from "./service/NHL/ScheduleMonitorService";
+import { EmojiCache } from "./utils/EmojiCache";
 import { getPackageVersion } from "./utils/helpers";
 import { Logger } from "./utils/Logger";
-import { EmojiCache } from "./utils/EmojiCache";
 
 if (Environment.LOCAL_RUN) {
     LogTimestamp();
@@ -30,6 +31,7 @@ const commands = [
     GetStandings,
     PlayoffBracket,
     ReplayGame,
+    GameThread,
     Mariners, // MLB commands
 ].reduce((map, obj) => {
     map[obj.name] = obj;
@@ -74,16 +76,27 @@ const registerAllSlashCommands = async (client: Client) => {
 };
 
 const startGameDayThreadChecker = async (guild: Guild) => {
-    if (!Environment.KRAKENCHANNEL) {
-        Logger.warn("Kraken channel ID env var (KRAKEN_CHANNEL_ID) not set. Game day thread checker will not start.");
+    if (!Environment.GAMEDAY_CHANNEL_ID) {
+        Logger.warn("Game day channel ID not set. Game day thread checker will not start.");
         return;
     }
-    const krakenChannel = await guild.channels.fetch(Environment.KRAKENCHANNEL);
-    if (!(krakenChannel?.type == ChannelType.GuildText)) {
-        Logger.warn("Kraken channel not found, or not a text channel. Game day thread checker will not start.");
+
+    const gameDayChannel = await guild.channels.fetch(Environment.GAMEDAY_CHANNEL_ID);
+    if (!(gameDayChannel?.type == ChannelType.GuildText)) {
+        Logger.warn("Game day channel not found or not a text channel.");
         return;
     }
-    new GameThreadManager(krakenChannel).initialize();
+
+    const scheduleMonitor = new GameScheduleMonitor(
+        gameDayChannel,
+        Environment.HOCKEYBOT_TEAM_ID || null
+    );
+    scheduleMonitor.initialize();
+
+    // Store in service instead of global variable
+    scheduleMonitorService.set(scheduleMonitor);
+
+    Logger.info("Game schedule monitor started");
 };
 
 client.once("ready", async () => {

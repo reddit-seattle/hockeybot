@@ -1,10 +1,11 @@
 import dotenv from "dotenv";
-import { EventTypeCode, GoalShotType, PenaltyType } from "./enums";
+import { EventTypeCode, GameState, GoalShotType, PenaltyType } from "./enums";
 dotenv.config();
 
 // TODO - separate MLB and NHL constants
 // TODO - move to env vars / customization
 export namespace Config {
+    export const DAILY_SCHEDULE_CRON = "0 0 9 * * *"; // Every day at 9am
     export const TIME_ZONE = "America/Los_Angeles";
     export const BODY_DATE_FORMAT = `iii PP @ p`; // "Thu Dec 28, 2023 @ 4:16 PM"
     export const TITLE_DATE_FORMAT = `iii PP`;
@@ -123,10 +124,18 @@ export namespace TeamIds {
 export namespace Environment {
     // Token
     export const botToken = process.env["bot_token"] || undefined;
-    export const KRAKENCHANNEL = process.env["KRAKEN_CHANNEL_ID"] || undefined;
-    export const DEBUGCHANNEL = process.env["DEBUG_CHANNEL_ID"] || undefined;
+    // Channel for game threads
+    export const GAMEDAY_CHANNEL_ID = process.env["HOCKEYBOT_CHANNEL_ID"] || undefined;
+    // Channel for general debug messages
+    export const DEBUG_CHANNEL_ID = process.env["GUILD_DEBUG_CHANNEL_ID"] || undefined;
+    // Team to track games
+    export const HOCKEYBOT_TEAM_ID = process.env["HOCKEYBOT_TEAM_ID"];
+    // Team name display
+    export const HOCKEYBOT_TEAM_NAME = process.env["HOCKEYBOT_TEAM_NAME"] || "Seattle Kraken";
+    // Team emoji reference (e.g., "SEA" for :SEA:)
+    export const HOCKEYBOT_TEAM_EMOJI = process.env["HOCKEYBOT_TEAM_EMOJI"] || "SEA";
+    // Local / debug run flag
     export const LOCAL_RUN = process.env["local_run"] ? true : false;
-    export const KRAKEN_TEAM_ID = process.env["KRAKEN_TEAM_ID"]
 }
 
 
@@ -159,6 +168,18 @@ export enum PlayerTypes {
     Scorer = "Scorer",
     Shooter = "Shooter",
     Goalie = "Goalie",
+}
+
+// Game states that indicate a game has started and we should track events
+export const STARTED_STATES = [GameState.pregame, GameState.live, GameState.critical];
+
+// Thread manager state machine
+export enum ThreadManagerState {
+    INITIALIZED = "INITIALIZED",
+    PREGAME = "PREGAME",
+    LIVE = "LIVE",
+    COMPLETED = "COMPLETED",
+    ERROR = "ERROR"
 }
 
 

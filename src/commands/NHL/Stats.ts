@@ -11,6 +11,7 @@ import { Career, Last5Game, PlayerStatsSummary, SubSeason } from "../../service/
 import { TeamSummary } from "../../service/NHL/models/TeamSummaryResponse";
 import { PlayerPosition, PlayerStatAbbrev } from "../../utils/enums";
 import { requiredPlayerOption, requiredTeamOption, teamOrPlayerAutocomplete } from "../../utils/helpers";
+import { MessageFlags } from "discord.js";
 
 export const GetStats: Command = {
     name: "stats",
@@ -58,7 +59,7 @@ export const GetStats: Command = {
             if (!playerStats) {
                 await interaction.followUp({
                     content: `Couldn't find stats for player ID ${player}. Tell burn.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
                 return;
             }

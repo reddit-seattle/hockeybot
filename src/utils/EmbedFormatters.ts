@@ -17,7 +17,7 @@ export class GameFeedEmbedFormatter {
     private roster: Map<string, RosterPlayer> = new Map<string, RosterPlayer>();
     private feed: PlayByPlayResponse;
     // TODO - pipe in this value to init or from config
-    private teamId?: string = Environment.KRAKEN_TEAM_ID;
+    private teamId?: string = Environment.HOCKEYBOT_TEAM_ID;
     private awayTeamEmoji?: string | ApplicationEmoji;
     private homeTeamEmoji?: string | ApplicationEmoji;
     constructor(feed: PlayByPlayResponse) {
@@ -212,12 +212,12 @@ export class GameFeedEmbedFormatter {
                 .setDescription(`${this.feed.venue.default}`)
                 .addFields([
                     {
-                        name: `**${away.commonName.default}**`,
+                        name: `**${awayString}**`,
                         value: away?.radioLink ? `[${away.placeName.default} Audio](${away.radioLink})` : "No radio link",
                         inline: true,
                     },
                     {
-                        name: `**${home.commonName.default}**`,
+                        name: `**${homeString}**`,
                         value: home?.radioLink ? `[${home.placeName.default} Audio](${home.radioLink})` : "No radio link",
                         inline: true,
                     },
@@ -324,9 +324,9 @@ export class GameFeedEmbedFormatter {
                 value: story.summary.threeStars
                     .slice(0, 3) // Ensure we only get 3 stars
                     .map((star, index) => {
-                        const starDisplay = ["⭐", "⭐⭐", "⭐⭐⭐"][index];
+                        const starNumber = ["1st", "2nd", "3rd"][index];
                         const points = star.points > 0 ? ` (${star.goals}G ${star.assists}A)` : "";
-                        return `${starDisplay} **${star.name}** ${star.teamAbbrev}${points}`;
+                        return `**${starNumber}:**: ${star.name} - ${star.teamAbbrev}${points}`;
                     })
                     .join("\n"),
                 inline: false,
@@ -350,7 +350,7 @@ export class GameFeedEmbedFormatter {
                         const scorer = goal.name?.default || `${goal.firstName.default} ${goal.lastName.default}`;
                         const periodScoring = story.summary.scoring.find((p: any) => p.goals.includes(goal));
                         const period = `P${periodScoring?.periodDescriptor.number || '?'}`;
-                        return `[${goal.teamAbbrev.default} - ${scorer} (${period})](${goal.highlightClipSharingUrl})`;
+                        return `[${goal.teamAbbrev.default} Goal - ${scorer} (${period})](${goal.highlightClipSharingUrl})`;
                     })
                     .join(" • ");
 
@@ -461,7 +461,14 @@ export class GameFeedEmbedFormatter {
 export const GameAnnouncementEmbedBuilder = async (gameId: string) => {
     const boxScore = await API.Games.GetBoxScore(gameId);
     const { homeTeam, awayTeam, venue, startTimeUTC } = boxScore;
-    const title = `Pregame: ${homeTeam.commonName.default} vs ${awayTeam.commonName.default}`;
+    
+    const homeEmoji = EmojiCache.getTeamEmoji(homeTeam.abbrev);
+    const awayEmoji = EmojiCache.getTeamEmoji(awayTeam.abbrev);
+    
+    const homeDisplay = `${homeTeam.commonName.default}${homeEmoji ? ` ${homeEmoji}` : ""}`;
+    const awayDisplay = `${awayEmoji ? `${awayEmoji} ` : ""}${awayTeam.commonName.default}`;
+    
+    const title = `Pregame: ${awayDisplay} vs ${homeDisplay}`;
     return new EmbedBuilder()
         .setTitle(title)
         .setDescription(`Puck drop: ${relativeDateString(startTimeUTC)} @ ${venue.default}`)

@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
+import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
 import { Command } from "../../models/Command";
 import { API } from "../../service/NHL/API";
 import { Game } from "../../service/NHL/models/ScoresResponse";
@@ -42,7 +42,7 @@ export const GetScores: Command = {
         // filter games that have already started
         const liveGames = games.filter((game) => hasGameStarted(game.gameState));
         if (!liveGames?.length) {
-            await interaction.followUp({ content: "No live games found", ephemeral: true });
+            await interaction.followUp({ content: "No live games found", flags: MessageFlags.Ephemeral });
             return;
         }
         const fields = await Promise.all(

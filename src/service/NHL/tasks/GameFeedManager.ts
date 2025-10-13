@@ -182,7 +182,6 @@ export class GameFeedManager {
      * Continues until OFFICIAL state, then polls for 5 more minutes before cleanup
      */
     private startStoryPolling = (gameEndMessage: Message) => {
-        let lastSeenState: string | null = null;
         let officialStateReached = false;
         let officialStateTime: number | null = null;
         const POLL_INTERVAL_MS = 1000 * 30; // 30 seconds
@@ -193,31 +192,27 @@ export class GameFeedManager {
             const boxScore = await API.Games.GetBoxScore(this.gameId);
             const currentState = boxScore.gameState;
 
-            // TODO - remove debug logging later
-            // Log state transitions
-            if (currentState !== lastSeenState) {
-                Logger.info(`[GAME END] State transition: ${lastSeenState || 'INITIAL'} -> ${currentState}`);
-                lastSeenState = currentState;
-            }
-
             // Check if (and when) we've reached official end state
             if (currentState === GameState.official && !officialStateReached) {
-                Logger.info(`[GAME END] Game reached OFFICIAL state`);
                 officialStateReached = true;
                 officialStateTime = Date.now();
             }
 
-            // Try to get story data and update embed
+            // Try to get story data and send as new message
             const story = await API.Games.GetStory(this.gameId);
 
             if (story?.summary) {
                 // Log what's available
                 const threeStars = story.summary.threeStars?.length || 0;
                 const gameStats = story.summary.teamGameStats?.length || 0;
-                // Update embed if we have meaningful data
+                // Send story summary as new message if we have meaningful data
                 if (threeStars > 0 || gameStats > 0) {
-                    const updatedEmbed = this.embedFormatter.createStoryEmbed(story);
-                    await gameEndMessage.edit({ embeds: [updatedEmbed] });
+                    const storyEmbed = this.embedFormatter.createStoryEmbed(story);
+                    await this?.thread?.send({ embeds: [storyEmbed] });
+                    // Stop polling after successfully sending story
+                    Logger.info(`[GAME END] Story data sent for game ${this.gameId}`);
+                    this.finalizeGameThread();
+                    return;
                 }
             }
 
