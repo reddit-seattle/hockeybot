@@ -7,6 +7,7 @@ import { MessageFlags } from "discord.js";
 
 export const GameThread: Command = {
     name: "gamethread",
+    adminOnly: true,
     description: "Track a specific game and create a game thread",
     slashCommandDescription: new SlashCommandBuilder()
         .addStringOption((option) =>

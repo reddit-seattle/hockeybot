@@ -6,6 +6,7 @@ import { isGuildTextChannel } from "../../utils/helpers";
 
 export const ReplayGame: Command = {
     name: "debug-game",
+    adminOnly: true,
     description: "[DEBUG] Replay a completed game for testing game threads",
     slashCommandDescription: new SlashCommandBuilder()
         .addStringOption((option) =>

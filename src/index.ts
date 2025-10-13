@@ -1,6 +1,6 @@
 import { REST } from "@discordjs/rest";
 import { RESTPostAPIApplicationCommandsJSONBody, Routes } from "discord-api-types/v10";
-import { ChannelType, Client, Guild, Interaction } from "discord.js";
+import { ChannelType, Client, Guild, Interaction, SlashCommandBuilder } from "discord.js";
 import { createServer } from "http";
 import { exit } from "process";
 import { Mariners } from "./commands/MLB";
@@ -57,7 +57,10 @@ const registerAllSlashCommands = async (client: Client) => {
         for (const commandName in commands) {
             const command = commands[commandName];
             Logger.debug(`adding ${command.name} slash command registration`);
-            const desc = command.slashCommandDescription.setName(command.name).setDescription(command.description);
+            const desc = command.slashCommandDescription.setName(command.name).setDescription(command.description) as SlashCommandBuilder;
+            if (command.adminOnly) {
+                desc.setDefaultMemberPermissions(0);
+            }
             if (desc?.toJSON) {
                 try {
                     const description = desc.toJSON();
