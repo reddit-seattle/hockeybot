@@ -1,7 +1,7 @@
 import { MessageFlags, SlashCommandBuilder } from "discord.js";
 import { Command } from "../../models/Command";
 import { Logger } from "../../utils/Logger";
-import { GameReplayManager } from "../../service/NHL/tasks/GameReplayManager";
+import { GameReplayManager } from "../../service/NHL/tasks/NHLGameReplayManager";
 import { isGuildTextChannel } from "../../utils/helpers";
 
 export const ReplayGame: Command = {
