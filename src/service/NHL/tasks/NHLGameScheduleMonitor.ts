@@ -1,6 +1,6 @@
-import { CronJob, Task, ToadScheduler } from "toad-scheduler";
 import { TextChannel } from "discord.js";
 import { existsSync, readFileSync, writeFileSync } from "fs";
+import { CronJob, Task, ToadScheduler } from "toad-scheduler";
 import { Logger } from "../../../utils/Logger";
 import { Config } from "../../../utils/constants";
 import { API } from "../API";
@@ -25,10 +25,7 @@ export class NHLGameScheduleMonitor {
      * @param channel Discord channel to post threads in
      * @param favoriteTeamId automatically track games for this team daily
      */
-    constructor(
-        channel: TextChannel,
-        favoriteTeamId: string | null = null
-    ) {
+    constructor(channel: TextChannel, favoriteTeamId: string | null = null) {
         this.channel = channel;
         this.favoriteTeamId = favoriteTeamId;
         if (!favoriteTeamId) {
@@ -36,11 +33,10 @@ export class NHLGameScheduleMonitor {
         }
 
         // Load persisted manual games
-        this.loadManualGames();
+        this.loadManualGamesFromDisk();
     }
 
-    // load file with game ids
-    private loadManualGames(): void {
+    private loadManualGamesFromDisk(): void {
         try {
             if (existsSync(MANUAL_GAMES_FILE)) {
                 const data = readFileSync(MANUAL_GAMES_FILE, "utf8");
@@ -55,8 +51,7 @@ export class NHLGameScheduleMonitor {
         }
     }
 
-    // save file with game ids
-    private saveManualGames(): void {
+    private saveManualGamesToDisk(): void {
         try {
             const gameIds = Array.from(this.manualGameIds);
             const dir = MANUAL_GAMES_FILE.substring(0, MANUAL_GAMES_FILE.lastIndexOf("/"));
@@ -88,7 +83,7 @@ export class NHLGameScheduleMonitor {
         const dailyCheckerTask = new CronJob(
             { cronExpression: Config.GAME_CHECKER_CRON, timezone: Config.TIME_ZONE },
             new Task("daily schedule checker", this.checkTodaysSchedule),
-            { preventOverrun: true }
+            { preventOverrun: true },
         );
         this.scheduler.addCronJob(dailyCheckerTask);
         this.isRunning = true;
@@ -113,7 +108,7 @@ export class NHLGameScheduleMonitor {
 
         // Add to manual tracking and persist
         this.manualGameIds.add(gameId);
-        this.saveManualGames();
+        this.saveManualGamesToDisk();
         Logger.info(`Added game ID ${gameId} to tracking list`);
 
         // Create thread manager using same logic as processGame
@@ -141,9 +136,8 @@ export class NHLGameScheduleMonitor {
 
             // Check for games we care about
             if (this.favoriteTeamId) {
-                const teamGames = games.filter(game =>
-                    game.homeTeam.id === this.favoriteTeamId ||
-                    game.awayTeam.id === this.favoriteTeamId
+                const teamGames = games.filter(
+                    (game) => game.homeTeam.id === this.favoriteTeamId || game.awayTeam.id === this.favoriteTeamId,
                 );
                 gamesToTrack.push(...teamGames);
                 if (teamGames.length > 0) {
@@ -153,7 +147,7 @@ export class NHLGameScheduleMonitor {
 
             // Check for manually added game IDs
             if (this.manualGameIds.size > 0) {
-                const manualGames = games.filter(game => this.manualGameIds.has(game.id));
+                const manualGames = games.filter((game) => this.manualGameIds.has(game.id));
                 gamesToTrack.push(...manualGames);
                 if (manualGames.length > 0) {
                     Logger.info(`Found ${manualGames.length} manually tracked games`);
@@ -161,7 +155,7 @@ export class NHLGameScheduleMonitor {
             }
 
             // Remove duplicates
-            const uniqueGames = Array.from(new Map(gamesToTrack.map(game => [game.id, game])).values());
+            const uniqueGames = Array.from(new Map(gamesToTrack.map((game) => [game.id, game])).values());
 
             if (uniqueGames.length === 0) {
                 Logger.info("No games to track today");
@@ -175,7 +169,7 @@ export class NHLGameScheduleMonitor {
         } catch (error) {
             Logger.error("Error checking today's schedule:", error);
         }
-    }
+    };
 
     // Creates a GameThreadManager for the specified game ID
     // This GameThreadManager creates a thread and updates with game events
@@ -194,8 +188,8 @@ export class NHLGameScheduleMonitor {
                     Logger.info(`Game ${gameId} complete - removing thread manager`);
                     this.activeManagers.delete(gameId);
                     this.manualGameIds.delete(gameId);
-                    this.saveManualGames();
-                }
+                    this.saveManualGamesToDisk();
+                },
             );
             await threadManager.initialize();
             this.activeManagers.set(gameId, threadManager);
@@ -203,7 +197,7 @@ export class NHLGameScheduleMonitor {
         } catch (error) {
             Logger.error(`Error creating thread manager for game ${gameId}:`, error);
             this.manualGameIds.delete(gameId);
-            this.saveManualGames(); // Persist removal
+            this.saveManualGamesToDisk(); // Persist removal
         }
     }
 

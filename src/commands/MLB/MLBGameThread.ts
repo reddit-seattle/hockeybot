@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { MessageFlags } from "discord.js";
 import { Command } from "../../models/Command";
-import { mlbScheduleMonitorService } from "../../service/MLB/MLBScheduleMonitorService";
+import { mlbScheduleMonitorService } from "../../service/ScheduleMonitorService";
 import { mlbGameAutocomplete } from "../../utils/autocomplete";
 import { Logger } from "../../utils/Logger";
 
@@ -9,14 +9,13 @@ export const MLBGameThread: Command = {
     name: "mlbgamethread",
     adminOnly: true,
     description: "Track a specific MLB game with a game thread",
-    slashCommandDescription: new SlashCommandBuilder()
-        .addStringOption((option) =>
-            option
-                .setName("game")
-                .setDescription("Select an MLB game from today's schedule")
-                .setRequired(true)
-                .setAutocomplete(true)
-        ),
+    slashCommandDescription: new SlashCommandBuilder().addStringOption((option) =>
+        option
+            .setName("game")
+            .setDescription("Select an MLB game from today's schedule")
+            .setRequired(true)
+            .setAutocomplete(true),
+    ),
     executeSlashCommand: async (interaction) => {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 

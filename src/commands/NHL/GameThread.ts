@@ -1,28 +1,27 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
+import { MessageFlags } from "discord.js";
 import { Command } from "../../models/Command";
+import { nhlScheduleMonitorService } from "../../service/ScheduleMonitorService";
 import { activeGameAutocomplete } from "../../utils/autocomplete";
 import { Logger } from "../../utils/Logger";
-import { scheduleMonitorService } from "../../service/NHL/ScheduleMonitorService";
-import { MessageFlags } from "discord.js";
 
 export const GameThread: Command = {
     name: "gamethread",
     adminOnly: true,
     description: "Track a specific game and create a game thread",
-    slashCommandDescription: new SlashCommandBuilder()
-        .addStringOption((option) =>
-            option
-                .setName("game")
-                .setDescription("Select a game from today's schedule")
-                .setRequired(true)
-                .setAutocomplete(true)
-        ),
+    slashCommandDescription: new SlashCommandBuilder().addStringOption((option) =>
+        option
+            .setName("game")
+            .setDescription("Select a game from today's schedule")
+            .setRequired(true)
+            .setAutocomplete(true),
+    ),
     executeSlashCommand: async (interaction) => {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const gameId = interaction.options.getString("game", true);
 
-        const scheduleMonitor = scheduleMonitorService.get();
+        const scheduleMonitor = nhlScheduleMonitorService.get();
         if (!scheduleMonitor) {
             await interaction.followUp({ content: "Game tracking is not enabled." });
             return;

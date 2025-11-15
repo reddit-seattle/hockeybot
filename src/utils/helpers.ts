@@ -23,8 +23,7 @@ export const getPackageVersion = () => {
         }
     }
     return packageVersion;
-}
-
+};
 
 // credit: Typescript documentation, src
 // https://www.typescriptlang.org/docs/handbook/advanced-types.html#index-types
@@ -128,7 +127,7 @@ export const requiredDivisionOption = (option: SlashCommandStringOption) =>
             { name: "Atlantic", value: DivisionAbbrev.atlantic },
             { name: "Central", value: DivisionAbbrev.central },
             { name: "Metro", value: DivisionAbbrev.metro },
-            { name: "Pacific", value: DivisionAbbrev.pacific }
+            { name: "Pacific", value: DivisionAbbrev.pacific },
         );
 
 export const requiredConferenceOption = (option: SlashCommandStringOption) =>
@@ -138,7 +137,7 @@ export const requiredConferenceOption = (option: SlashCommandStringOption) =>
         .setRequired(true)
         .addChoices(
             { name: "Western", value: ConferenceAbbrev.western },
-            { name: "Eastern", value: ConferenceAbbrev.eastern }
+            { name: "Eastern", value: ConferenceAbbrev.eastern },
         );
 
 export const requiredTeamOption = (option: SlashCommandStringOption) =>
@@ -155,7 +154,7 @@ export const relativeDateString = (input: string | Date) => {
 
 export const localizedTimeString = (input: string | Date): string => {
     const date = new Date(input);
-    return date.toLocaleTimeString('en-US', Config.LOCAL_TIME_DISPLAY_OPTIONS);
+    return date.toLocaleTimeString("en-US", Config.LOCAL_TIME_DISPLAY_OPTIONS);
 };
 
 export const processLocalizedDateInput = (input?: string | Date | null) => {
@@ -261,5 +260,5 @@ export function isGuildTextChannel(channel: Channel | null): channel is TextChan
 }
 
 export function delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }

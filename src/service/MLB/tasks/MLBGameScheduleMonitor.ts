@@ -26,7 +26,7 @@ export class MLBGameScheduleMonitor {
     public async initialize(): Promise<void> {
         Logger.info("[MLB] Initializing MLB game schedule monitor");
 
-        this.loadManualGamesFromDisk();
+        await this.loadManualGamesFromDisk();
 
         const dailyCheck = new CronJob(
             { cronExpression: Config.GAME_CHECKER_CRON, timezone: Config.TIME_ZONE },
@@ -106,7 +106,7 @@ export class MLBGameScheduleMonitor {
         }
     }
 
-    private loadManualGamesFromDisk(): void {
+    private async loadManualGamesFromDisk(): Promise<void> {
         try {
             if (fs.existsSync(MANUAL_GAMES_FILE)) {
                 const data = fs.readFileSync(MANUAL_GAMES_FILE, "utf8");
@@ -115,7 +115,7 @@ export class MLBGameScheduleMonitor {
                 Logger.info(`[MLB] Loaded ${games.length} manual game(s) from disk`);
 
                 // Recreate thread managers for manual games
-                games.forEach((gameId) => this.createThreadManager(gameId));
+                await Promise.all(games.map((gameId) => this.createThreadManager(gameId)));
             }
         } catch (error) {
             Logger.error("[MLB] Error loading manual games:", error);

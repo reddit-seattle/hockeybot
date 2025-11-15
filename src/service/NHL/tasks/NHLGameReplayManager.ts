@@ -1,10 +1,10 @@
 import { ThreadChannel } from "discord.js";
 import { Config } from "../../../utils/constants";
 import { GameFeedEmbedFormatter } from "../../../utils/EmbedFormatters";
+import { delay } from "../../../utils/helpers";
 import { Logger } from "../../../utils/Logger";
 import { API } from "../API";
 import { Play, PlayByPlayResponse } from "../models/PlayByPlayResponse";
-import { delay } from "../../../utils/helpers";
 
 export class GameReplayManager {
     private thread: ThreadChannel;
@@ -62,7 +62,7 @@ export class GameReplayManager {
         if (!this.feed) return;
 
         const { plays } = this.feed;
-        const playsToReplay = plays.filter(play => Config.TRACKED_NHL_EVENT_TYPES.includes(play.typeCode))
+        const playsToReplay = plays.filter((play) => Config.TRACKED_NHL_EVENT_TYPES.includes(play.typeCode));
         Logger.info(`Replaying ${playsToReplay.length} plays...`);
 
         for (const play of playsToReplay) {

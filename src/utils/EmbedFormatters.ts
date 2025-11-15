@@ -113,7 +113,7 @@ export class GameFeedEmbedFormatter {
                 name: `${this.formatHomeTeamEmoji()}**${homeTeam?.commonName.default ?? "Home"}**`,
                 value: `Goals: **${homeScore}**\nShots: ${homeSOG}`,
                 inline: true,
-            }
+            },
         );
 
         // check for highlights and append to description
@@ -124,7 +124,7 @@ export class GameFeedEmbedFormatter {
 
         const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
             periodDescriptor?.number || 1,
-            periodDescriptor?.periodType || "REG"
+            periodDescriptor?.periodType || "REG",
         )} period`;
         return new EmbedBuilder()
             .setTitle(title)
@@ -177,7 +177,7 @@ export class GameFeedEmbedFormatter {
         const { timeRemaining, periodDescriptor } = penalty;
         const timeRemainingString = `${timeRemaining} remaining in the ${periodToStr(
             periodDescriptor?.number || 1,
-            periodDescriptor?.periodType || "REG"
+            periodDescriptor?.periodType || "REG",
         )} period`;
 
         return new EmbedBuilder()
@@ -199,8 +199,9 @@ export class GameFeedEmbedFormatter {
 
         const { periodDescriptor } = periodEvent;
         const periodOrdinal = periodToStr(periodDescriptor?.number || 1, periodDescriptor?.periodType || "REG");
-        const title = `${periodOrdinal} period has ${periodEvent.typeCode == EventTypeCode.periodEnd ? "ended" : "started"
-            }.`;
+        const title = `${periodOrdinal} period has ${
+            periodEvent.typeCode == EventTypeCode.periodEnd ? "ended" : "started"
+        }.`;
 
         const awayString = `${this.formatAwayTeamEmoji()}${away.commonName.default}`;
         const homeString = `${this.formatHomeTeamEmoji()}${home.commonName.default}`;
@@ -212,12 +213,16 @@ export class GameFeedEmbedFormatter {
                 .addFields([
                     {
                         name: `**${awayString}**`,
-                        value: away?.radioLink ? `[${away.placeName.default} Audio](${away.radioLink})` : "No radio link",
+                        value: away?.radioLink
+                            ? `[${away.placeName.default} Audio](${away.radioLink})`
+                            : "No radio link",
                         inline: true,
                     },
                     {
                         name: `**${homeString}**`,
-                        value: home?.radioLink ? `[${home.placeName.default} Audio](${home.radioLink})` : "No radio link",
+                        value: home?.radioLink
+                            ? `[${home.placeName.default} Audio](${home.radioLink})`
+                            : "No radio link",
                         inline: true,
                     },
                 ])
@@ -322,9 +327,9 @@ export class GameFeedEmbedFormatter {
                 value: story.summary.threeStars
                     .slice(0, 3) // Ensure we only get 3 stars
                     .map((star, index) => {
-                        const starNumber = ["1st", "2nd", "3rd"][index];
+                        const starLabel = ["1st", "2nd", "3rd"][index];
                         const points = star.points > 0 ? ` (${star.goals}G ${star.assists}A)` : "";
-                        return `**${starNumber}:**: ${star.name} ${EmojiCache.getNHLTeamEmoji(star.teamAbbrev) || star.teamAbbrev}${points}`;
+                        return `**${starLabel}:** ${star.name} ${EmojiCache.getNHLTeamEmoji(star.teamAbbrev) || star.teamAbbrev}${points}`;
                     })
                     .join("\n"),
                 inline: false,
@@ -336,7 +341,7 @@ export class GameFeedEmbedFormatter {
         if (story.summary?.scoring?.length > 0) {
             // Collect all goals from all periods
             const allGoals: any[] = [];
-            story.summary.scoring.forEach(periodScoring => {
+            story.summary.scoring.forEach((periodScoring) => {
                 allGoals.push(...periodScoring.goals);
             });
 
@@ -347,7 +352,7 @@ export class GameFeedEmbedFormatter {
                     .map((goal: any) => {
                         const scorer = goal.name?.default || `${goal.firstName.default} ${goal.lastName.default}`;
                         const periodScoring = story.summary.scoring.find((p: any) => p.goals.includes(goal));
-                        const period = `P${periodScoring?.periodDescriptor.number || '?'}`;
+                        const period = `P${periodScoring?.periodDescriptor.number || "?"}`;
                         return `- [${goal.teamAbbrev.default} Goal - ${scorer} (${period})](${goal.highlightClipSharingUrl})`;
                     })
                     .join("\n");
@@ -371,21 +376,25 @@ export class GameFeedEmbedFormatter {
 
             // Define stats to display (order matters)
             const statsConfig: Array<{ category: string; label: string; formatter?: (val: string) => string }> = [
-                { category: StoryStatCategories.FACEOFF_WIN_PCT, label: 'Faceoffs', formatter: (val) => this.formatStatValue(StoryStatCategories.FACEOFF_WIN_PCT, val) },
-                { category: StoryStatCategories.POWER_PLAY, label: 'PP' },
-                { category: StoryStatCategories.PIM, label: 'PIM' },
-                { category: StoryStatCategories.HITS, label: 'Hits' },
-                { category: StoryStatCategories.BLOCKED_SHOTS, label: 'Blocked Shots' },
-                { category: StoryStatCategories.GIVEAWAYS, label: 'Giveaways' },
-                { category: StoryStatCategories.TAKEAWAYS, label: 'Takeaways' },
+                {
+                    category: StoryStatCategories.FACEOFF_WIN_PCT,
+                    label: "Faceoffs",
+                    formatter: (val) => this.formatStatValue(StoryStatCategories.FACEOFF_WIN_PCT, val),
+                },
+                { category: StoryStatCategories.POWER_PLAY, label: "PP" },
+                { category: StoryStatCategories.PIM, label: "PIM" },
+                { category: StoryStatCategories.HITS, label: "Hits" },
+                { category: StoryStatCategories.BLOCKED_SHOTS, label: "Blocked Shots" },
+                { category: StoryStatCategories.GIVEAWAYS, label: "Giveaways" },
+                { category: StoryStatCategories.TAKEAWAYS, label: "Takeaways" },
             ];
 
             // Find stats for each team
-            const getStat = (cat: string) => story.summary.teamGameStats.find(stat => stat.category === cat);
+            const getStat = (cat: string) => story.summary.teamGameStats.find((stat) => stat.category === cat);
 
             // Build stat lines from config
             const statLines = statsConfig
-                .map(config => {
+                .map((config) => {
                     const stat = getStat(config.category);
                     if (!stat) return null;
 
@@ -394,7 +403,7 @@ export class GameFeedEmbedFormatter {
 
                     return `**${config.label}:** ${awayValue} - ${homeValue}`;
                 })
-                .filter(line => line !== null);
+                .filter((line) => line !== null);
 
             if (statLines.length > 0) {
                 const statsField = {
@@ -432,7 +441,7 @@ export class GameFeedEmbedFormatter {
             if (!isNaN(seconds)) {
                 const minutes = Math.floor(seconds / 60);
                 const remainingSeconds = seconds % 60;
-                return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+                return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
             }
         }
 
@@ -459,13 +468,13 @@ export class GameFeedEmbedFormatter {
 export const GameAnnouncementEmbedBuilder = async (gameId: string) => {
     const boxScore = await API.Games.GetBoxScore(gameId);
     const { homeTeam, awayTeam, venue, startTimeUTC } = boxScore;
-    
+
     const homeEmoji = EmojiCache.getNHLTeamEmoji(homeTeam.abbrev);
     const awayEmoji = EmojiCache.getNHLTeamEmoji(awayTeam.abbrev);
-    
+
     const homeDisplay = `${homeTeam.commonName.default}${homeEmoji ? ` ${homeEmoji}` : ""}`;
     const awayDisplay = `${awayEmoji ? `${awayEmoji} ` : ""}${awayTeam.commonName.default}`;
-    
+
     const title = `Pregame: ${awayDisplay} vs ${homeDisplay}`;
     return new EmbedBuilder()
         .setTitle(title)
@@ -475,7 +484,7 @@ export const GameAnnouncementEmbedBuilder = async (gameId: string) => {
 
 export const ScheduleEmbedBuilder = async (
     schedule: (DayScheduleGame | TeamWeeklyScheduleGame | TeamMonthlyScheduleGame)[],
-    scheduleTypeDisplay: string
+    scheduleTypeDisplay: string,
 ) => {
     const fields = await Promise.all(
         schedule.map(async (item) => {
@@ -483,7 +492,7 @@ export const ScheduleEmbedBuilder = async (
             const dateSlug = relativeDateString(startTimeUTC);
             const dateStr = `${format(
                 utcToZonedTime(startTimeUTC, Config.TIME_ZONE),
-                Config.BODY_DATE_FORMAT
+                Config.BODY_DATE_FORMAT,
             )} (${dateSlug})`;
             const venuStr = `Venue: ${venue.default}`;
             let output = `${dateStr}\n${venuStr}`;
@@ -505,7 +514,7 @@ export const ScheduleEmbedBuilder = async (
                 value: output,
                 inline: false,
             };
-        })
+        }),
     );
     return new EmbedBuilder()
         .setTitle(`${scheduleTypeDisplay} Schedule`)

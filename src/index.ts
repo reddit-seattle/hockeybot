@@ -8,11 +8,10 @@ import { GameThread, GetSchedule, GetScores, GetStandings, GetStats, PlayoffBrac
 import { CommandDictionary } from "./models/Command";
 import { MLBGameScheduleMonitor } from "./service/MLB/tasks/MLBGameScheduleMonitor";
 import { NHLGameScheduleMonitor } from "./service/NHL/tasks/NHLGameScheduleMonitor";
+import { mlbScheduleMonitorService, nhlScheduleMonitorService } from "./service/ScheduleMonitorService";
 import { Environment } from "./utils/constants";
 // @ts-ignore
 import LogTimestamp from "log-timestamp";
-import { mlbScheduleMonitorService } from "./service/MLB/MLBScheduleMonitorService";
-import { scheduleMonitorService } from "./service/NHL/ScheduleMonitorService";
 import { EmojiCache } from "./utils/EmojiCache";
 import { getPackageVersion } from "./utils/helpers";
 import { Logger } from "./utils/Logger";
@@ -99,7 +98,7 @@ const startNHLGameDayThreadChecker = async (guild: Guild) => {
     // Start NHL monitor
     const scheduleMonitor = new NHLGameScheduleMonitor(nhlGameDayChannel, Environment.HOCKEYBOT_TEAM_ID || null);
     scheduleMonitor.initialize();
-    scheduleMonitorService.set(scheduleMonitor);
+    nhlScheduleMonitorService.set(scheduleMonitor);
     Logger.info("NHL schedule monitor started");
 };
 
