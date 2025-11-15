@@ -13,13 +13,13 @@ export const ReplayGame: Command = {
             option
                 .setName("game")
                 .setDescription("NHL Game ID (e.g., 2023020543)")
-                .setRequired(false)
+                .setRequired(true)
         ),
     executeSlashCommand: async (interaction) => {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         try {
-            const gameId = interaction.options.getString("game") ?? "";
+            const gameId = interaction.options.getString("game", true);
 
             if (isGuildTextChannel(interaction.channel)) {
                 const channel = interaction.channel;
