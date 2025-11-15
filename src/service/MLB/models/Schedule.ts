@@ -18,7 +18,7 @@ export interface ScheduleDate {
 }
 
 export interface Game {
-	gamePk: string;
+	gamePk: number;
 	gameGuid: string;
 	link: string;
 	gameType: string;
@@ -69,7 +69,7 @@ export interface LeagueRecord {
 }
 
 export interface Team {
-	id: string;
+	id: number;
 	name: string;
 	link: string;
 }

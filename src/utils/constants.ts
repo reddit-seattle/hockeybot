@@ -192,11 +192,6 @@ export namespace Strings {
 	};
 }
 
-export namespace TeamIds {
-	export const Kraken: string = "55";
-	export const Mariners: string = "136";
-}
-
 export namespace Environment {
 	// Token
 	export const botToken = process.env["bot_token"] || undefined;

@@ -131,10 +131,10 @@ class GameThreadManager {
 		// If either team matches our favorite team ID, use special title
 		if (
 			favoriteTeamId &&
-			(homeTeam.id.toString() === favoriteTeamId || awayTeam.id.toString() === favoriteTeamId)
+			(`${homeTeam.id}` === favoriteTeamId || `${awayTeam.id}` === favoriteTeamId)
 		) {
 			// Add emoji to favorite team title
-			const ourTeamEmoji = homeTeam.id.toString() === favoriteTeamId ? homeEmoji : awayEmoji;
+			const ourTeamEmoji = `${homeTeam.id}` === favoriteTeamId ? homeEmoji : awayEmoji;
 			title = ourTeamEmoji
 				? `${ourTeamEmoji} ${favoriteTeamName} game today!`
 				: `${favoriteTeamName} game today!`;

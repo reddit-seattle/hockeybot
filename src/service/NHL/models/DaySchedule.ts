@@ -8,7 +8,7 @@ export interface TvBroadcast {
 }
 
 export interface Team {
-	id: string;
+	id: number;
 	commonName: LocalizedString;
 	placeName: LocalizedString;
 	placeNameWithPreposition: LocalizedString;

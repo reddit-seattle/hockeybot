@@ -2,7 +2,7 @@ import { EmbedBuilder, SlashCommandBuilder } from "@discordjs/builders";
 import { utcToZonedTime } from "date-fns-tz";
 import { Command } from "../../models/Command";
 import { API } from "../../service/MLB/API";
-import { Colors, Config, TeamIds } from "../../utils/constants";
+import { Colors, Config, Environment } from "../../utils/constants";
 
 export const Mariners: Command = {
 	name: "mariners",
@@ -44,7 +44,7 @@ export const Mariners: Command = {
 		switch (subcommand) {
 			case "next":
 				const number = interaction.options.getInteger("number", false);
-				const nextGames = await API.Schedule.TeamNext(TeamIds.Mariners, number ?? 1);
+				const nextGames = await API.Schedule.TeamNext(`${Environment.HOCKEYBOT_MLB_TEAM_ID}`, number ?? 1);
 				if (nextGames.length == 0) {
 					await interaction.followUp("No games found");
 					return;
@@ -55,7 +55,7 @@ export const Mariners: Command = {
 						nextGames
 							.map((game) => {
 								const date = utcToZonedTime(game.gameDate, Config.TIME_ZONE);
-								const isHomeGame = game.teams.home.team.id == TeamIds.Mariners;
+								const isHomeGame = `${game.teams.home.team.id}` === Environment.HOCKEYBOT_MLB_TEAM_ID;
 								const vsString = isHomeGame ? "vs" : " @";
 								const opponent = isHomeGame ? game.teams.away.team.name : game.teams.home.team.name;
 								const formattedDate = date.toLocaleString("en-US", {
@@ -75,7 +75,7 @@ export const Mariners: Command = {
 				break;
 			case "scores":
 				const allTeams = interaction.options.getBoolean("all", false);
-				const teamId = allTeams ? undefined : TeamIds.Mariners;
+				const teamId = allTeams ? undefined : `${Environment.HOCKEYBOT_MLB_TEAM_ID}`;
 				const games = await API.Schedule.Today(teamId);
 				if (games.length == 0) {
 					await interaction.followUp(`No games today`);
@@ -85,7 +85,7 @@ export const Mariners: Command = {
 				for (const game of games) {
 					const { gamePk } = game;
 					const { home, away } = game.teams;
-					const gameFeed = await API.LiveGames.ById(gamePk);
+					const gameFeed = await API.LiveGames.ById(`${gamePk}`);
 					fields.push({
 						name: `${home.score ?? 0} - ${home.team.name}\n${away.score ?? 0} - ${away.team.name}`,
 						value:

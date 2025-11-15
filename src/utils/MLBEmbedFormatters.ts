@@ -149,7 +149,7 @@ export class MLBGameFeedEmbedFormatter {
 		const winnerEmoji = EmojiCache.getMLBTeamEmoji(winner.abbreviation);
 		const loserEmoji = EmojiCache.getMLBTeamEmoji(loser.abbreviation);
 
-		const title = `${winner.teamName} Win${winner.id === parseInt(Environment.HOCKEYBOT_MLB_TEAM_ID!) ? "!" : ""}`;
+		const title = `${winner.teamName} Win${`${winner.id}` === Environment.HOCKEYBOT_MLB_TEAM_ID ? "!" : ""}`;
 		const description = `${winnerEmoji} ${winner.teamName} **${winnerScore}**\n${loserEmoji} ${loser.teamName} **${loserScore}**`;
 
 		const lineScore = this.buildLineScore();
