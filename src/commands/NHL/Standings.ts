@@ -4,14 +4,10 @@ import _ from "underscore";
 import { Command } from "../../models/Command";
 import { API } from "../../service/NHL/API";
 import { Standing } from "../../service/NHL/models/DefaultStandingsResponse";
-import { ConferenceAbbrev } from "../../utils/enums";
+import { EmojiCache } from "../../utils/EmojiCache";
+import { ConferenceAbbrev, DivisionAbbrev } from "../../utils/enums";
 import { requiredConferenceOption, requiredDivisionOption } from "../../utils/helpers";
 
-/**
- * TODO
- * Standings
- * By League, Conference, Division, wildcard
- */
 export const GetStandings: Command = {
 	name: "standings",
 	description: "Get NHL Standings",
@@ -22,11 +18,6 @@ export const GetStandings: Command = {
 		.addSubcommand((cmd) =>
 			cmd.setName("conference").setDescription("Conference Standings").addStringOption(requiredConferenceOption),
 		)
-		// .addSubcommand(cmd =>
-		//     cmd
-		//         .setName('league')
-		//         .setDescription('League Standings')
-		// )
 		.addSubcommand((cmd) => cmd.setName("wildcard").setDescription("Wildcard Standings")),
 
 	async executeSlashCommand(interaction) {
@@ -41,12 +32,13 @@ export const GetStandings: Command = {
 			const conference = interaction.options.getString("conference", true);
 			const sortedStandings = standings
 				.filter((standing) => standing.conferenceAbbrev == conference)
-				.sort((standing) => standing.conferenceSequence);
+				.sort((a, b) => a.conferenceSequence - b.conferenceSequence);
 
 			const title = `${conference === "E" ? "Eastern" : "Western"} conference standings`;
 			const fields = sortedStandings.map((standing, idx) => {
-				const { teamAbbrev, teamName } = standing;
-				const teamDescriptor = `${idx + 1}: [${teamAbbrev.default}] ${teamName.default}`;
+				const { teamAbbrev } = standing;
+				const emoji = EmojiCache.getNHLTeamEmoji(teamAbbrev.default);
+				const teamDescriptor = `${idx + 1}: ${emoji} **${teamAbbrev.default}**`;
 				return {
 					name: teamDescriptor,
 					value: buildTeamStandingString(standing),
@@ -60,12 +52,19 @@ export const GetStandings: Command = {
 			const division = interaction.options.getString("division", true);
 			const sortedStandings = standings
 				.filter((standing) => standing.divisionAbbrev == division)
-				.sort((standing) => standing.divisionSequence);
-			const div = standings[0].divisionName;
-			const title = `${div} division standings`;
+				.sort((a, b) => a.divisionSequence - b.divisionSequence);
+
+			const divisionNameMap: { [key: string]: string } = {
+				[DivisionAbbrev.atlantic]: "Atlantic",
+				[DivisionAbbrev.central]: "Central",
+				[DivisionAbbrev.metro]: "Metro",
+				[DivisionAbbrev.pacific]: "Pacific",
+			};
+			const title = `${divisionNameMap[division]} division standings`;
 			const fields = sortedStandings.map((standing, idx) => {
-				const { teamAbbrev, teamName } = standing;
-				const teamDescriptor = `${idx + 1}: [${teamAbbrev.default}] ${teamName.default}`;
+				const { teamAbbrev } = standing;
+				const emoji = EmojiCache.getNHLTeamEmoji(teamAbbrev.default);
+				const teamDescriptor = `${idx + 1}: ${emoji} **${teamAbbrev.default}**`;
 				return {
 					name: teamDescriptor,
 					value: buildTeamStandingString(standing),
@@ -86,44 +85,54 @@ export const GetStandings: Command = {
 			const easternPlayoffs = _.first(eastern, 8);
 			const westernPlayoffs = _.first(western, 8);
 
-			const eastWildcardRace = eastern.filter((standing) => standing.wildcardSequence > 2);
-			const westWildcardRace = western.filter((standing) => standing.wildcardSequence > 2);
+			const eastWildcardRace = eastern.slice(8);
+			const westWildcardRace = western.slice(8);
 
 			const title = "Wildcard standings";
 			const fields = [
 				{
-					name: "Eastern Playoffs",
+					name: "**Eastern Playoffs**",
 					value: easternPlayoffs
 						.map((standing, idx) => {
-							const pos = idx > 5 ? `WC${idx - 5}` : idx + 1;
-							return `${pos}: ${buildWildcardString(standing)}`;
+							const pos = idx >= 6 ? `WC${idx - 5}` : `${idx + 1}`;
+							return `\`${pos.padEnd(3)}\` ${buildWildcardString(standing)}`;
 						})
 						.join("\n"),
+					inline: false,
 				},
 				{
-					name: "Eastern Wildcard",
-					value: eastWildcardRace
-						.map((standing) => {
-							return `${buildWildcardString(standing)}`;
-						})
-						.join("\n"),
+					name: "**Eastern Wildcard**",
+					value:
+						eastWildcardRace.length > 0
+							? eastWildcardRace
+									.map((standing) => {
+										return `${buildWildcardString(standing)}`;
+									})
+									.join("\n")
+							: "No teams in wildcard race",
+					inline: false,
 				},
 				{
-					name: "Western Playoffs",
+					name: "**Western Playoffs**",
 					value: westernPlayoffs
 						.map((standing, idx) => {
-							const pos = idx > 5 ? `WC${idx - 5}` : idx + 1;
-							return `${pos}: ${buildWildcardString(standing)}`;
+							const pos = idx >= 6 ? `WC${idx - 5}` : `${idx + 1}`;
+							return `\`${pos.padEnd(3)}\` ${buildWildcardString(standing)}`;
 						})
 						.join("\n"),
+					inline: false,
 				},
 				{
-					name: "Western Wildcard",
-					value: westWildcardRace
-						.map((standing) => {
-							return `${buildWildcardString(standing)}`;
-						})
-						.join("\n"),
+					name: "**Western Wildcard**",
+					value:
+						westWildcardRace.length > 0
+							? westWildcardRace
+									.map((standing) => {
+										return `${buildWildcardString(standing)}`;
+									})
+									.join("\n")
+							: "No teams in wildcard race",
+					inline: false,
 				},
 			];
 
@@ -139,38 +148,19 @@ const wildcardSort = (a: Standing, b: Standing) => {
 };
 
 const buildWildcardString = (standing: Standing) => {
-	const {
-		teamAbbrev,
-		teamName,
-		points, // (82 pts [.500])
-		gamesPlayed,
-		divisionAbbrev,
-		divisionSequence,
-	} = standing;
+	const { teamAbbrev, points, gamesPlayed, divisionAbbrev, divisionSequence } = standing;
 
-	const teamDescriptor = `${teamAbbrev.default}`;
+	const emoji = EmojiCache.getNHLTeamEmoji(teamAbbrev.default);
 	const divisionDescriptor = `(${divisionAbbrev}${divisionSequence})`;
-	return `${teamDescriptor} - ${points} pts - ${gamesPlayed} GP - ${divisionDescriptor}`;
+	return `${emoji} **${teamAbbrev.default}** - ${points} pts - ${gamesPlayed} GP - ${divisionDescriptor}`;
 };
 
 const buildTeamStandingString = (standing: Standing) => {
-	const {
-		points,
-		pointPctg, // (82 pts [.500])
-		wins,
-		losses,
-		otLosses, // (W-L-OTL)
-		streakCode,
-		streakCount, // W2
-		l10Wins,
-		l10Losses,
-		l10OtLosses, // (L10)
-	} = standing;
+	const { points, wins, losses, otLosses, streakCode, streakCount, l10Wins, l10Losses, l10OtLosses } = standing;
 
-	const pointsDescriptor = `${points} pts`;
-	const record = `(${wins}-${losses}-${otLosses})`;
-	const l10 = `(${l10Wins}-${l10Losses}-${l10OtLosses})`;
-	const streak = `${streakCount}${streakCode}`;
+	const record = `${wins}-${losses}-${otLosses}`;
+	const l10 = `L10: (${l10Wins}-${l10Losses}-${l10OtLosses})`;
+	const streak = `streak ${streakCount}${streakCode}`;
 
-	return `${pointsDescriptor} - ${record} - L10: ${l10} - streak ${streak}`;
+	return `${points} pts - (${record}) - ${l10} - ${streak}`;
 };
