@@ -2,15 +2,15 @@ import { MLBGameScheduleMonitor } from "./MLB/tasks/MLBGameScheduleMonitor";
 import { NHLGameScheduleMonitor } from "./NHL/tasks/NHLGameScheduleMonitor";
 
 export class ScheduleMonitorService<T> {
-    private monitor?: T;
+	private monitor?: T;
 
-    set(monitor: T): void {
-        this.monitor = monitor;
-    }
+	set(monitor: T): void {
+		this.monitor = monitor;
+	}
 
-    get(): T | undefined {
-        return this.monitor;
-    }
+	get(): T | undefined {
+		return this.monitor;
+	}
 }
 
 // Singleton instances
