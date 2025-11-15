@@ -1,10 +1,9 @@
 import { addHours, format, getUnixTime } from "date-fns";
-import { AutocompleteInteraction, Channel, ChannelType, SlashCommandStringOption, TextChannel } from "discord.js";
+import { Channel, ChannelType, SlashCommandStringOption, TextChannel } from "discord.js";
 import { mkdirSync, writeFileSync } from "fs";
-import { any, first } from "underscore";
-import { API } from "../service/NHL/API";
+import { any } from "underscore";
 import { PlayByPlayResponse } from "../service/NHL/models/PlayByPlayResponse";
-import { Environment } from "./constants";
+import { Config, Environment } from "./constants";
 import { ConferenceAbbrev, DivisionAbbrev, GameState, PeriodType, TeamTriCode } from "./enums";
 import { Logger } from "./Logger";
 
@@ -52,68 +51,6 @@ export async function get<T>(url: string): Promise<T> {
     const body = await response.json();
     return body;
 }
-
-//TODO - bring into it's own autocomplete module with name: method loaders
-export const teamOrPlayerAutocomplete = async (interaction: AutocompleteInteraction) => {
-    const value = interaction.options.getFocused(true);
-    if (value.name == "team") {
-        const choices = Object.keys(TeamTriCode);
-        const filtered = choices.filter((choice) => choice.toUpperCase().startsWith(value.value.toUpperCase()));
-        await interaction.respond(
-            first(
-                filtered.map((choice) => ({ name: choice, value: choice })),
-                25
-            )
-        );
-        return;
-    }
-    if (value.name == "player") {
-        const choices = await API.Search.Player(value.value);
-        await interaction.respond(
-            choices
-                ? first(
-                    choices.map((choice) => ({
-                        name: `${choice.name} [${choice.teamAbbrev}]`,
-                        value: choice.playerId,
-                    })),
-                    25
-                )
-                : []
-        );
-        return;
-    }
-};
-
-export const activeGameAutocomplete = async (interaction: AutocompleteInteraction) => {
-    try {
-        const focusedValue = interaction.options.getFocused();
-
-        // Get today's schedule
-        const games = await API.Schedule.GetDailySchedule();
-
-        if (!games || games.length === 0) {
-            await interaction.respond([]);
-            return;
-        }
-
-        // Format games as "AWAY @ HOME" with game ID as value
-        const choices = games.map((game) => ({
-            name: `${game.awayTeam.abbrev} @ ${game.homeTeam.abbrev}`,
-            value: String(game.id), // Ensure it's a string
-        }));
-
-        // Filter based on user input
-        const filtered = choices.filter((choice) =>
-            choice.name.toLowerCase().includes(focusedValue.toLowerCase())
-        );
-
-        // Discord allows max 25 autocomplete options
-        await interaction.respond(filtered.slice(0, 25));
-    } catch (error) {
-        Logger.error("Error fetching games for autocomplete:", error);
-        await interaction.respond([]);
-    }
-};
 
 export const validTeamName = (team: string) => {
     return (
@@ -214,6 +151,11 @@ export const requiredPlayerOption = (option: SlashCommandStringOption) =>
 export const relativeDateString = (input: string | Date) => {
     const time = getUnixTime(new Date(input));
     return `<t:${time}:R>`;
+};
+
+export const localizedTimeString = (input: string | Date): string => {
+    const date = new Date(input);
+    return date.toLocaleTimeString('en-US', Config.LOCAL_TIME_DISPLAY_OPTIONS);
 };
 
 export const processLocalizedDateInput = (input?: string | Date | null) => {

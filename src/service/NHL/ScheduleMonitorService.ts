@@ -1,13 +1,13 @@
-import { GameScheduleMonitor } from "./tasks/GameScheduleMonitor";
+import { NHLGameScheduleMonitor } from "./tasks/NHLGameScheduleMonitor";
 
 class ScheduleMonitorService {
-    private monitor: GameScheduleMonitor | null = null;
+    private monitor: NHLGameScheduleMonitor | null = null;
 
-    public set(monitor: GameScheduleMonitor): void {
+    public set(monitor: NHLGameScheduleMonitor): void {
         this.monitor = monitor;
     }
 
-    public get(): GameScheduleMonitor | null {
+    public get(): NHLGameScheduleMonitor | null {
         return this.monitor;
     }
 }

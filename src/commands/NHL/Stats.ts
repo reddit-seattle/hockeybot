@@ -4,14 +4,15 @@ import {
     SlashCommandSubcommandBuilder,
     SlashCommandSubcommandGroupBuilder,
 } from "@discordjs/builders";
+import { MessageFlags } from "discord.js";
 import { table } from "table";
 import { Command } from "../../models/Command";
 import { API } from "../../service/NHL/API";
 import { Career, Last5Game, PlayerStatsSummary, SubSeason } from "../../service/NHL/models/PlayerStatsSummaryResponse";
 import { TeamSummary } from "../../service/NHL/models/TeamSummaryResponse";
+import { teamOrPlayerAutocomplete } from "../../utils/autocomplete";
 import { PlayerPosition, PlayerStatAbbrev } from "../../utils/enums";
-import { requiredPlayerOption, requiredTeamOption, teamOrPlayerAutocomplete } from "../../utils/helpers";
-import { MessageFlags } from "discord.js";
+import { requiredPlayerOption, requiredTeamOption } from "../../utils/helpers";
 
 export const GetStats: Command = {
     name: "stats",
@@ -22,7 +23,7 @@ export const GetStats: Command = {
             new SlashCommandSubcommandBuilder()
                 .setName("team")
                 .setDescription("Get team stats")
-                .addStringOption(requiredTeamOption)
+                .addStringOption(requiredTeamOption),
         )
         .addSubcommandGroup(
             new SlashCommandSubcommandGroupBuilder()
@@ -32,20 +33,20 @@ export const GetStats: Command = {
                     new SlashCommandSubcommandBuilder()
                         .setName("last5")
                         .setDescription("Get player's last 5 games")
-                        .addStringOption(requiredPlayerOption)
+                        .addStringOption(requiredPlayerOption),
                 )
                 .addSubcommand(
                     new SlashCommandSubcommandBuilder()
                         .setName("season")
                         .setDescription("Get player's season stats")
-                        .addStringOption(requiredPlayerOption)
+                        .addStringOption(requiredPlayerOption),
                 )
                 .addSubcommand(
                     new SlashCommandSubcommandBuilder()
                         .setName("career")
                         .setDescription("Get player's career stats")
-                        .addStringOption(requiredPlayerOption)
-                )
+                        .addStringOption(requiredPlayerOption),
+                ),
         ),
     async executeSlashCommand(interaction) {
         await interaction.deferReply();

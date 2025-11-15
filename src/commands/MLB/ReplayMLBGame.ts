@@ -1,46 +1,45 @@
-import { MessageFlags, SlashCommandBuilder } from "discord.js";
+import { MessageFlags, SlashCommandBuilder, ThreadAutoArchiveDuration } from "discord.js";
 import { Command } from "../../models/Command";
-import { Logger } from "../../utils/Logger";
-import { GameReplayManager } from "../../service/NHL/tasks/GameReplayManager";
+import { MLBGameReplayManager } from "../../service/MLB/tasks/MLBGameReplayManager";
 import { isGuildTextChannel } from "../../utils/helpers";
+import { Logger } from "../../utils/Logger";
 
-export const ReplayGame: Command = {
-    name: "debug-game",
+export const ReplayMLBGame: Command = {
+    name: "debug-mlb-game",
     adminOnly: true,
-    description: "[DEBUG] Replay a completed game for testing game threads",
+    description: "[DEBUG] Replay a completed MLB game for testing game threads",
     slashCommandDescription: new SlashCommandBuilder()
         .addStringOption((option) =>
             option
                 .setName("game")
-                .setDescription("NHL Game ID (e.g., 2023020543)")
-                .setRequired(false)
+                .setDescription("MLB Game ID (gamePk, e.g., 813054)")
+                .setRequired(true)
         ),
     executeSlashCommand: async (interaction) => {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         try {
-            const gameId = interaction.options.getString("game") ?? "";
+            const gameId = interaction.options.getString("game", true);
 
             if (isGuildTextChannel(interaction.channel)) {
                 const channel = interaction.channel;
                 const thread = await channel.threads.create({
-                    name: `[DEBUG]Game: ${gameId}`,
-                    autoArchiveDuration: 60,
-                    reason: "Game replay",
+                    name: `[DEBUG]MLB: ${gameId}`,
+                    autoArchiveDuration: ThreadAutoArchiveDuration.OneHour,
+                    reason: "MLB game replay",
                 });
 
                 await interaction.editReply({
-                    content: `Starting game replay in ${thread}`,
+                    content: `Starting MLB game replay in ${thread}`,
                 });
 
                 // Start the replay
-                const replayManager = new GameReplayManager(thread, gameId);
-
+                const replayManager = new MLBGameReplayManager(thread, gameId);
                 await replayManager.start();
             }
 
         } catch (error: any) {
-            Logger.error("Error in replay-game command:", error);
+            Logger.error("Error in debug-mlb-game command:", error);
             await interaction.editReply({
                 content: `Error: ${error?.message || "Unknown error occurred"}`,
             });

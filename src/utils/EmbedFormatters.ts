@@ -16,7 +16,6 @@ export class GameFeedEmbedFormatter {
     private teamsMap: Map<string, Team> = new Map<string, Team>();
     private roster: Map<string, RosterPlayer> = new Map<string, RosterPlayer>();
     private feed: PlayByPlayResponse;
-    // TODO - pipe in this value to init or from config
     private teamId?: string = Environment.HOCKEYBOT_TEAM_ID;
     private awayTeamEmoji?: string | ApplicationEmoji;
     private homeTeamEmoji?: string | ApplicationEmoji;
@@ -25,8 +24,8 @@ export class GameFeedEmbedFormatter {
         const { awayTeam, homeTeam, rosterSpots } = this.feed;
         this.teamsMap.set(awayTeam.id, awayTeam);
         this.teamsMap.set(homeTeam.id, homeTeam);
-        this.homeTeamEmoji = EmojiCache.getTeamEmoji(homeTeam.abbrev);
-        this.awayTeamEmoji = EmojiCache.getTeamEmoji(awayTeam.abbrev);
+        this.homeTeamEmoji = EmojiCache.getNHLTeamEmoji(homeTeam.abbrev);
+        this.awayTeamEmoji = EmojiCache.getNHLTeamEmoji(awayTeam.abbrev);
 
         rosterSpots.forEach((player) => {
             this.roster.set(player.playerId, player);
@@ -265,7 +264,6 @@ export class GameFeedEmbedFormatter {
         });
     };
     createGameEndEmbed = () => {
-        // TODO - add highlight videos after the game
         const { awayTeam: away, homeTeam: home } = this.feed;
         const { score: homeScore, sog: homeSOG } = home;
         const { score: awayScore, sog: awaySOG } = away;
@@ -326,7 +324,7 @@ export class GameFeedEmbedFormatter {
                     .map((star, index) => {
                         const starNumber = ["1st", "2nd", "3rd"][index];
                         const points = star.points > 0 ? ` (${star.goals}G ${star.assists}A)` : "";
-                        return `**${starNumber}:**: ${star.name} - ${star.teamAbbrev}${points}`;
+                        return `**${starNumber}:**: ${star.name} ${EmojiCache.getNHLTeamEmoji(star.teamAbbrev) || star.teamAbbrev}${points}`;
                     })
                     .join("\n"),
                 inline: false,
@@ -350,9 +348,9 @@ export class GameFeedEmbedFormatter {
                         const scorer = goal.name?.default || `${goal.firstName.default} ${goal.lastName.default}`;
                         const periodScoring = story.summary.scoring.find((p: any) => p.goals.includes(goal));
                         const period = `P${periodScoring?.periodDescriptor.number || '?'}`;
-                        return `[${goal.teamAbbrev.default} Goal - ${scorer} (${period})](${goal.highlightClipSharingUrl})`;
+                        return `- [${goal.teamAbbrev.default} Goal - ${scorer} (${period})](${goal.highlightClipSharingUrl})`;
                     })
-                    .join(" • ");
+                    .join("\n");
 
                 scoreFields.push({
                     name: "Highlights",
@@ -462,8 +460,8 @@ export const GameAnnouncementEmbedBuilder = async (gameId: string) => {
     const boxScore = await API.Games.GetBoxScore(gameId);
     const { homeTeam, awayTeam, venue, startTimeUTC } = boxScore;
     
-    const homeEmoji = EmojiCache.getTeamEmoji(homeTeam.abbrev);
-    const awayEmoji = EmojiCache.getTeamEmoji(awayTeam.abbrev);
+    const homeEmoji = EmojiCache.getNHLTeamEmoji(homeTeam.abbrev);
+    const awayEmoji = EmojiCache.getNHLTeamEmoji(awayTeam.abbrev);
     
     const homeDisplay = `${homeTeam.commonName.default}${homeEmoji ? ` ${homeEmoji}` : ""}`;
     const awayDisplay = `${awayEmoji ? `${awayEmoji} ` : ""}${awayTeam.commonName.default}`;
@@ -497,8 +495,8 @@ export const ScheduleEmbedBuilder = async (
             if (homeRadioStr || awayRadioStr) {
                 output += `\nListen: ${[homeRadioStr, awayRadioStr].filter((x) => x != undefined).join(" - ")}`;
             }
-            const awayEmoji = EmojiCache.getTeamEmoji(awayTeam.abbrev);
-            const homeEmoji = EmojiCache.getTeamEmoji(homeTeam.abbrev);
+            const awayEmoji = EmojiCache.getNHLTeamEmoji(awayTeam.abbrev);
+            const homeEmoji = EmojiCache.getNHLTeamEmoji(homeTeam.abbrev);
             const awayString = `${awayEmoji ? `${awayEmoji} ` : ""}${awayTeam.abbrev}`;
             const homeString = `${homeTeam.abbrev}${homeEmoji ? ` ${homeEmoji}` : ""}`;
             const title = `${awayString} vs ${homeString}`;

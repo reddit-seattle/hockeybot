@@ -62,7 +62,7 @@ export class GameReplayManager {
         if (!this.feed) return;
 
         const { plays } = this.feed;
-        const playsToReplay = plays.filter(play => Config.TRACKED_EVENT_TYPES.includes(play.typeCode))
+        const playsToReplay = plays.filter(play => Config.TRACKED_NHL_EVENT_TYPES.includes(play.typeCode))
         Logger.info(`Replaying ${playsToReplay.length} plays...`);
 
         for (const play of playsToReplay) {

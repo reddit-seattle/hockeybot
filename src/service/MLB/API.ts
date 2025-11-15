@@ -4,28 +4,27 @@ import { ApiDateString, get } from "../../utils/helpers";
 import { GameFeedResponse } from "./models/GameFeed";
 import { ScheduleResponse } from "./models/Schedule";
 import { SeasonResponse } from "./models/Season";
-import exp from "constants";
 import { TeamResponse } from "./models/Team";
 
 export namespace API {
     export namespace Schedule {
         export const Today = async (teamId?: string) => {
             const response = await get<ScheduleResponse>(
-                teamId ? Paths.MLB.Schedule.Filtered({ teamId }) : Paths.MLB.Schedule.All
+                teamId ? Paths.MLB.Schedule.Filtered({ teamId }) : Paths.MLB.Schedule.All,
             );
-            return response.dates[0].games ?? [];
+            return response.dates?.[0]?.games ?? [];
         };
         export const ByDate = async (dateIn?: Date, teamId?: string) => {
             const date = dateIn && dateIn instanceof Date ? ApiDateString(dateIn) : undefined;
             const response = await get<ScheduleResponse>(Paths.MLB.Schedule.Filtered({ date, teamId }));
-            return response.dates[0].games ?? [];
+            return response.dates?.[0]?.games ?? [];
         };
         export const TeamSeason = async (teamId: string) => {
             const season = await Season();
-            if (!season) return;
+            if (!season) return [];
             const { seasonId } = season;
             const response = await get<ScheduleResponse>(Paths.MLB.Schedule.Filtered({ teamId, seasonId }));
-            return response.dates[0].games ?? [];
+            return response.dates?.[0]?.games ?? [];
         };
         export const TeamNext = async (teamId: string, next: number = 1) => {
             const season = await Season();
@@ -33,7 +32,7 @@ export namespace API {
             const { seasonId, seasonEndDate: endDate } = season;
             const startDate = ApiDateString(new Date(Date.now()));
             const response = await get<ScheduleResponse>(
-                Paths.MLB.Schedule.Filtered({ startDate, endDate, teamId, seasonId })
+                Paths.MLB.Schedule.Filtered({ startDate, endDate, teamId, seasonId }),
             );
             const allGames = flatten(response?.dates?.map((date) => date?.games) ?? []);
             return allGames.slice(0, next);

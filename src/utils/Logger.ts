@@ -1,7 +1,6 @@
 import chalk from "chalk";
 import { Environment } from "./constants";
 
-// TODO - its own module
 export class Logger {
     static info(message: string, ...optionalParams: any[]) {
         console.info(chalk.white(`[INFO] ${Logger.timeStamp()} - ${message}`), ...optionalParams);

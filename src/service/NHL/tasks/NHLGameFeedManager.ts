@@ -86,7 +86,7 @@ export class GameFeedManager {
             const { plays: allPlays } = await this.getFeed(true);
 
             // filter out plays that are not in the tracked types (once)
-            const trackedPlays = allPlays.filter((play) => Config.TRACKED_EVENT_TYPES.includes(play.typeCode));
+            const trackedPlays = allPlays.filter((play) => Config.TRACKED_NHL_EVENT_TYPES.includes(play.typeCode));
             Logger.debug(
                 `{${stateKey}} Tracking ${trackedPlays.length} plays: [${trackedPlays
                     .map((play) => play.eventId)
@@ -248,7 +248,7 @@ export class GameFeedManager {
             if (this.feed === undefined || Environment.LOCAL_RUN) {
                 for (const play of newFeed.plays) {
                     // mark all previous plays as tracked, no message
-                    if (Config.TRACKED_EVENT_TYPES.includes(play.typeCode) && !this.trackedEvents.has(play.eventId)) {
+                    if (Config.TRACKED_NHL_EVENT_TYPES.includes(play.typeCode) && !this.trackedEvents.has(play.eventId)) {
                         this.trackedEvents.set(play.eventId, { message: undefined, play: play });
                     }
                 }

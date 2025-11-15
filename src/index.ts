@@ -1,15 +1,17 @@
 import { REST } from "@discordjs/rest";
 import { RESTPostAPIApplicationCommandsJSONBody, Routes } from "discord-api-types/v10";
-import { ChannelType, Client, Guild, Interaction, SlashCommandBuilder } from "discord.js";
+import { ChannelType, Client, Guild, Interaction, SlashCommandBuilder, TextChannel } from "discord.js";
 import { createServer } from "http";
 import { exit } from "process";
-import { Mariners } from "./commands/MLB";
-import { GetSchedule, GetScores, GetStandings, GetStats, PlayoffBracket, ReplayGame, GameThread } from "./commands/NHL";
+import { Mariners, MLBGameThread, ReplayMLBGame } from "./commands/MLB";
+import { GameThread, GetSchedule, GetScores, GetStandings, GetStats, PlayoffBracket, ReplayGame } from "./commands/NHL";
 import { CommandDictionary } from "./models/Command";
-import { GameScheduleMonitor } from "./service/NHL/tasks/GameScheduleMonitor";
+import { MLBGameScheduleMonitor } from "./service/MLB/tasks/MLBGameScheduleMonitor";
+import { NHLGameScheduleMonitor } from "./service/NHL/tasks/NHLGameScheduleMonitor";
 import { Environment } from "./utils/constants";
 // @ts-ignore
 import LogTimestamp from "log-timestamp";
+import { mlbScheduleMonitorService } from "./service/MLB/MLBScheduleMonitorService";
 import { scheduleMonitorService } from "./service/NHL/ScheduleMonitorService";
 import { EmojiCache } from "./utils/EmojiCache";
 import { getPackageVersion } from "./utils/helpers";
@@ -33,6 +35,8 @@ const commands = [
     ReplayGame,
     GameThread,
     Mariners, // MLB commands
+    MLBGameThread,
+    ReplayMLBGame,
 ].reduce((map, obj) => {
     map[obj.name] = obj;
     return map;
@@ -57,7 +61,9 @@ const registerAllSlashCommands = async (client: Client) => {
         for (const commandName in commands) {
             const command = commands[commandName];
             Logger.debug(`adding ${command.name} slash command registration`);
-            const desc = command.slashCommandDescription.setName(command.name).setDescription(command.description) as SlashCommandBuilder;
+            const desc = command.slashCommandDescription
+                .setName(command.name)
+                .setDescription(command.description) as SlashCommandBuilder;
             if (command.adminOnly) {
                 desc.setDefaultMemberPermissions(0);
             }
@@ -78,36 +84,52 @@ const registerAllSlashCommands = async (client: Client) => {
     });
 };
 
-const startGameDayThreadChecker = async (guild: Guild) => {
+const startNHLGameDayThreadChecker = async (guild: Guild) => {
     if (!Environment.GAMEDAY_CHANNEL_ID) {
-        Logger.warn("Game day channel ID not set. Game day thread checker will not start.");
+        Logger.warn("NHL game day channel ID not set. NHL game day thread checker will not start.");
         return;
     }
 
-    const gameDayChannel = await guild.channels.fetch(Environment.GAMEDAY_CHANNEL_ID);
-    if (!(gameDayChannel?.type == ChannelType.GuildText)) {
-        Logger.warn("Game day channel not found or not a text channel.");
+    const nhlGameDayChannel = await guild.channels.fetch(Environment.GAMEDAY_CHANNEL_ID);
+    if (!(nhlGameDayChannel?.type == ChannelType.GuildText)) {
+        Logger.warn("NHL game day channel not found or not a text channel.");
         return;
     }
 
-    const scheduleMonitor = new GameScheduleMonitor(
-        gameDayChannel,
-        Environment.HOCKEYBOT_TEAM_ID || null
-    );
+    // Start NHL monitor
+    const scheduleMonitor = new NHLGameScheduleMonitor(nhlGameDayChannel, Environment.HOCKEYBOT_TEAM_ID || null);
     scheduleMonitor.initialize();
-
-    // Store in service instead of global variable
     scheduleMonitorService.set(scheduleMonitor);
+    Logger.info("NHL schedule monitor started");
+};
 
-    Logger.info("Game schedule monitor started");
+const startMLBGameDayThreadChecker = async (guild: Guild) => {
+    if (!Environment.HOCKEYBOT_MLB_CHANNEL_ID) {
+        Logger.warn("MLB game day channel ID not set. MLB game day thread checker will not start.");
+        return;
+    }
+    const mlbGameDayChannel = await guild.channels.fetch(Environment.HOCKEYBOT_MLB_CHANNEL_ID);
+    if (!(mlbGameDayChannel?.type == ChannelType.GuildText)) {
+        Logger.warn("MLB game day channel not found or not a text channel.");
+        return;
+    }
+
+    // Start MLB monitor
+    const mlbScheduleMonitor = new MLBGameScheduleMonitor(
+        mlbGameDayChannel as TextChannel,
+        Environment.HOCKEYBOT_MLB_TEAM_ID,
+    );
+    mlbScheduleMonitor.initialize();
+    mlbScheduleMonitorService.set(mlbScheduleMonitor);
+    Logger.info("MLB schedule monitor started");
 };
 
 client.once("ready", async () => {
     Logger.info(`Logged in as ${client?.user?.tag}!`);
     Logger.debug(`Version: ${getPackageVersion()}`);
     client.guilds.cache.forEach((guild: Guild) => {
-        // start the game day thread checker for this guild
-        startGameDayThreadChecker(guild);
+        startNHLGameDayThreadChecker(guild);
+        startMLBGameDayThreadChecker(guild);
     });
     // keep this out of the loop, this actually loops through guilds
     registerAllSlashCommands(client);

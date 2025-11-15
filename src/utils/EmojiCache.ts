@@ -45,12 +45,21 @@ class EmojiCacheManager {
     }
 
     /**
-     * Get team emoji by team abbreviation
+     * Get NHL team emoji by team abbreviation
      * @param abbrev Team abbreviation
      * @returns ApplicationEmoji or empty string if not found
      */
-    public getTeamEmoji(abbrev: string): ApplicationEmoji | string {
+    public getNHLTeamEmoji(abbrev: string): ApplicationEmoji | string {
         return this.emojis.find((emoji) => emoji.name === abbrev.toUpperCase()) || "";
+    }
+
+    /**
+     * Get MLB team emoji by team abbreviation
+     * @param abbrev Team abbreviation
+     * @returns ApplicationEmoji or empty string if not found
+     */
+    public getMLBTeamEmoji(abbrev: string): ApplicationEmoji | string {
+        return this.emojis.find((emoji) => emoji.name === `MLB_${abbrev.toUpperCase()}`) || "";
     }
 
     /**

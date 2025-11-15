@@ -28,8 +28,8 @@ export const PlayoffBracket: Command = {
                 const leader = max([topSeed, bottomSeed], (seed) => seed.wins) as Seed;
                 const loser = topSeed.id === leader.id ? bottomSeed : topSeed;
 
-                const leaderEmoji = EmojiCache.getTeamEmoji(leader.abbrev) || "";
-                const loserEmoji = EmojiCache.getTeamEmoji(loser.abbrev) || "";
+                const leaderEmoji = EmojiCache.getNHLTeamEmoji(leader.abbrev) || "";
+                const loserEmoji = EmojiCache.getNHLTeamEmoji(loser.abbrev) || "";
 
                 const description =
                     bottomSeed.wins === topSeed.wins

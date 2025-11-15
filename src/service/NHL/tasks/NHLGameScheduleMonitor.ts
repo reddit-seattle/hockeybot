@@ -5,14 +5,14 @@ import { Logger } from "../../../utils/Logger";
 import { Config } from "../../../utils/constants";
 import { API } from "../API";
 import { Game } from "../models/DaySchedule";
-import GameThreadManager from "./GameThreadManager";
+import GameThreadManager from "./NHLGameThreadManager";
 
 const MANUAL_GAMES_FILE = "./data/manual-games.json";
 
 /**
  * Manages game threads
  */
-export class GameScheduleMonitor {
+export class NHLGameScheduleMonitor {
     private scheduler: ToadScheduler = new ToadScheduler();
     private channel: TextChannel;
     private favoriteTeamId: string | null;
@@ -86,13 +86,13 @@ export class GameScheduleMonitor {
         }
         this.checkTodaysSchedule();
         const dailyCheckerTask = new CronJob(
-            { cronExpression: Config.DAILY_SCHEDULE_CRON, timezone: Config.TIME_ZONE },
+            { cronExpression: Config.GAME_CHECKER_CRON, timezone: Config.TIME_ZONE },
             new Task("daily schedule checker", this.checkTodaysSchedule),
             { preventOverrun: true }
         );
-        this.isRunning = true;
         this.scheduler.addCronJob(dailyCheckerTask);
-        Logger.info(`Game schedule monitor initialized - checking daily at 9am (tracking team ID: ${this.favoriteTeamId || "none"})`);
+        this.isRunning = true;
+        Logger.info(`Game schedule monitor initialized for team: ${this.favoriteTeamId || "none"}`);
     }
 
     /**

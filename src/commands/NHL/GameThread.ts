@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { Command } from "../../models/Command";
-import { activeGameAutocomplete } from "../../utils/helpers";
+import { activeGameAutocomplete } from "../../utils/autocomplete";
 import { Logger } from "../../utils/Logger";
 import { scheduleMonitorService } from "../../service/NHL/ScheduleMonitorService";
 import { MessageFlags } from "discord.js";

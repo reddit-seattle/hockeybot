@@ -48,8 +48,8 @@ export const GetScores: Command = {
         const fields = await Promise.all(
             liveGames.map(async (game) => {
                 const { gameState, awayTeam, homeTeam, gameOutcome } = game;
-                const awayTeamEmoji = EmojiCache.getTeamEmoji(awayTeam.abbrev);
-                const homeTeamEmoji = EmojiCache.getTeamEmoji(homeTeam.abbrev);
+                const awayTeamEmoji = EmojiCache.getNHLTeamEmoji(awayTeam.abbrev);
+                const homeTeamEmoji = EmojiCache.getNHLTeamEmoji(homeTeam.abbrev);
                 // emoji formatting
                 const awayTeamString = awayTeamEmoji ? `${awayTeamEmoji} ${awayTeam.abbrev}` : awayTeam.abbrev;
                 const homeTeamString = homeTeamEmoji ? `${homeTeamEmoji} ${homeTeam.abbrev}` : homeTeam.abbrev;

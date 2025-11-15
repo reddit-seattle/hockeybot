@@ -9,7 +9,7 @@ import { GameState } from "../../../utils/enums";
 import { ApiDateString, isGameOfficiallyOver, relativeDateString } from "../../../utils/helpers";
 import { Logger } from "../../../utils/Logger";
 import { API } from "../API";
-import { GameFeedManager } from "./GameFeedManager";
+import { GameFeedManager } from "./NHLGameFeedManager";
 
 const PREGAME_CHECKER_ID = "pregame_checker";
 
@@ -84,9 +84,6 @@ class GameThreadManager {
         }
     }
 
-    /**
-     * Creates a new thread for the game or finds an existing one
-     */
     private async createOrFindGameThread(boxScore: any): Promise<void> {
         const threadTitle = this.generateThreadTitle(boxScore);
 
@@ -101,7 +98,7 @@ class GameThreadManager {
         }
 
         // Create thread with game announcement
-        const gameAnnounceEmbed = await this.createGameAnnouncement(boxScore);
+        const gameAnnounceEmbed = await this.createGameAnnouncementEmbed(boxScore);
         const message = await this.channel.send({ embeds: [gameAnnounceEmbed] });
 
         this.thread = await this.channel.threads.create({
@@ -114,10 +111,7 @@ class GameThreadManager {
         Logger.info(`Created new thread for game ${this.gameId}: ${this.thread.id}`);
     }
 
-    /**
-     * Creates the game announcement embed
-     */
-    private async createGameAnnouncement(boxScore: any): Promise<EmbedBuilder> {
+    private async createGameAnnouncementEmbed(boxScore: any): Promise<EmbedBuilder> {
         const { awayTeam, homeTeam, startTimeUTC, venue } = boxScore;
 
         // Format date/time
@@ -127,8 +121,8 @@ class GameThreadManager {
 
         // Get team emojis
 
-        const homeEmoji = EmojiCache.getTeamEmoji(homeTeam.abbrev);
-        const awayEmoji = EmojiCache.getTeamEmoji(awayTeam.abbrev);
+        const homeEmoji = EmojiCache.getNHLTeamEmoji(homeTeam.abbrev);
+        const awayEmoji = EmojiCache.getNHLTeamEmoji(awayTeam.abbrev);
 
         // Check if this is our favorite team's game
         const favoriteTeamId = Environment.HOCKEYBOT_TEAM_ID;
@@ -157,7 +151,6 @@ class GameThreadManager {
             .setColor(embedColor);
     }
 
-    // Starts the pregame checker
     private startPregameChecker(): void {
         const pregameCheckerTask = new SimpleIntervalJob(
             { minutes: 5, runImmediately: true },
@@ -169,9 +162,6 @@ class GameThreadManager {
         Logger.info(`Started pregame checker for game ${this.gameId}`);
     }
 
-    /**
-     * Checks if the game has started and starts game feed manager if so
-     */
     private checkForGameStart = async (): Promise<void> => {
         if (!this.thread) {
             this.handleError("Thread unavailable during pregame check", new Error("Thread not found"));
@@ -179,13 +169,10 @@ class GameThreadManager {
         }
 
         try {
-            // Get latest game state
             const game = await API.Games.GetBoxScore(this.gameId);
             const { gameState } = game;
-
             Logger.debug(`Pregame check: ${this.gameId} - state: ${gameState}`);
 
-            // Check if game has started
             if (STARTED_STATES.includes(gameState as GameState)) {
                 Logger.info(`Game ${this.gameId} has started (state: ${gameState})`);
                 this.stopPregameChecker();
@@ -202,19 +189,15 @@ class GameThreadManager {
             return;
         }
         try {
-            // Get game feed data
             const feed = await API.Games.GetPlays(this.gameId);
 
             // Post game start announcement
             const embed = await GameAnnouncementEmbedBuilder(this.gameId);
             await this.thread.send({ embeds: [embed] });
-
-            // Create feed manager with completion callback
             this.gameFeedManager = new GameFeedManager(this.thread, feed, () => {
                 Logger.info(`Game ${this.gameId} fully complete, notifying thread manager`);
                 this.processStateChange(ThreadManagerState.COMPLETED);
             });
-
             this.processStateChange(ThreadManagerState.LIVE);
             Logger.info(`Started game tracking for game ${this.gameId}`);
         } catch (error) {
@@ -229,15 +212,12 @@ class GameThreadManager {
         }
     }
 
-    // Allows for custom handling/logging of state transitions
     private processStateChange(newState: ThreadManagerState): void {
         const oldState = this.state;
         this.state = newState;
         if (oldState !== newState) {
             Logger.debug(`Game ${this.gameId} state changed: ${oldState} -> ${newState}`);
         }
-
-        // If transitioning to COMPLETED, notify parent
         if (newState === ThreadManagerState.COMPLETED) {
             this.notifyComplete();
         }

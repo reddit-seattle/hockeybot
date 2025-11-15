@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { Play } from "../service/MLB/models/GameFeed";
 import { EventTypeCode, GameState, GoalShotType, PenaltyType } from "./enums";
 dotenv.config();
 
@@ -6,33 +7,108 @@ dotenv.config();
 // TODO - move to env vars / customization
 export namespace Config {
     export const DAILY_SCHEDULE_CRON = "0 0 9 * * *"; // Every day at 9am
+    export const GAME_CHECKER_CRON = "0 0,30 9,10 * * *"; // 9:00, 9:30, 10:00, 10:30 AM
     export const TIME_ZONE = "America/Los_Angeles";
     export const BODY_DATE_FORMAT = `iii PP @ p`; // "Thu Dec 28, 2023 @ 4:16 PM"
     export const TITLE_DATE_FORMAT = `iii PP`;
-    export const TRACKED_EVENT_TYPES = [
+    export const TRACKED_NHL_EVENT_TYPES = [
         EventTypeCode.goal,
         EventTypeCode.penalty,
         EventTypeCode.periodStart,
-        EventTypeCode.periodEnd
+        EventTypeCode.periodEnd,
     ];
+    export const TRACKED_MLB_EVENT_TYPES = [
+        "home_run",
+        "triple",
+        "double",
+        "single",
+        "walk",
+        "hit_by_pitch",
+        "sac_fly",
+        "grounded_into_double_play",
+        "field_error",
+    ];
+    export const doesThisMLBPlayMatter = (play: Play) => {
+        return !play.result
+            ? false
+            : play.about.isComplete &&
+                  // if it's an event we care about
+                  (TRACKED_MLB_EVENT_TYPES.includes(play.result.eventType) ||
+                      // or if it scored a run regardless
+                      play.result.rbi > 0);
+    };
+    export const LOCAL_TIME_DISPLAY_OPTIONS: Intl.DateTimeFormatOptions = {
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: TIME_ZONE,
+    };
 }
 export namespace StoryStatCategories {
-    export const FACEOFF_WIN_PCT = 'faceoffWinningPctg';
-    export const POWER_PLAY = 'powerPlay';
-    export const POWER_PLAY_PCT = 'powerPlayPctg';
-    export const PIM = 'pim';
-    export const HITS = 'hits';
-    export const BLOCKED_SHOTS = 'blockedShots';
-    export const GIVEAWAYS = 'giveaways';
-    export const TAKEAWAYS = 'takeaways';
-    export const SHOTS = 'sog';
-    export const TIME_ON_PUCK = 'timeOnPuck';
+    export const FACEOFF_WIN_PCT = "faceoffWinningPctg";
+    export const POWER_PLAY = "powerPlay";
+    export const POWER_PLAY_PCT = "powerPlayPctg";
+    export const PIM = "pim";
+    export const HITS = "hits";
+    export const BLOCKED_SHOTS = "blockedShots";
+    export const GIVEAWAYS = "giveaways";
+    export const TAKEAWAYS = "takeaways";
+    export const SHOTS = "sog";
+    export const TIME_ON_PUCK = "timeOnPuck";
 }
 
 // TODO - move to env vars / customization
 export namespace Colors {
     export const KRAKEN_EMBED = 39129;
-    export const MARINERS = 0x00ff00;
+    export const MARINERS = 0x005c5c; // Teal
+}
+
+export const MLBTeamColors: { [teamId: number]: number } = {
+    // American League East
+    110: 0xdf4601, // Baltimore Orioles - Orange
+    111: 0xbd3039, // Boston Red Sox - Red
+    147: 0x003087, // New York Yankees - Navy
+    139: 0x092c5c, // Tampa Bay Rays - Navy Blue
+    141: 0x134a8e, // Toronto Blue Jays - Blue
+
+    // American League Central
+    145: 0x27251f, // Chicago White Sox - Black
+    114: 0x00385d, // Cleveland Guardians - Navy
+    116: 0x0c2340, // Detroit Tigers - Navy
+    118: 0x004687, // Kansas City Royals - Royal Blue
+    142: 0x002b5c, // Minnesota Twins - Navy
+
+    // American League West
+    117: 0xeb6e1f, // Houston Astros - Orange
+    108: 0xba0021, // Los Angeles Angels - Red
+    133: 0x003831, // Oakland Athletics - Green
+    136: 0x005c5c, // Seattle Mariners - Northwest Green (Navy: 0x0C2C56 as alternate)
+    140: 0x003278, // Texas Rangers - Blue
+
+    // National League East
+    144: 0xce1141, // Atlanta Braves - Red
+    146: 0x00a3e0, // Miami Marlins - Blue
+    121: 0x002d72, // New York Mets - Blue
+    143: 0xe81828, // Philadelphia Phillies - Red
+    120: 0xab0003, // Washington Nationals - Red
+
+    // National League Central
+    112: 0x0e3386, // Chicago Cubs - Blue
+    113: 0xc6011f, // Cincinnati Reds - Red
+    158: 0xffc52f, // Milwaukee Brewers - Gold
+    134: 0xfdb827, // Pittsburgh Pirates - Gold
+    138: 0xc41e3a, // St. Louis Cardinals - Red
+
+    // National League West
+    109: 0xa71930, // Arizona Diamondbacks - Sedona Red
+    115: 0x33006f, // Colorado Rockies - Purple
+    119: 0x005a9c, // Los Angeles Dodgers - Dodger Blue
+    135: 0x2f241d, // San Diego Padres - Brown
+    137: 0xfd5a1e, // San Francisco Giants - Orange
+};
+
+// Gets the primary color for an MLB team by team ID
+export function getMLBTeamColor(teamId: number): number {
+    return MLBTeamColors[teamId] ?? Colors.MARINERS;
 }
 
 export namespace Strings {
@@ -124,20 +200,30 @@ export namespace TeamIds {
 export namespace Environment {
     // Token
     export const botToken = process.env["bot_token"] || undefined;
-    // Channel for game threads
+
+    // NHL Configuration
+    // Channel for NHL game threads
     export const GAMEDAY_CHANNEL_ID = process.env["HOCKEYBOT_CHANNEL_ID"] || undefined;
-    // Channel for general debug messages
-    export const DEBUG_CHANNEL_ID = process.env["GUILD_DEBUG_CHANNEL_ID"] || undefined;
-    // Team to track games
+    // NHL Team to track games
     export const HOCKEYBOT_TEAM_ID = process.env["HOCKEYBOT_TEAM_ID"];
-    // Team name display
+    // NHL Team name display
     export const HOCKEYBOT_TEAM_NAME = process.env["HOCKEYBOT_TEAM_NAME"] || "Seattle Kraken";
     // Team emoji reference (e.g., "SEA" for :SEA:)
     export const HOCKEYBOT_TEAM_EMOJI = process.env["HOCKEYBOT_TEAM_EMOJI"] || "SEA";
+
+    // MLB Configuration
+    // Channel for MLB game threads
+    export const HOCKEYBOT_MLB_CHANNEL_ID = process.env["HOCKEYBOT_MLB_CHANNEL_ID"] || undefined;
+    // MLB Team to track games (team ID from MLB API)
+    export const HOCKEYBOT_MLB_TEAM_ID = process.env["HOCKEYBOT_MLB_TEAM_ID"];
+    // MLB Team name display
+    export const HOCKEYBOT_MLB_TEAM_NAME = process.env["HOCKEYBOT_MLB_TEAM_NAME"] || "Seattle Mariners";
+
+    // Channel for general debug messages
+    export const DEBUG_CHANNEL_ID = process.env["GUILD_DEBUG_CHANNEL_ID"] || undefined;
     // Local / debug run flag
     export const LOCAL_RUN = process.env["local_run"] ? true : false;
 }
-
 
 export enum EventTypes {
     Goal = "GOAL",
@@ -179,9 +265,8 @@ export enum ThreadManagerState {
     PREGAME = "PREGAME",
     LIVE = "LIVE",
     COMPLETED = "COMPLETED",
-    ERROR = "ERROR"
+    ERROR = "ERROR",
 }
-
 
 export interface Record {
     Wins: number;
@@ -334,7 +419,6 @@ export namespace Paths {
 
                 return `${All}${queryParams}`;
             };
-            export const NextGames = (teamId: string) => { };
         }
 
         export namespace Teams {

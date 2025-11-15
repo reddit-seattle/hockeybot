@@ -2,15 +2,10 @@ import { SlashCommandBuilder, SlashCommandSubcommandBuilder } from "@discordjs/b
 import { format } from "date-fns-tz";
 import { Command } from "../../models/Command";
 import { API } from "../../service/NHL/API";
+import { teamOrPlayerAutocomplete } from "../../utils/autocomplete";
 import { Config } from "../../utils/constants";
 import { ScheduleEmbedBuilder } from "../../utils/EmbedFormatters";
-import {
-    optionalDateOption,
-    processLocalizedDateInput,
-    requiredTeamOption,
-    teamOrPlayerAutocomplete,
-    validTeamName,
-} from "../../utils/helpers";
+import { optionalDateOption, processLocalizedDateInput, requiredTeamOption, validTeamName } from "../../utils/helpers";
 
 const teamScheduleSubgroupCommand = new SlashCommandSubcommandBuilder()
     .setName("team")
@@ -20,7 +15,7 @@ const teamScheduleSubgroupCommand = new SlashCommandSubcommandBuilder()
         option
             .setName("type")
             .setDescription("Weekly or Monthly")
-            .addChoices({ name: "weekly", value: "weekly" }, { name: "monthly", value: "monthly" })
+            .addChoices({ name: "weekly", value: "weekly" }, { name: "monthly", value: "monthly" }),
     );
 const leagueScheduleSubgroupCommand = new SlashCommandSubcommandBuilder()
     .setName("all")
