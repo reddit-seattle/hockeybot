@@ -2,17 +2,21 @@ on:
     workflow_dispatch:
         inputs:
             environment:
+                description: "deployment environment"
                 type: environment
                 required: true
+    push:
+        branches:
+            - main
 name: Publish Hockeybot Image
-run-name: Publish Hockeybot Image (${{ inputs.environment }})
+run-name: Publish Hockeybot Image (${{ inputs.environment || 'dev' }})
 permissions:
     contents: "read"
     id-token: "write"
 
 jobs:
     build-and-deploy:
-        environment: ${{ inputs.environment }}
+        environment: ${{ inputs.environment || 'dev' }}
         runs-on: ubuntu-latest
         steps:
             - name: "Checkout Source"
@@ -25,7 +29,7 @@ jobs:
                   subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
             - name: Login to ACR and deploy
               run: |
-                  base=$(echo "hockeybot/${{inputs.environment}}" | tr '[:upper:]' '[:lower:]')
-                  env=$(echo "${{inputs.environment}}" | tr '[:upper:]' '[:lower:]')
+                  base=$(echo "hockeybot/${{inputs.environment || 'dev'}}" | tr '[:upper:]' '[:lower:]')
+                  env=$(echo "${{inputs.environment || 'dev'}}" | tr '[:upper:]' '[:lower:]')
                   az acr login --name bpidocker
                   az acr build -t $base:latest -t $base:${{ github.sha }} -r bpidocker .
