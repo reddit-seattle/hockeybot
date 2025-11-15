@@ -38,21 +38,6 @@ export const Mariners: Command = {
 				.setDescription("Get today's MLB scores")
 				.addBooleanOption((option) => option.setName("all").setDescription("Show all scores?")),
 		),
-	// .addSubcommand((cmd) =>
-	//     cmd
-	//         .setName("standings")
-	//         .setDescription("Mariners standings")
-	//         .addStringOption((option) =>
-	//             option
-	//                 .setName("type")
-	//                 .setDescription("Standings type")
-	//                 .setChoices(
-	//                     { name: "division", value: "division" },
-	//                     { name: "league", value: "league" },
-	//                     { name: "all", value: "all" }
-	//                 )
-	//         )
-	// )
 	executeSlashCommand: async (interaction) => {
 		await interaction.deferReply();
 		const subcommand = interaction.options.getSubcommand();
@@ -124,9 +109,6 @@ export const Mariners: Command = {
 					.setColor(Colors.MARINERS); // Green color for Mariners
 				await interaction.followUp({ embeds: [gamesEmbed] });
 				break;
-			// case "standings":
-			//     await interaction.followUp("todo");
-			//     break;
 		}
 	},
 };

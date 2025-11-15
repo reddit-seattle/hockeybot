@@ -1,6 +1,7 @@
 import { Mutex } from "async-mutex";
 import { Message, ThreadChannel } from "discord.js";
 import { Config } from "../../../utils/constants";
+import { MLBGameState, MLBPosition } from "../../../utils/enums";
 import { Logger } from "../../../utils/Logger";
 import { MLBGameFeedEmbedFormatter } from "../../../utils/MLBEmbedFormatters";
 import { GameFeedResponse, Play } from "../models/GameFeed";
@@ -94,8 +95,7 @@ export class MLBGameFeedManager {
 			);
 
 			// Check if game is over
-			// TODO - enums for MLB game states
-			if (abstractGameState === "Final") {
+			if (abstractGameState === MLBGameState.final) {
 				if (!this.gameOver) {
 					await this.handleGameEnd();
 				}
@@ -114,8 +114,7 @@ export class MLBGameFeedManager {
 		const { about, result } = play;
 
 		// Check for pitching change
-		// TODO - MLB position enums
-		const substitution = play.playEvents.find((e) => e.isSubstitution && e.position?.code === "1");
+		const substitution = play.playEvents.find((e) => e.isSubstitution && e.position?.code === MLBPosition.pitcher);
 		if (substitution && substitution.player?.id) {
 			const pitchingChangeKey = `${substitution.player.id}-${about.inning}-${about.halfInning}`;
 			if (!this.postedPitchingChanges.has(pitchingChangeKey)) {

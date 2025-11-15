@@ -91,6 +91,29 @@ export enum GameState {
 	critical = "CRIT",
 }
 
+export enum MLBGameState {
+	preview = "Preview",
+	live = "Live",
+	final = "Final",
+	other = "Other",
+}
+
+export enum MLBPosition {
+	pitcher = "1",
+	catcher = "2",
+	firstBase = "3",
+	secondBase = "4",
+	thirdBase = "5",
+	shortstop = "6",
+	leftField = "7",
+	centerField = "8",
+	rightField = "9",
+	designatedHitter = "10",
+	pinchHitter = "11",
+	pinchRunner = "12",
+	extraHitter = "13",
+}
+
 export enum GameScheduleState {
 	scheduled = "OK",
 	toBeDetermined = "TBD",

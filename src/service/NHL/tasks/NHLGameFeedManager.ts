@@ -159,7 +159,7 @@ export class GameFeedManager {
 				}),
 			);
 		} catch (error) {
-			console.error("Error in checkGameStatus", error);
+			Logger.error("Error in checkGameStatus", error);
 		} finally {
 			release();
 		}

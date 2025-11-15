@@ -2,6 +2,7 @@ import { EmbedBuilder } from "discord.js";
 import { GameFeedResponse, Play } from "../service/MLB/models/GameFeed";
 import { Colors, Environment, getMLBTeamColor } from "./constants";
 import { EmojiCache } from "./EmojiCache";
+import { MLBPosition } from "./enums";
 import { localizedTimeString } from "./helpers";
 
 // Creates Discord embeds for MLB game events
@@ -88,7 +89,7 @@ export class MLBGameFeedEmbedFormatter {
 	}
 
 	createPitchingChangeEmbed(play: Play): EmbedBuilder | undefined {
-		const substitution = play.playEvents.find((e) => e.isSubstitution && e.position?.code === "1");
+		const substitution = play.playEvents.find((e) => e.isSubstitution && e.position?.code === MLBPosition.pitcher);
 
 		if (!substitution || !substitution.player) {
 			return undefined;

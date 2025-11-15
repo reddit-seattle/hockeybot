@@ -1,5 +1,6 @@
 import { ThreadChannel } from "discord.js";
 import { Config } from "../../../utils/constants";
+import { MLBPosition } from "../../../utils/enums";
 import { delay } from "../../../utils/helpers";
 import { Logger } from "../../../utils/Logger";
 import { MLBGameFeedEmbedFormatter } from "../../../utils/MLBEmbedFormatters";
@@ -38,7 +39,9 @@ export class MLBGameReplayManager {
 				if (!play.about.isComplete) continue;
 
 				// Check for pitching changes
-				const substitution = play.playEvents.find((e) => e.isSubstitution && e.position?.code === "1");
+				const substitution = play.playEvents.find(
+					(e) => e.isSubstitution && e.position?.code === MLBPosition.pitcher,
+				);
 				if (substitution) {
 					const embed = embedFormatter.createPitchingChangeEmbed(play);
 					if (embed) {
