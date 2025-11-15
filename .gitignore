@@ -67,3 +67,5 @@ dist
 output/**/*.json
 
 test
+.vscode/settings.json
+.prettierrc
