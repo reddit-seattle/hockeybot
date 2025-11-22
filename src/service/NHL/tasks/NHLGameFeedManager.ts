@@ -121,11 +121,13 @@ export class GameFeedManager {
 							break;
 						case EventTypeCode.periodStart:
 						case EventTypeCode.periodEnd:
-							const existingEmbed = this.trackedEvents.get(play.eventId)?.message?.embeds?.[0];
-							embed = existingEmbed
-								? this.embedFormatter.updateIntermissionEmbed(play, existingEmbed)
-								: this.embedFormatter.createIntermissionEmbed(play);
-							break;
+							if (!isGameOver(gameState)) {
+								const existingEmbed = this.trackedEvents.get(play.eventId)?.message?.embeds?.[0];
+								embed = existingEmbed
+									? this.embedFormatter.updateIntermissionEmbed(play, existingEmbed)
+									: this.embedFormatter.createIntermissionEmbed(play);
+								break;
+							}
 					}
 					if (embed) {
 						const { eventId, typeDescKey } = play;
@@ -168,69 +170,43 @@ export class GameFeedManager {
 	private handleGameEnd = async () => {
 		this.gameOver = true;
 
-		// Create initial game end embed
-		const scoreEmbed = this.embedFormatter.createGameEndEmbed();
-		const gameEndMessage = await this?.thread?.send({ embeds: [scoreEmbed] });
+		const gameSummaryEmbed = this.embedFormatter.createGameSummaryEmbed();
+		await this?.thread?.send({ embeds: [gameSummaryEmbed] });
+		Logger.info(`[GAME END] Game summary sent for game ${this.gameId}`);
 
-		// Start polling for story updates
-		this.startStoryPolling(gameEndMessage);
+		this.startThreeStarsPolling();
 
 		// Stop main game status checker
 		this.Stop();
 	};
 
-	/**
-	 * Polls for story updates, tracking state transitions and updating the embed with new data
-	 * Continues until OFFICIAL state, then polls for 5 more minutes before cleanup
-	 */
-	private startStoryPolling = (gameEndMessage: Message) => {
-		let officialStateReached = false;
-		let officialStateTime: number | null = null;
+	// Polls for three stars after delay, continues until we post or timeout
+	private startThreeStarsPolling = () => {
 		const POLL_INTERVAL_MS = 1000 * 30; // 30 seconds
-		const POLLING_AFTER_OFFICIAL_MS = 1000 * 60 * 5; // 5 minutes
-		const POLLING_DELAY_MS = 1000 * 60; // 1 minute
+		const THREE_STARS_DELAY_MS = 1000 * 60 * 5; // 5 minutes
+		const MAX_POLLING_TIME_MS = 1000 * 60 * 10; // 10 minutes
+		const startTime = Date.now();
 
-		const pollStory = async (): Promise<void> => {
-			const boxScore = await API.Games.GetBoxScore(this.gameId);
-			const currentState = boxScore.gameState;
-
-			// Check if (and when) we've reached official end state
-			if (currentState === GameState.official && !officialStateReached) {
-				officialStateReached = true;
-				officialStateTime = Date.now();
-			}
-
-			// Try to get story data and send as new message
+		const pollThreeStars = async (): Promise<void> => {
 			const story = await API.Games.GetStory(this.gameId);
 
-			if (story?.summary) {
-				// Log what's available
-				const threeStars = story.summary.threeStars?.length || 0;
-				const gameStats = story.summary.teamGameStats?.length || 0;
-				// Send story summary as new message if we have meaningful data
-				if (threeStars > 0 || gameStats > 0) {
-					const storyEmbed = this.embedFormatter.createStoryEmbed(story);
-					await this?.thread?.send({ embeds: [storyEmbed] });
-					// Stop polling after successfully sending story
-					Logger.info(`[GAME END] Story data sent for game ${this.gameId}`);
-					this.finalizeGameThread();
-					return;
-				}
+			if (story?.summary?.threeStars?.length > 0) {
+				const threeStarsEmbed = this.embedFormatter.createThreeStarsEmbed(story);
+				await this?.thread?.send({ embeds: [threeStarsEmbed] });
+				Logger.info(`[GAME END] Three stars embed sent for game ${this.gameId}`);
+				this.finalizeGameThread();
+				return;
 			}
-
-			// Determine if we should continue polling
-			const shouldContinue =
-				!officialStateReached || Date.now() - (officialStateTime || 0) < POLLING_AFTER_OFFICIAL_MS;
-
-			if (shouldContinue) {
-				setTimeout(pollStory, POLL_INTERVAL_MS);
+			if (Date.now() - startTime < MAX_POLLING_TIME_MS) {
+				setTimeout(pollThreeStars, POLL_INTERVAL_MS);
 			} else {
-				Logger.info(`[GAME END] Polling complete for game ${this.gameId}`);
+				Logger.warn(`[GAME END] Three stars not available for game ${this.gameId}`);
 				this.finalizeGameThread();
 			}
 		};
-		// Start polling after 1 minute
-		setTimeout(pollStory, POLLING_DELAY_MS);
+		// Start polling after delay
+		setTimeout(pollThreeStars, THREE_STARS_DELAY_MS);
+		Logger.info(`[GAME END] Three stars polling scheduled for game ${this.gameId}`);
 	};
 
 	/**

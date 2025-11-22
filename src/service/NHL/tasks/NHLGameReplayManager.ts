@@ -92,17 +92,18 @@ export class GameReplayManager {
 	private async postGameEnd(): Promise<void> {
 		if (!this.feed || !this.embedFormatter) return;
 
-		const gameEndEmbed = this.embedFormatter.createGameEndEmbed();
-		await this.thread.send({ embeds: [gameEndEmbed] });
+		// Send game summary
+		const gameSummaryEmbed = this.embedFormatter.createGameSummaryEmbed();
+		await this.thread.send({ embeds: [gameSummaryEmbed] });
 
-		// Try to get story data for the game
+		// Try to get story data for three stars
 		try {
 			Logger.info(`Fetching post-game story data...`);
 			const story = await API.Games.GetStory(this.gameId);
 
 			if (story?.summary?.threeStars?.length > 0) {
-				const enhancedEmbed = this.embedFormatter.createStoryEmbed(story);
-				await this.thread.send({ embeds: [enhancedEmbed] });
+				const threeStarsEmbed = this.embedFormatter.createThreeStarsEmbed(story);
+				await this.thread.send({ embeds: [threeStarsEmbed] });
 				Logger.info(`Posted three stars and game stats`);
 			}
 		} catch (error) {

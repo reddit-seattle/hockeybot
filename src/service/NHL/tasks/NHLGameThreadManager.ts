@@ -129,10 +129,7 @@ class GameThreadManager {
 		let embedColor: number = 0x0099ff; // Default color
 
 		// If either team matches our favorite team ID, use special title
-		if (
-			favoriteTeamId &&
-			(`${homeTeam.id}` === favoriteTeamId || `${awayTeam.id}` === favoriteTeamId)
-		) {
+		if (favoriteTeamId && (`${homeTeam.id}` === favoriteTeamId || `${awayTeam.id}` === favoriteTeamId)) {
 			// Add emoji to favorite team title
 			const ourTeamEmoji = `${homeTeam.id}` === favoriteTeamId ? homeEmoji : awayEmoji;
 			title = ourTeamEmoji

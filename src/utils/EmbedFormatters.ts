@@ -77,7 +77,9 @@ export class GameFeedEmbedFormatter {
 		}
 		const unassisted = !assist1 && !assist2;
 		const description = scorer
-			? `${excitement ? "### " : ""}${scorer.firstName.default} ${scorer.lastName.default} (${goal.details?.scoringPlayerTotal})`
+			? `${excitement ? "### " : ""}${scorer.firstName.default} ${scorer.lastName.default} (${
+					goal.details?.scoringPlayerTotal
+				})`
 			: "Unknown player";
 		const shotType = goal.details?.shotType;
 		const goalTypeKeys = Object.keys(Strings.GOAL_TYPE_STRINGS);
@@ -85,7 +87,9 @@ export class GameFeedEmbedFormatter {
 			shotType && contains(goalTypeKeys, shotType)
 				? Strings.GOAL_TYPE_STRINGS[shotType as keyof typeof Strings.GOAL_TYPE_STRINGS]
 				: "Unknown shot type";
-		let secondaryDescription = `${shotTypeString}${unassisted ? ` - Unassisted` : ""}${goalphrase ? ` - ${goalphrase}` : ""}`;
+		let secondaryDescription = `${shotTypeString}${unassisted ? ` - Unassisted` : ""}${
+			goalphrase ? ` - ${goalphrase}` : ""
+		}`;
 
 		const fields = [];
 		if (assist1) {
@@ -146,7 +150,9 @@ export class GameFeedEmbedFormatter {
 		const drawnByPlayer = this.roster.get(drawnByPlayerId ?? "");
 		const penaltyTeam = this.teamsMap.get(eventOwnerTeamId ?? "");
 
-		const title = `${penaltyTeam?.placeName.default} ${penaltyTeam?.commonName.default} penalty${excitement ? "!" : ""}`;
+		const title = `${penaltyTeam?.placeName.default} ${penaltyTeam?.commonName.default} penalty${
+			excitement ? "!" : ""
+		}`;
 		const fields = [];
 		// Penalty Description
 		const penaltyTypeKeys = Object.keys(Strings.PENALTY_STRINGS);
@@ -292,10 +298,7 @@ export class GameFeedEmbedFormatter {
 		return new EmbedBuilder().setTitle(title).addFields(scoreFields).setColor(Colors.KRAKEN_EMBED);
 	};
 
-	/**
-	 * Post-game (three stars etc.)
-	 */
-	createStoryEmbed = (story: StoryResponse) => {
+	createGameSummaryEmbed = () => {
 		const { awayTeam: away, homeTeam: home } = this.feed;
 		const { score: homeScore, sog: homeSOG } = home;
 		const { score: awayScore, sog: awaySOG } = away;
@@ -307,29 +310,40 @@ export class GameFeedEmbedFormatter {
 		const krakenWin = `${winner?.id}` == this.teamId;
 		const title = krakenWin ? "🦑 SEATTLE KRAKEN WIN! 🦑" : "Game Summary";
 
-		const scoreFields = [
-			{
-				name: `**${awayTeamDisplay}**`,
-				value: `Goals: **${awayScore ?? 0}**\nShots: ${awaySOG ?? 0}`,
-				inline: true,
-			},
-			{
-				name: `**${homeTeamDisplay}**`,
-				value: `Goals: **${homeScore ?? 0}**\nShots: ${homeSOG ?? 0}`,
-				inline: true,
-			},
-		];
+		return new EmbedBuilder()
+			.setTitle(title)
+			.addFields([
+				{
+					name: `**${awayTeamDisplay}**`,
+					value: `Goals: **${awayScore ?? 0}**\nShots: ${awaySOG ?? 0}`,
+					inline: true,
+				},
+				{
+					name: `**${homeTeamDisplay}**`,
+					value: `Goals: **${homeScore ?? 0}**\nShots: ${homeSOG ?? 0}`,
+					inline: true,
+				},
+			])
+			.setFooter({ text: "Final" })
+			.setColor(krakenWin ? 0x006d75 : Colors.KRAKEN_EMBED);
+	};
+
+	createThreeStarsEmbed = (story: StoryResponse) => {
+		const scoreFields = [];
+		const title = "⭐ Three Stars of the Game";
 
 		// Add three stars if available
 		if (story.summary?.threeStars?.length > 0) {
 			const threeStarsField = {
-				name: "⭐ Three Stars",
+				name: "\u200B",
 				value: story.summary.threeStars
 					.slice(0, 3) // Ensure we only get 3 stars
-					.map((star, index) => {
+					.map((star: any, index: number) => {
 						const starLabel = ["1st", "2nd", "3rd"][index];
 						const points = star.points > 0 ? ` (${star.goals}G ${star.assists}A)` : "";
-						return `**${starLabel}:** ${star.name} ${EmojiCache.getNHLTeamEmoji(star.teamAbbrev) || star.teamAbbrev}${points}`;
+						return `**${starLabel}:** ${star.name} ${
+							EmojiCache.getNHLTeamEmoji(star.teamAbbrev) || star.teamAbbrev
+						}${points}`;
 					})
 					.join("\n"),
 				inline: false,
@@ -393,7 +407,7 @@ export class GameFeedEmbedFormatter {
 			const getStat = (cat: string) => story.summary.teamGameStats.find((stat) => stat.category === cat);
 
 			// Build stat lines from config
-			const statLines = statsConfig
+			const statData = statsConfig
 				.map((config) => {
 					const stat = getStat(config.category);
 					if (!stat) return null;
@@ -401,11 +415,18 @@ export class GameFeedEmbedFormatter {
 					const awayValue = config.formatter ? config.formatter(stat.awayValue) : stat.awayValue;
 					const homeValue = config.formatter ? config.formatter(stat.homeValue) : stat.homeValue;
 
-					return `**${config.label}:** ${awayValue} - ${homeValue}`;
+					return { label: config.label, awayValue, homeValue };
 				})
-				.filter((line) => line !== null);
+				.filter((data) => data !== null);
 
-			if (statLines.length > 0) {
+			if (statData.length > 0) {
+				const maxLabelLength = Math.max(...statData.map((d) => d.label.length));
+				const statLines = statData.map((data) => {
+					// Pad label to align on colon
+					const paddedLabel = data.label.padEnd(maxLabelLength, " ");
+					return `**${paddedLabel}:** ${data.awayValue} - ${data.homeValue}`;
+				});
+
 				const statsField = {
 					name: "Game Stats",
 					value: `${teamLine}\n${statLines.join("\n")}`,
@@ -415,11 +436,7 @@ export class GameFeedEmbedFormatter {
 			}
 		}
 
-		return new EmbedBuilder()
-			.setTitle(title)
-			.addFields(scoreFields)
-			.setFooter({ text: "Final" })
-			.setColor(krakenWin ? 0x006d75 : Colors.KRAKEN_EMBED); // Special color for Kraken wins
+		return new EmbedBuilder().setTitle(title).addFields(scoreFields).setColor(Colors.KRAKEN_EMBED);
 	};
 
 	/**
