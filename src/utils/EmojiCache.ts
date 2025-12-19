@@ -63,6 +63,15 @@ class EmojiCacheManager {
 	}
 
 	/**
+	 * Get PWHL team emoji by team abbreviation
+	 * @param abbrev Team abbreviation (e.g., "SEA", "TOR", "MTL", "BOS", "MIN", "NYY", "OTT")
+	 * @returns ApplicationEmoji or empty string if not found
+	 */
+	public getPWHLTeamEmoji(abbrev: string): ApplicationEmoji | string {
+		return this.emojis.find((emoji) => emoji.name === `PWHL_${abbrev.toUpperCase()}`) || "";
+	}
+
+	/**
 	 * Get the entire emoji collection
 	 */
 	public getAllEmojis(): Collection<string, ApplicationEmoji> {
