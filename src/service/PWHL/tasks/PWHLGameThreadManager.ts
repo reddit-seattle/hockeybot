@@ -48,17 +48,17 @@ export class PWHLGameThreadManager {
 
 	public async initialize(): Promise<void> {
 		try {
-			const schedule = await API.Schedule.GetTodaysGames();
-			const game = schedule.find((g) => g.ID === this.gameId);
+			const scorebarGames = await API.Schedule.GetScorebar(1, 1);
+			const game = scorebarGames.find((g) => g.ID === this.gameId);
 
 			if (!game) {
-				throw new Error(`Game ${this.gameId} not found in today's schedule`);
+				throw new Error(`Game ${this.gameId} not found`);
 			}
 
 			// Don't start new threads for games that are already over
 			if (PWHL_FINAL_STATUSES.includes(game.GameStatus)) {
 				Logger.info(
-					`[PWHL] Game ${this.gameId} is already over (status: ${game.GameStatus}), skipping thread creation`
+					`[PWHL] Game ${this.gameId} is already over (status: ${game.GameStatus}), skipping thread creation`,
 				);
 				this.processStateChange(ThreadManagerState.COMPLETED);
 				return;
@@ -73,7 +73,7 @@ export class PWHLGameThreadManager {
 			// If game is already live, start tracking events immediately
 			if (PWHL_LIVE_STATUSES.includes(game.GameStatus)) {
 				Logger.info(
-					`[PWHL] Game ${this.gameId} is already in progress (status: ${game.GameStatus}, ${game.GameStatusString}), starting event tracking immediately`
+					`[PWHL] Game ${this.gameId} is already in progress (status: ${game.GameStatus}, ${game.GameStatusString}), starting event tracking immediately`,
 				);
 				await this.startGameTracking();
 			} else {
@@ -160,7 +160,7 @@ export class PWHLGameThreadManager {
 		const pregameCheckerTask = new SimpleIntervalJob(
 			Environment.LOCAL_RUN ? { seconds: 30, runImmediately: true } : { minutes: 5, runImmediately: true },
 			new Task(`PWHL pregame checker [${this.gameId}]`, this.checkForGameStart),
-			{ id: PREGAME_CHECKER_ID, preventOverrun: true }
+			{ id: PREGAME_CHECKER_ID, preventOverrun: true },
 		);
 
 		this.scheduler.addSimpleIntervalJob(pregameCheckerTask);
@@ -174,20 +174,20 @@ export class PWHLGameThreadManager {
 		}
 
 		try {
-			const schedule = await API.Schedule.GetTodaysGames();
-			const game = schedule.find((g) => g.ID === this.gameId);
+			const scorebarGames = await API.Schedule.GetScorebar(1, 1);
+			const game = scorebarGames.find((g) => g.ID === this.gameId);
 
 			if (!game) {
-				throw new Error(`Game ${this.gameId} not found in schedule`);
+				throw new Error(`Game ${this.gameId} not found in scorebar`);
 			}
 
 			Logger.debug(
-				`[PWHL] Pregame check: ${this.gameId} - status: ${game.GameStatus} (${game.GameStatusString})`
+				`[PWHL] Pregame check: ${this.gameId} - status: ${game.GameStatus} (${game.GameStatusString})`,
 			);
 
 			if (PWHL_LIVE_STATUSES.includes(game.GameStatus)) {
 				Logger.info(
-					`[PWHL] Game ${this.gameId} has started (status: ${game.GameStatus}, ${game.GameStatusString})`
+					`[PWHL] Game ${this.gameId} has started (status: ${game.GameStatus}, ${game.GameStatusString})`,
 				);
 				this.stopPregameChecker();
 				await this.startGameTracking();

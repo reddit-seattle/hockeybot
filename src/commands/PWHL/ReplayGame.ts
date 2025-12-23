@@ -9,7 +9,7 @@ export const ReplayGame: Command = {
 	adminOnly: true,
 	description: "[DEBUG] Replay a completed PWHL game to test game threads",
 	slashCommandDescription: new SlashCommandBuilder().addStringOption((option) =>
-		option.setName("gameid").setDescription("PWHL Game ID (e.g., 137)").setRequired(true)
+		option.setName("gameid").setDescription("PWHL Game ID (e.g., 137)").setRequired(true),
 	),
 	executeSlashCommand: async (interaction) => {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });

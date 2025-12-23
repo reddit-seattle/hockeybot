@@ -120,8 +120,11 @@ export class PWHLGameScheduleMonitor {
 		try {
 			Logger.info("[PWHL] Checking today's PWHL schedule...");
 
-			// Get today's games
-			const games = await API.Schedule.GetTodaysGames();
+			// Get today's games from scorebar (has live status)
+			const allGames = await API.Schedule.GetScorebar(1, 1);
+			const todayStr = new Date().toISOString().split("T")[0];
+			const games = allGames.filter((game) => game.GameDateISO8601.startsWith(todayStr));
+
 			if (!games || games.length === 0) {
 				Logger.info("[PWHL] No games scheduled for today");
 				return;

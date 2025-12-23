@@ -223,6 +223,9 @@ export namespace Environment {
 	export const HOCKEYBOT_PWHL_TEAM_NAME = process.env["HOCKEYBOT_PWHL_TEAM_NAME"] || "Seattle Torrent";
 	// Team code/abbreviation (e.g., "SEA", "TOR", "MTL", etc.)
 	export const HOCKEYBOT_PWHL_TEAM_CODE = process.env["HOCKEYBOT_PWHL_TEAM_CODE"] || "SEA";
+	// PWHL Firebase auth token for real-time API access
+	export const HOCKEYBOT_PWHL_AUTH_TOKEN = process.env["HOCKEYBOT_PWHL_AUTH_TOKEN"];
+
 
 	// Channel for general debug messages
 	export const DEBUG_CHANNEL_ID = process.env["GUILD_DEBUG_CHANNEL_ID"] || undefined;
@@ -268,6 +271,7 @@ export const STARTED_STATES = [GameState.pregame, GameState.live, GameState.crit
 export enum ThreadManagerState {
 	INITIALIZED = "INITIALIZED",
 	PREGAME = "PREGAME",
+	TRACKING_EVENTS = "TRACKING_EVENTS",
 	LIVE = "LIVE",
 	COMPLETED = "COMPLETED",
 	ERROR = "ERROR",
@@ -368,6 +372,34 @@ export namespace Paths {
 			// https://lscluster.hockeytech.com/feed/index.php?feed=gc&tab=gamesummary&game_id=137&key=...&client_code=pwhl
 			export const Summary = (gameId: string) =>
 				buildUrl({ feed: "gc", tab: "gamesummary", game_id: gameId, site_id: "0", lang: "en" });
+		}
+
+		/**
+		 * Real-Time API Endpoints
+		 * Base: https://leaguestat-b9523.firebaseio.com/svf/pwhl/
+		 */
+		export namespace Live {
+			export const BASE_URL = "https://leaguestat-b9523.firebaseio.com/svf/pwhl";
+			export const AUTH_TOKEN = Environment.HOCKEYBOT_PWHL_AUTH_TOKEN || "";
+
+			const buildEndpoint = (endpoint: string) => {
+				return `${BASE_URL}${endpoint}?auth=${AUTH_TOKEN}`;
+			};
+
+			// All live game data in one call
+			export const AllLiveData = () => buildEndpoint(".json");
+
+			// Clock endpoints
+			export const RunningClock = () => buildEndpoint("/runningclock.json");
+			export const PublishedClock = () => buildEndpoint("/publishedclock.json");
+
+			// Event endpoints
+			export const Goals = () => buildEndpoint("/goals.json");
+			export const Penalties = () => buildEndpoint("/penalties.json");
+			export const Faceoffs = () => buildEndpoint("/faceoffs.json");
+
+			// Stats endpoints
+			export const ShotsSummary = () => buildEndpoint("/shotssummary.json");
 		}
 	}
 

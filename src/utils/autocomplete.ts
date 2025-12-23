@@ -1,10 +1,11 @@
 import { AutocompleteInteraction } from "discord.js";
 import { first } from "underscore";
-import { API as NHLAPI } from "../service/NHL/API";
 import { API as MLBAPI } from "../service/MLB/API";
+import { API as NHLAPI } from "../service/NHL/API";
+import { API as PWHLAPI } from "../service/PWHL/API";
 import { TeamTriCode } from "./enums";
-import { Logger } from "./Logger";
 import { localizedTimeString } from "./helpers";
+import { Logger } from "./Logger";
 
 /**
  * Autocomplete for NHL team or player options
@@ -96,6 +97,38 @@ export const mlbGameAutocomplete = async (interaction: AutocompleteInteraction) 
 		await interaction.respond(choices);
 	} catch (error) {
 		Logger.error("Error in MLB game autocomplete:", error);
+		await interaction.respond([]);
+	}
+};
+
+/**
+ * Autocomplete for PWHL games
+ */
+export const pwhlGameAutocomplete = async (interaction: AutocompleteInteraction) => {
+	try {
+		const focusedValue = interaction.options.getFocused();
+
+		// Get games from scorebar (today and nearby dates)
+		const games = await PWHLAPI.Schedule.GetScorebar(1, 1);
+
+		if (!games || games.length === 0) {
+			await interaction.respond([]);
+			return;
+		}
+
+		// Format games as "AWAY @ HOME" with game ID as value
+		const choices = games.map((game) => ({
+			name: `${game.VisitorCode} @ ${game.HomeCode} - ${game.GameStatusString}`,
+			value: game.ID,
+		}));
+
+		// Filter based on user input
+		const filtered = choices.filter((choice) => choice.name.toLowerCase().includes(focusedValue.toLowerCase()));
+
+		// Discord allows max 25 autocomplete options
+		await interaction.respond(filtered.slice(0, 25));
+	} catch (error) {
+		Logger.error("Error fetching PWHL games for autocomplete:", error);
 		await interaction.respond([]);
 	}
 };

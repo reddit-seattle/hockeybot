@@ -1,15 +1,15 @@
 import { ThreadChannel } from "discord.js";
 import { delay } from "../../../utils/helpers";
 import { Logger } from "../../../utils/Logger";
+import {
+	PWHLGameEndEmbedBuilder,
+	PWHLGameStartEmbedBuilder,
+	PWHLGoalEmbedBuilder,
+	PWHLPenaltyEmbedBuilder,
+} from "../../../utils/PWHLEmbedFormatters";
 import { API } from "../API";
 import { GameSummary } from "../models/GameSummaryResponse";
-import { PBPEvent } from "../models/PlayByPlayResponse";
-import { 
-	PWHLGameStartEmbedBuilder, 
-	PWHLGoalEmbedBuilder, 
-	PWHLPenaltyEmbedBuilder, 
-	PWHLGameEndEmbedBuilder 
-} from "../../../utils/PWHLEmbedFormatters";
+import { GoalEvent, PenaltyEvent } from "../models/LiveGameResponse";
 
 /**
  * Replays a completed PWHL game for testing/debugging
@@ -45,7 +45,6 @@ export class PWHLGameReplayManager {
 
 			// Post game start
 			await this.postGameStart();
-			await delay(this.delayMs);
 
 			// Replay all events in chronological order
 			await this.replayEvents();
@@ -70,6 +69,15 @@ export class PWHLGameReplayManager {
 	private async loadGameData(): Promise<void> {
 		Logger.info(`[PWHL] Loading game data for ${this.gameId}`);
 		this.gameSummary = await API.Games.GetGameSummary(this.gameId);
+
+		// Also load shots data for the embeds
+		const shotsData = await API.Live.GetShotsSummary(this.gameId);
+		if (shotsData) {
+			(this.gameSummary as any).totalShots = {
+				home: shotsData.HomeShotTotal,
+				visitor: shotsData.VisitorShotTotal,
+			};
+		}
 	}
 
 	private async postGameStart(): Promise<void> {
@@ -82,44 +90,53 @@ export class PWHLGameReplayManager {
 	private async replayEvents(): Promise<void> {
 		if (!this.gameSummary) return;
 
-		// Fetch play-by-play data
-		const playByPlay = await API.Games.GetPlayByPlay(this.gameId);
+		// Fetch live data
+		const goalsData = await API.Live.GetGoals(this.gameId);
+		const penaltiesData = await API.Live.GetPenalties(this.gameId);
 
-		// Filter for goals and penalties
-		const goalEvents = playByPlay.filter((e) => e.event === "goal");
-		const penaltyEvents = playByPlay.filter((e) => e.event === "penalty");
+		if (!goalsData && !penaltiesData) {
+			Logger.warn(`[PWHL] No live event data found for game ${this.gameId}`);
+			return;
+		}
 
-		// Combine all events with their type and sort by "time"
+		// Combine all events with their type and sort by time
 		interface Event {
 			type: "goal" | "penalty";
-			seconds: number;
-			data: PBPEvent;
+			eventId: number;
+			data: GoalEvent | PenaltyEvent;
 		}
 
 		const events: Event[] = [];
 
 		// Add all goals
-		goalEvents.forEach((goal) => {
-			events.push({
-				type: "goal",
-				seconds: goal.s || 0,
-				data: goal,
+		if (goalsData?.GameGoals) {
+			Object.values(goalsData.GameGoals).forEach((goal) => {
+				events.push({
+					type: "goal",
+					eventId: goal.LSEventId,
+					data: goal,
+				});
 			});
-		});
+		}
 
 		// Add all penalties
-		penaltyEvents.forEach((penalty) => {
-			events.push({
-				type: "penalty",
-				seconds: penalty.s || 0,
-				data: penalty,
+		if (penaltiesData?.GamePenalties) {
+			Object.values(penaltiesData.GamePenalties).forEach((penalty) => {
+				events.push({
+					type: "penalty",
+					eventId: penalty.LSEventId,
+					data: penalty,
+				});
 			});
-		});
+		}
 
-		// Sort by seconds elapsed in game
-		events.sort((a, b) => a.seconds - b.seconds);
+		// Sort by event ID (chronological order)
+		events.sort((a, b) => a.eventId - b.eventId);
 
-		Logger.info(`[PWHL] Replaying ${events.length} events (${goalEvents.length} goals, ${penaltyEvents.length} penalties)...`);
+		const goalCount = goalsData?.GameGoals ? Object.keys(goalsData.GameGoals).length : 0;
+		const penaltyCount = penaltiesData?.GamePenalties ? Object.keys(penaltiesData.GamePenalties).length : 0;
+
+		Logger.info(`[PWHL] Replaying ${events.length} events (${goalCount} goals, ${penaltyCount} penalties)...`);
 
 		// Post each event
 		for (const event of events) {
@@ -129,23 +146,23 @@ export class PWHLGameReplayManager {
 			}
 
 			if (event.type === "goal") {
-				await this.postGoal(event.data);
+				await this.postGoal(event.data as GoalEvent);
 			} else {
-				await this.postPenalty(event.data);
+				await this.postPenalty(event.data as PenaltyEvent);
 			}
 
 			await delay(this.delayMs);
 		}
 	}
 
-	private async postGoal(goal: PBPEvent): Promise<void> {
+	private async postGoal(goal: GoalEvent): Promise<void> {
 		if (!this.gameSummary) return;
 
 		const embed = PWHLGoalEmbedBuilder(goal, this.gameSummary);
 		await this.thread.send({ embeds: [embed] });
 	}
 
-	private async postPenalty(penalty: PBPEvent): Promise<void> {
+	private async postPenalty(penalty: PenaltyEvent): Promise<void> {
 		if (!this.gameSummary) return;
 
 		const embed = PWHLPenaltyEmbedBuilder(penalty, this.gameSummary);

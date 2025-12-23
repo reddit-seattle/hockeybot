@@ -3,14 +3,16 @@ import { MessageFlags } from "discord.js";
 import { Command } from "../../models/Command";
 import { pwhlScheduleMonitorService } from "../../service/ScheduleMonitorService";
 import { Logger } from "../../utils/Logger";
+import { pwhlGameAutocomplete } from "../../utils/autocomplete";
 
 export const GameThread: Command = {
 	name: "pwhl-game-thread",
 	adminOnly: true,
 	description: "Start game thread for a PWHL game",
 	slashCommandDescription: new SlashCommandBuilder().addStringOption((option) =>
-		option.setName("gameid").setDescription("Game ID (e.g., 137)").setRequired(true)
+		option.setName("gameid").setDescription("Game ID (e.g., 137)").setRequired(true).setAutocomplete(true),
 	),
+	autocomplete: pwhlGameAutocomplete,
 	executeSlashCommand: async (interaction) => {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 

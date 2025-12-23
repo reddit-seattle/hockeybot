@@ -22,8 +22,8 @@ export const GetStandings: Command = {
 				return;
 			}
 
-			// Sort by rank
-			const sortedStandings = standings.sort((a, b) => parseInt(a.rank) - parseInt(b.rank));
+			// Sort by rank (already sorted from API, but ensure it)
+			const sortedStandings = standings.sort((a, b) => (a.rank || 0) - (b.rank || 0));
 
 			await interaction.followUp({
 				embeds: [await PWHLStandingsEmbedBuilder(sortedStandings, "Standings")],

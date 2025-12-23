@@ -15,7 +15,6 @@ export interface PlayByPlayResponse {
 export type PBPEventType = "goal" | "penalty" | "shot" | "faceoff" | "hit" | "blocked_shot" | "goalie_change";
 
 export interface PBPEvent {
-
 	id?: string; // some events don't have an ID?!
 
 	event: PBPEventType; // manual enum
@@ -24,7 +23,7 @@ export interface PBPEvent {
 	time?: string;
 	time_formatted?: string;
 	s?: number; // seconds into game
-	
+
 	// Goal-specific fields
 	goal_type?: string;
 	home?: string;
@@ -48,7 +47,7 @@ export interface PBPEvent {
 	goal_scorer?: PlayerInfo;
 	assist1_player?: PlayerInfo;
 	assist2_player?: PlayerInfo;
-	
+
 	// Penalty-specific fields
 	player_id?: string;
 	player_served?: string;
@@ -63,7 +62,7 @@ export interface PBPEvent {
 	lang_penalty_description?: string;
 	player_penalized_info?: PlayerInfo;
 	player_served_info?: PlayerInfo;
-	
+
 	// Shot-specific fields
 	player_team_id?: string;
 	goalie_team_id?: string;
@@ -75,7 +74,7 @@ export interface PBPEvent {
 	game_goal_id?: string;
 	player?: PlayerInfo;
 	goalie?: PlayerInfo;
-	
+
 	// Faceoff-specific fields
 	home_player_id?: string;
 	visitor_player_id?: string;
@@ -84,11 +83,11 @@ export interface PBPEvent {
 	win_team_id?: string;
 	player_home?: PlayerInfo;
 	player_visitor?: PlayerInfo;
-	
+
 	// Hit-specific fields
 	hitter?: PlayerInfo;
 	hit_type?: string;
-	
+
 	// Blocked shot-specific fields
 	game_id?: string;
 	blocker_player_id?: string;
@@ -97,12 +96,14 @@ export interface PBPEvent {
 	seconds?: string;
 	period_long_name?: string;
 	blocker?: PlayerInfo;
-	
+
 	// Goalie change-specific fields
 	goalie_in_id?: string | null;
 	goalie_out_id?: string | null;
 	team_code?: string;
-	goalie_in_info?: PlayerInfo | { player_id: null; jersey_number: null; team_id: null; team_code: null; first_name: null; last_name: null };
+	goalie_in_info?:
+		| PlayerInfo
+		| { player_id: null; jersey_number: null; team_id: null; team_code: null; first_name: null; last_name: null };
 	goalie_out_info?: PlayerInfo;
 }
 

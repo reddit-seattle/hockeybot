@@ -21,10 +21,16 @@ export const GetScores: Command = {
 			let titleDate: string;
 
 			if (adjustedDate) {
-				games = await API.Schedule.GetGamesByDate(adjustedDate);
+				// Use GetScorebar for live scores
+				const allGames = await API.Schedule.GetScorebar(365, 1);
+				const targetDate = format(adjustedDate, "yyyy-MM-dd");
+				games = allGames.filter((game) => game.GameDateISO8601.startsWith(targetDate));
 				titleDate = `Scores for ${format(adjustedDate, Config.TITLE_DATE_FORMAT)}`;
 			} else {
-				games = await API.Schedule.GetTodaysGames();
+				games = await API.Schedule.GetScorebar(1, 1);
+				const zonedNow = new Date();
+				const todayStr = format(zonedNow, "yyyy-MM-dd");
+				games = games.filter((game) => game.GameDateISO8601.startsWith(todayStr));
 				titleDate = `Scores for ${format(new Date(), Config.TITLE_DATE_FORMAT)}`;
 			}
 
@@ -32,7 +38,7 @@ export const GetScores: Command = {
 				await interaction.followUp(
 					`No PWHL games ${
 						adjustedDate ? `on ${format(adjustedDate, Config.TITLE_DATE_FORMAT)}` : "today"
-					} :(`
+					} :(`,
 				);
 				return;
 			}

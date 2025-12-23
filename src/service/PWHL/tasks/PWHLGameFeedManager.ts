@@ -1,7 +1,7 @@
-import { EmbedBuilder } from "@discordjs/builders";
 import { Mutex } from "async-mutex";
-import { ThreadChannel } from "discord.js";
+import { Message, ThreadChannel } from "discord.js";
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
+import { isEqual } from "underscore";
 import { Logger } from "../../../utils/Logger";
 import {
 	PWHLGameEndEmbedBuilder,
@@ -13,7 +13,12 @@ import {
 import { Environment } from "../../../utils/constants";
 import { API } from "../API";
 import { GameSummary } from "../models/GameSummaryResponse";
-import { PBPEvent } from "../models/PlayByPlayResponse";
+import { GoalEvent, PenaltyEvent, PublishedClockData } from "../models/LiveGameResponse";
+
+interface EventContainer {
+	message?: Message;
+	event: GoalEvent | PenaltyEvent;
+}
 
 export class PWHLGameFeedManager {
 	private scheduler: ToadScheduler = new ToadScheduler();
@@ -25,7 +30,7 @@ export class PWHLGameFeedManager {
 	private onGameComplete?: () => void;
 
 	// Tracking state
-	private trackedEvents: Set<string> = new Set();
+	private trackedEvents: Map<string, EventContainer> = new Map();
 	private currentPeriod: number = 0;
 
 	constructor(thread: ThreadChannel, gameId: string, initialSummary: GameSummary, onGameComplete?: () => void) {
@@ -48,7 +53,7 @@ export class PWHLGameFeedManager {
 			{
 				id: this.gameId,
 				preventOverrun: true,
-			}
+			},
 		);
 		this.scheduler.addSimpleIntervalJob(gameStatusChecker);
 		Logger.info(`[PWHL] Started feed manager for game ${this.gameId}`);
@@ -65,37 +70,56 @@ export class PWHLGameFeedManager {
 			const summary = await API.Games.GetGameSummary(this.gameId);
 			this.gameSummary = summary;
 
-			const { meta } = summary;
-			const currentPeriodNum = parseInt(meta.period || "0");
-			const gameStatus = meta.status; // Numeric game status (1=pregame, 2=live, 3/4/5=final)
-			const gameStatusString = meta.game_status_string;
+			// Fetch live data
+			const clockData = await API.Live.GetPublishedClock(this.gameId);
+			const shotsData = await API.Live.GetShotsSummary(this.gameId);
+
+			if (!clockData) {
+				Logger.warn(`[PWHL] No clock data found for game ${this.gameId}`);
+				return;
+			}
+
+			// Update summary with shots data
+			if (shotsData) {
+				(this.gameSummary as any).totalShots = {
+					home: shotsData.HomeShotTotal,
+					visitor: shotsData.VisitorShotTotal,
+				};
+			}
+
+			const currentPeriodNum = clockData.PeriodId;
+			const gameStatus = clockData.StatusId.toString();
+			const isFinal = clockData.Final;
 
 			Logger.debug(
-				`[PWHL] Game ${this.gameId} - Period ${currentPeriodNum}, Status: ${gameStatus} (${gameStatusString}), Score: ${meta.quick_score}`
+				`[PWHL] Game ${this.gameId} - Period ${currentPeriodNum} (${clockData.PeriodLongName}), Status: ${gameStatus} (${clockData.StatusName}), Progress: ${clockData.ProgressString}`,
 			);
 
 			// Debug logging - game feed
 			if (Environment.LOCAL_RUN) {
-				Logger.debug(`[PWHL] Full game feed for ${this.gameId}:`, JSON.stringify(summary, null, 2));
+				Logger.debug(`[PWHL] Clock data for ${this.gameId}:`, JSON.stringify(clockData, null, 2));
 			}
 
-		// TODO - Currently we only detect when currentPeriodNum increments, which happens when the NEXT period starts.
-		// Need to investigate PWHL API to see if there's another indicator of intermission progress.
-		// Check for period changes
-		if (currentPeriodNum > this.currentPeriod) {
-			await this.handlePeriodChange(currentPeriodNum);
-			this.currentPeriod = currentPeriodNum;
-		}
+			// Check for period changes
+			if (currentPeriodNum > this.currentPeriod) {
+				await this.handlePeriodChange(currentPeriodNum, clockData);
+				this.currentPeriod = currentPeriodNum;
+			}
 
-			// Fetch play-by-play data to get goal and penalty details
-			const playByPlay = await API.Games.GetPlayByPlay(this.gameId);
+			// process goals
+			const goalsData = await API.Live.GetGoals(this.gameId);
+			if (goalsData?.GameGoals) {
+				await this.processGoals(goalsData.GameGoals);
+			}
 
-			// Process plays
-			await this.processPlayByPlayEvents(playByPlay);
+			// process penalties
+			const penaltiesData = await API.Live.GetPenalties(this.gameId);
+			if (penaltiesData?.GamePenalties) {
+				await this.processPenalties(penaltiesData.GamePenalties);
+			}
 
-			// Check if game is over (status 3, 4, or 5)
-			const FINAL_STATUSES = ["3", "4", "5"];
-			if (FINAL_STATUSES.includes(gameStatus)) {
+			// Check if game is over
+			if (isFinal) {
 				await this.handleGameEnd();
 			}
 		} catch (error) {
@@ -105,7 +129,7 @@ export class PWHLGameFeedManager {
 		}
 	};
 
-	private async handlePeriodChange(newPeriod: number): Promise<void> {
+	private async handlePeriodChange(newPeriod: number, clockData: PublishedClockData): Promise<void> {
 		// Send period end embed for previous period (except when period 1 starts)
 		if (newPeriod > 1) {
 			const periodEndEmbed = PWHLPeriodEndEmbedBuilder(newPeriod - 1, this.gameSummary!);
@@ -116,57 +140,72 @@ export class PWHLGameFeedManager {
 		// Send period start embed for new period
 		const periodStartEmbed = PWHLPeriodStartEmbedBuilder(newPeriod, this.gameSummary!);
 		await this.thread.send({ embeds: [periodStartEmbed] });
-		Logger.info(`[PWHL] Game ${this.gameId} - Period ${newPeriod} started`);
+		Logger.info(`[PWHL] Game ${this.gameId} - Period ${newPeriod} (${clockData.PeriodLongName}) started`);
 	}
 
-	private async processPlayByPlayEvents(events: PBPEvent[]): Promise<void> {
-		// Filter to only events we care about
-		const relevantEvents = events.filter((e) => e.event === "goal" || e.event === "penalty");
+	private async processGoals(goals: { [eventId: string]: GoalEvent }): Promise<void> {
+		for (const [eventId, goal] of Object.entries(goals)) {
+			const existingEvent = this.trackedEvents.get(eventId);
 
-		for (const event of relevantEvents) {
-			// Create unique ID for this event
-			const eventId =
-				event.id || `${event.team_id}-${event.period_id}-${event.time_formatted || event.time_off_formatted}`;
+			if (!existingEvent) {
+				// New goal - send message
+				await this.processGoal(goal, eventId);
+			} else {
+				// Check if goal data has changed
+				if (!isEqual(existingEvent.event, goal)) {
+					// update message
+					const embed = PWHLGoalEmbedBuilder(goal, this.gameSummary!);
+					const editedMessage = await existingEvent.message?.edit({ embeds: [embed] });
+					this.trackedEvents.set(eventId, { message: editedMessage ?? existingEvent.message, event: goal });
 
-			if (this.trackedEvents.has(eventId)) {
-				continue; // Already processed
-			}
-
-			// Mark as tracked
-			this.trackedEvents.add(eventId);
-
-			// Process based on event type
-			switch (event.event) {
-				case "goal":
-					await this.processGoal(event);
-					break;
-				case "penalty":
-					await this.processPenalty(event);
-					break;
-				default:
-					Logger.warn(`[PWHL] Unhandled event type: ${event.event}`);
+					const scorerName = `${goal.ScorerPlayerFirstName} ${goal.ScorerPlayerLastName}`;
+					Logger.info(`[PWHL] Game ${this.gameId} - Goal updated: ${scorerName} (${eventId})`);
+				}
 			}
 		}
 	}
 
-	private async processGoal(goal: PBPEvent): Promise<void> {
-		const embed = PWHLGoalEmbedBuilder(goal, this.gameSummary!);
-		await this.thread.send({ embeds: [embed] });
+	private async processPenalties(penalties: { [eventId: string]: PenaltyEvent }): Promise<void> {
+		for (const [eventId, penalty] of Object.entries(penalties)) {
+			const existingEvent = this.trackedEvents.get(eventId);
 
-		const scorerName = goal.goal_scorer
-			? `${goal.goal_scorer.first_name} ${goal.goal_scorer.last_name}`
-			: "Unknown";
-		Logger.info(`[PWHL] Game ${this.gameId} - Goal by ${scorerName}`);
+			if (!existingEvent) {
+				// New penalty - send message
+				await this.processPenalty(penalty, eventId);
+			} else {
+				// Check if penalty data has changed
+				if (!isEqual(existingEvent.event, penalty)) {
+					// update message
+					const embed = PWHLPenaltyEmbedBuilder(penalty, this.gameSummary!);
+					const editedMessage = await existingEvent.message?.edit({ embeds: [embed] });
+					this.trackedEvents.set(eventId, {
+						message: editedMessage ?? existingEvent.message,
+						event: penalty,
+					});
+
+					const playerName = `${penalty.PenalizedPlayerFirstName} ${penalty.PenalizedPlayerLastName}`;
+					Logger.info(`[PWHL] Game ${this.gameId} - Penalty updated: ${playerName} (${eventId})`);
+				}
+			}
+		}
 	}
 
-	private async processPenalty(penalty: PBPEvent): Promise<void> {
-		const embed = PWHLPenaltyEmbedBuilder(penalty, this.gameSummary!);
-		await this.thread.send({ embeds: [embed] });
+	private async processGoal(goal: GoalEvent, eventId: string): Promise<void> {
+		const embed = PWHLGoalEmbedBuilder(goal, this.gameSummary!);
+		const message = await this.thread.send({ embeds: [embed] });
+		this.trackedEvents.set(eventId, { message, event: goal });
 
-		const playerName = penalty.player_penalized_info
-			? `${penalty.player_penalized_info.first_name} ${penalty.player_penalized_info.last_name}`
-			: "Unknown";
-		Logger.info(`[PWHL] Game ${this.gameId} - Penalty: ${playerName} - ${penalty.lang_penalty_description}`);
+		const scorerName = `${goal.ScorerPlayerFirstName} ${goal.ScorerPlayerLastName}`;
+		Logger.info(`[PWHL] Game ${this.gameId} - Goal by ${scorerName} (${eventId})`);
+	}
+
+	private async processPenalty(penalty: PenaltyEvent, eventId: string): Promise<void> {
+		const embed = PWHLPenaltyEmbedBuilder(penalty, this.gameSummary!);
+		const message = await this.thread.send({ embeds: [embed] });
+		this.trackedEvents.set(eventId, { message, event: penalty });
+
+		const playerName = `${penalty.PenalizedPlayerFirstName} ${penalty.PenalizedPlayerLastName}`;
+		Logger.info(`[PWHL] Game ${this.gameId} - Penalty: ${playerName} - ${penalty.OffenceDescription} (${eventId})`);
 	}
 
 	private async handleGameEnd(): Promise<void> {
