@@ -329,9 +329,9 @@ export namespace Paths {
 			export const BySeason = (seasonId: string) =>
 				buildUrl({ feed: "modulekit", view: "schedule", season_id: seasonId });
 
-			// https://lscluster.hockeytech.com/feed/index.php?feed=statviewfeed&view=schedule&team=3&season=5&month=-1&key=...&client_code=pwhl
+			// https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=schedule&team_id=3&season_id=5&key=...&client_code=pwhl
 			export const ByTeam = (teamId: string, seasonId: string) =>
-				buildUrl({ feed: "statviewfeed", view: "schedule", team: teamId, season: seasonId, month: "-1" });
+				buildUrl({ feed: "modulekit", view: "schedule", team_id: teamId, season_id: seasonId });
 
 			// https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=gamesperday&start_date=2023-01-01&end_date=2026-01-01&key=...&client_code=pwhl
 			export const ByDateRange = (startDate: string, endDate: string) =>

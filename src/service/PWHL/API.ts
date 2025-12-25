@@ -75,11 +75,7 @@ export namespace API {
 		export const GetTeamsBySeason = async (seasonId?: string): Promise<Team[]> => {
 			const sid = seasonId ?? (await Season.GetCurrentSeasonId());
 			const response = await get<PWHLTeamsResponse>(Paths.PWHL.Teams.BySeasonId(sid));
-			const teams: Team[] = [];
-			response.SiteKit.Teamsbydivision.forEach((division) => {
-				teams.push(...division.teams);
-			});
-			return teams;
+			return response.SiteKit.Teamsbyseason;
 		};
 
 		export const GetRoster = async (teamId: string, seasonId?: string) => {
@@ -90,7 +86,7 @@ export namespace API {
 
 		export const GetTeamByCode = async (teamCode: string, seasonId?: string): Promise<Team | undefined> => {
 			const teams = await GetTeamsBySeason(seasonId);
-			return teams.find((team) => team.team_code.toUpperCase() === teamCode.toUpperCase());
+			return teams.find((team) => team.code.toUpperCase() === teamCode.toUpperCase());
 		};
 	}
 

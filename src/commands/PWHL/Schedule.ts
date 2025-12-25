@@ -5,11 +5,15 @@ import { API } from "../../service/PWHL/API";
 import { Config } from "../../utils/constants";
 import { optionalDateOption, processLocalizedDateInput } from "../../utils/helpers";
 import { PWHLScheduleEmbedBuilder } from "../../utils/PWHLEmbedFormatters";
+import { EmojiCache } from "../../utils/EmojiCache";
+import { pwhlTeamAutocomplete } from "../../utils/autocomplete";
 
 const teamScheduleSubcommandBuilder = new SlashCommandSubcommandBuilder()
 	.setName("team")
 	.setDescription("Get PWHL team schedule")
-	.addStringOption((option) => option.setName("team").setDescription("Team code (e.g., SEA)").setRequired(true));
+	.addStringOption((option) =>
+		option.setName("team").setDescription("Team code (e.g., SEA)").setRequired(true).setAutocomplete(true),
+	);
 
 const leagueScheduleSubcommandBuilder = new SlashCommandSubcommandBuilder()
 	.setName("all")
@@ -22,6 +26,7 @@ export const GetSchedule: Command = {
 	slashCommandDescription: new SlashCommandBuilder()
 		.addSubcommand(leagueScheduleSubcommandBuilder)
 		.addSubcommand(teamScheduleSubcommandBuilder),
+	autocomplete: pwhlTeamAutocomplete,
 	executeSlashCommand: async (interaction) => {
 		await interaction.deferReply();
 
@@ -38,9 +43,30 @@ export const GetSchedule: Command = {
 					return;
 				}
 
-				const schedule = await API.Schedule.GetTeamSchedule(team.team_id);
+				// Get team schedule and filter to upcoming games
+				const schedule = await API.Schedule.GetTeamSchedule(team.id.toString());
+				if (!schedule || schedule.length === 0) {
+					await interaction.followUp(`No schedule found for ${team.nickname}`);
+					return;
+				}
+
+				// Filter to upcoming games and sort by date
+				const now = new Date();
+				const upcomingGames = schedule
+					.filter((game) => new Date(game.GameDateISO8601) >= now)
+					.sort((a, b) => new Date(a.GameDateISO8601).getTime() - new Date(b.GameDateISO8601).getTime())
+					.slice(0, 5); // Show only next 5 games
+
+				if (upcomingGames.length === 0) {
+					await interaction.followUp(`No upcoming games found for ${team.nickname}`);
+					return;
+				}
+
+				const teamEmoji = EmojiCache.getPWHLTeamEmoji(team.code);
+				const title = `${teamEmoji ?? ""}${team.name} Schedule`;
+
 				await interaction.followUp({
-					embeds: [await PWHLScheduleEmbedBuilder(schedule, `${team.nickname}`)],
+					embeds: [await PWHLScheduleEmbedBuilder(upcomingGames, title)],
 				});
 			} catch (error) {
 				await interaction.followUp(`Error fetching team schedule: ${error}`);

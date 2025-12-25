@@ -3,7 +3,7 @@ export interface PWHLTeamsResponse {
 		Gametypes: any[];
 		Parameters: any;
 		Seasons: Season[];
-		Teamsbydivision: Teamsbydivision[];
+		Teamsbyseason: Team[]; // Flat array of teams, not grouped by division
 	};
 }
 
@@ -16,27 +16,15 @@ export interface Season {
 	start_date: string;
 }
 
-export interface Teamsbydivision {
-	division_id: string;
-	division_long_name: string;
-	division_name: string;
-	division_short_name: string;
-	teams: Team[];
-}
-
 export interface Team {
-	team_code: string;
-	team_id: string;
-	league_id: string;
+	id: string;
+	code: string;
 	name: string;
 	nickname: string;
-	short_name: string;
 	city: string;
-	team_url: string;
-	logo: string;
+	team_caption: string;
 	division_id: string;
 	division_long_name: string;
 	division_short_name: string;
-	conference_id: string;
-	conference_name: string;
+	team_logo_url: string;
 }

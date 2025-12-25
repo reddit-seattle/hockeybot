@@ -56,6 +56,7 @@ export class PWHLGameReplayManager {
 		} catch (error) {
 			Logger.error(`[PWHL] Error during game replay for ${this.gameId}:`, error);
 			await this.thread.send(`Error during replay: ${error}`);
+			throw error; // Re-throw so the command can handle cleanup
 		} finally {
 			this.isRunning = false;
 		}
@@ -95,8 +96,7 @@ export class PWHLGameReplayManager {
 		const penaltiesData = await API.Live.GetPenalties(this.gameId);
 
 		if (!goalsData && !penaltiesData) {
-			Logger.warn(`[PWHL] No live event data found for game ${this.gameId}`);
-			return;
+			throw new Error(`No live event data available for game ${this.gameId}, cannot replay.`);
 		}
 
 		// Combine all events with their type and sort by time
@@ -138,6 +138,10 @@ export class PWHLGameReplayManager {
 
 		Logger.info(`[PWHL] Replaying ${events.length} events (${goalCount} goals, ${penaltyCount} penalties)...`);
 
+		// Track running score for replay
+		let homeScore = 0;
+		let awayScore = 0;
+
 		// Post each event
 		for (const event of events) {
 			if (!this.isRunning) {
@@ -146,24 +150,37 @@ export class PWHLGameReplayManager {
 			}
 
 			if (event.type === "goal") {
-				await this.postGoal(event.data as GoalEvent);
+				const goalEvent = event.data as GoalEvent;
+				// Update score after this goal
+				if (goalEvent.IsHome) {
+					homeScore++;
+				} else {
+					awayScore++;
+				}
+				await this.postGoal(goalEvent, homeScore, awayScore);
 			} else {
-				await this.postPenalty(event.data as PenaltyEvent);
+				await this.postPenalty(event.data as PenaltyEvent, homeScore, awayScore);
 			}
 
 			await delay(this.delayMs);
 		}
 	}
 
-	private async postGoal(goal: GoalEvent): Promise<void> {
+	private async postGoal(goal: GoalEvent, homeScore: number, awayScore: number): Promise<void> {
 		if (!this.gameSummary) return;
+
+		// Update the meta.quick_score with calculated running score
+		this.gameSummary.meta.quick_score = `${awayScore}-${homeScore}`;
 
 		const embed = PWHLGoalEmbedBuilder(goal, this.gameSummary);
 		await this.thread.send({ embeds: [embed] });
 	}
 
-	private async postPenalty(penalty: PenaltyEvent): Promise<void> {
+	private async postPenalty(penalty: PenaltyEvent, homeScore: number, awayScore: number): Promise<void> {
 		if (!this.gameSummary) return;
+
+		// Update the meta.quick_score with current running score
+		this.gameSummary.meta.quick_score = `${awayScore}-${homeScore}`;
 
 		const embed = PWHLPenaltyEmbedBuilder(penalty, this.gameSummary);
 		await this.thread.send({ embeds: [embed] });

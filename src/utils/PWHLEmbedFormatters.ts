@@ -17,7 +17,7 @@ import { relativeDateString } from "./helpers";
  * Build embed for PWHL schedule (upcoming/scheduled games)
  */
 export const PWHLScheduleEmbedBuilder = async (games: ScheduleGame[], title: string): Promise<EmbedBuilder> => {
-	const embed = new EmbedBuilder().setTitle(`PWHL ${title} Schedule`).setColor(Colors.KRAKEN_EMBED);
+	const embed = new EmbedBuilder().setTitle(title).setColor(Colors.KRAKEN_EMBED);
 
 	if (!games || games.length === 0) {
 		embed.setDescription("No games scheduled");
@@ -163,25 +163,20 @@ export const PWHLStandingsEmbedBuilder = async (standings: TeamStanding[], title
 	}
 
 	const fields = standings.map((standing, index) => {
-		const { team_code, name, wins, losses, ot_losses, points, games_played, goals_for, goals_against, past_10 } =
-			standing;
+		const { team_code, name, wins, losses, ot_losses, points, goals_for, goals_against, past_10 } = standing;
 
 		const emoji = EmojiCache.getPWHLTeamEmoji(team_code!) || "";
 		const teamDisplay = `${emoji} ${name}`;
 		const rankDisplay = `${index + 1}. ${teamDisplay}`;
 
 		const record = `${wins}-${losses}-${ot_losses}`;
-		const detailLines = [
-			`Record: ${record}`,
-			`Points: ${points}`,
-			`GP: ${games_played}`,
-			`GF: ${goals_for} | GA: ${goals_against}`,
-			`Last 10: ${past_10}`,
-		];
+		const diff = (Number(goals_for) || 0) - (Number(goals_against) || 0);
+		const diffDisplay = diff > 0 ? `+${diff}` : `${diff}`;
+		const last10 = `L10: ${past_10}`;
 
 		return {
 			name: rankDisplay,
-			value: detailLines.join("\n"),
+			value: `${points} pts - (${record}) - ${last10} - Diff: ${diffDisplay}`,
 			inline: false,
 		};
 	});
@@ -253,7 +248,7 @@ export function PWHLGoalEmbedBuilder(goal: GoalEvent, gameSummary: GameSummary):
 
 	// Add JAILBREAK for shorthanded goals
 	if (ShortHanded === 1) {
-		description += "\n\n**JAILBREAK**";
+		description += "\n**Jailbreak**";
 	}
 
 	// Build title

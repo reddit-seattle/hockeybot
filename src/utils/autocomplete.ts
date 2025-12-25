@@ -132,3 +132,25 @@ export const pwhlGameAutocomplete = async (interaction: AutocompleteInteraction)
 		await interaction.respond([]);
 	}
 };
+
+/**
+ * Autocomplete for PWHL teams
+ */
+export const pwhlTeamAutocomplete = async (interaction: AutocompleteInteraction) => {
+	try {
+		const focusedValue = interaction.options.getFocused();
+
+		const teams = await PWHLAPI.Teams.GetTeamsBySeason();
+		const choices = teams.map((team) => ({
+			name: `${team.nickname} (${team.code})`,
+			value: team.code,
+		}));
+
+		const filtered = choices.filter((choice) => choice.name.toLowerCase().includes(focusedValue.toLowerCase()));
+
+		await interaction.respond(filtered.slice(0, 25));
+	} catch (error) {
+		Logger.error("Error fetching teams for autocomplete:", error);
+		await interaction.respond([]);
+	}
+};

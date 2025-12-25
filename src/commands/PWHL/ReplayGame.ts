@@ -29,9 +29,22 @@ export const ReplayGame: Command = {
 					content: `Starting PWHL game replay in ${thread}`,
 				});
 
-				// Start the replay
-				const replayManager = new PWHLGameReplayManager(thread, gameId);
-				await replayManager.start();
+				try {
+					// Start the replay
+					const replayManager = new PWHLGameReplayManager(thread, gameId);
+					await replayManager.start();
+				} catch (replayError: any) {
+					Logger.error("[PWHL] Replay failed:", replayError);
+					// Delete both the thread and its creation message
+					const starterMessage = await thread.fetchStarterMessage().catch(() => null);
+					await thread.delete("Replay failed - no data available");
+					if (starterMessage) {
+						await starterMessage.delete().catch(() => {});
+					}
+					await interaction.editReply({
+						content: `Replay failed: ${replayError?.message || "Unknown error"}`,
+					});
+				}
 			}
 		} catch (error: any) {
 			Logger.error("[PWHL] Error in replay-game command:", error);
