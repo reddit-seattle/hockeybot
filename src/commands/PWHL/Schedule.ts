@@ -11,6 +11,8 @@ import { Logger } from "../../utils/Logger";
 
 const NEXT_GAMES_COUNT = 5;
 
+// TODO - past games need to know to use different season id for fetching games
+
 const teamScheduleSubcommandBuilder = new SlashCommandSubcommandBuilder()
 	.setName("team")
 	.setDescription("PWHL team schedule")

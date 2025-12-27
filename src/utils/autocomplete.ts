@@ -147,3 +147,43 @@ export const pwhlTeamAutocomplete = async (interaction: AutocompleteInteraction)
 		await interaction.respond([]);
 	}
 };
+
+/**
+ * Autocomplete for debug-replayable PWHL games
+ */
+export const pwhlReplayGameAutocomplete = async (interaction: AutocompleteInteraction) => {
+	try {
+		const focusedValue = interaction.options.getFocused();
+
+		// Get available game IDs and fetch game metadata
+		const [liveData, games] = await Promise.all([
+			PWHLAPI.Live.GetAllLiveData(),
+			PWHLAPI.Schedule.GetScorebar(60, 0),
+		]);
+
+		const availableGameIds = Object.keys(liveData?.goals?.[1]?.games || {});
+		if (availableGameIds.length === 0 || !games) {
+			await interaction.respond([]);
+			return;
+		}
+
+		// Filter and map in one pass
+		const choices = games
+			// Only include games with live data
+			.filter((game) => availableGameIds.includes(game.ID))
+			// format for autocomplete
+			.map((game) => ({
+				name: `${game.VisitorCode} ${game.VisitorGoals} @ ${game.HomeCode} ${game.HomeGoals} (${new Date(game.GameDateISO8601).toLocaleDateString()})`,
+				value: game.ID,
+			}))
+			// filter based on user input
+			.filter((choice) => choice.name.toLowerCase().includes(focusedValue.toLowerCase()))
+			// limit to 25 results
+			.slice(0, 25);
+
+		await interaction.respond(choices);
+	} catch (error) {
+		Logger.error("Error fetching PWHL replay games for autocomplete:", error);
+		await interaction.respond([]);
+	}
+};

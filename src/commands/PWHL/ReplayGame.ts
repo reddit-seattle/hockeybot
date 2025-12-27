@@ -3,14 +3,16 @@ import { Command } from "../../models/Command";
 import { PWHLGameReplayManager } from "../../service/PWHL/tasks/PWHLGameReplayManager";
 import { isGuildTextChannel } from "../../utils/helpers";
 import { Logger } from "../../utils/Logger";
+import { pwhlReplayGameAutocomplete } from "../../utils/autocomplete";
 
 export const ReplayGame: Command = {
 	name: "debug-pwhl-game",
 	adminOnly: true,
 	description: "[DEBUG] Replay a completed PWHL game to test game threads",
 	slashCommandDescription: new SlashCommandBuilder().addStringOption((option) =>
-		option.setName("gameid").setDescription("PWHL Game ID (e.g., 137)").setRequired(true),
+		option.setName("gameid").setDescription("PWHL Game ID").setRequired(true).setAutocomplete(true),
 	),
+	autocomplete: pwhlReplayGameAutocomplete,
 	executeSlashCommand: async (interaction) => {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
