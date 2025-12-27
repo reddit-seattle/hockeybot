@@ -6,6 +6,7 @@ import { TeamStanding } from "../service/PWHL/models/StandingsResponse";
 import { GoalEvent, PenaltyEvent } from "../service/PWHL/models/LiveGameResponse";
 import { Colors, Config, Environment, Paths, Strings } from "./constants";
 import { EmojiCache } from "./EmojiCache";
+import { PWHLGameStatus } from "./enums";
 import { format, utcToZonedTime } from "date-fns-tz";
 import { relativeDateString, formatPWHLPeriodName } from "./helpers";
 
@@ -127,8 +128,6 @@ export const PWHLScoresEmbedBuilder = async (games: Game[], title: string): Prom
 			GameStatus,
 			GameStatusStringLong,
 			ScheduledFormattedTime,
-			PeriodNameShort,
-			Clock,
 			HomeShots,
 			VisitorShots,
 			venue_name,
@@ -142,8 +141,7 @@ export const PWHLScoresEmbedBuilder = async (games: Game[], title: string): Prom
 		const homeTeamString = homeEmoji ? `${homeEmoji} ${HomeCode}` : HomeCode;
 
 		// if game has not started, show schedule
-		const gameStatusNum = parseInt(GameStatus);
-		const gameStarted = !isNaN(gameStatusNum) && gameStatusNum > 1;
+		const gameStarted = GameStatus !== PWHLGameStatus.Pregame;
 		if (!gameStarted) {
 			const gameDate = new Date(game.GameDateISO8601);
 			const relativeDate = relativeDateString(gameDate.toISOString());
@@ -164,23 +162,14 @@ export const PWHLScoresEmbedBuilder = async (games: Game[], title: string): Prom
 		const matchupLine = `${awayTeamString} - ${awayScore}\n${homeTeamString} - ${homeScore}`;
 
 		const detailLines = [];
-		const isFinal = GameStatus === "4"; // Status 4 is typically final
-
-		if (isFinal) {
-			const statusLong = GameStatusStringLong.toLowerCase();
-			if (statusLong !== "final") {
-				detailLines.push(GameStatusStringLong);
-			}
-		} else if (GameStatus === "1") {
+		if (GameStatus === PWHLGameStatus.Pregame) {
 			detailLines.push(`Pregame - ${ScheduledFormattedTime}`);
 		} else {
-			if (PeriodNameShort && Clock) {
-				detailLines.push(`${PeriodNameShort} - ${Clock}`);
-			}
+			detailLines.push(`${GameStatusStringLong}`);
 		}
 
 		// Shots if available and game has started
-		if (HomeShots && VisitorShots && GameStatus !== "1") {
+		if (HomeShots && VisitorShots && GameStatus !== PWHLGameStatus.Pregame) {
 			const awayShots = `${awayEmoji || VisitorCode} ${VisitorShots}`;
 			const homeShots = `${homeEmoji || HomeCode} ${HomeShots}`;
 			detailLines.push(`Shots: ${awayShots} ${homeShots}`);
@@ -245,9 +234,17 @@ export const PWHLStandingsEmbedBuilder = async (standings: TeamStanding[], title
 
 export const PWHLGameStartEmbedBuilder = (gameSummary: GameSummary): EmbedBuilder => {
 	const { home, visitor, venue } = gameSummary;
+
+	const homeEmoji = EmojiCache.getPWHLTeamEmoji(home.code);
+	const awayEmoji = EmojiCache.getPWHLTeamEmoji(visitor.code);
+
+	const awayDisplay = awayEmoji ? `${awayEmoji} ${visitor.name}` : visitor.name;
+	const homeDisplay = homeEmoji ? `${home.name} ${homeEmoji}` : home.name;
+
+	// TODO: Add head-to-head matchup information (season series, recent results, etc.)
 	return new EmbedBuilder()
 		.setTitle("Game is starting!")
-		.setDescription(`${visitor.name} @ ${home.name}\n\n${venue}`)
+		.setDescription(`${awayDisplay} @ ${homeDisplay}\n\n${venue}`)
 		.setColor(0x0099ff)
 		.setTimestamp();
 };
@@ -273,7 +270,7 @@ export function PWHLGoalEmbedBuilder(goal: GoalEvent, gameSummary: GameSummary):
 		EmptyNet,
 		PenaltyShot,
 		Time,
-		PeriodLongName,
+		PeriodShortName,
 	} = goal;
 
 	// Determine which team scored
@@ -331,9 +328,8 @@ export function PWHLGoalEmbedBuilder(goal: GoalEvent, gameSummary: GameSummary):
 		});
 	}
 
-	const scores = meta.quick_score.split("-");
-	const awayScore = scores[0] || "0";
-	const homeScore = scores[1] || "0";
+	const awayScore = meta?.visiting_goal_count || "0";
+	const homeScore = meta?.home_goal_count || "0";
 
 	const awayShots = totalShots?.visitor ?? "?";
 	const homeShots = totalShots?.home ?? "?";
@@ -351,7 +347,7 @@ export function PWHLGoalEmbedBuilder(goal: GoalEvent, gameSummary: GameSummary):
 		},
 	);
 
-	const timestamp = `${Time} in the ${PeriodLongName} period`;
+	const timestamp = `${Time} ${PeriodShortName}`;
 
 	// Build headshot URL
 	const headshotUrl = Paths.PWHL.HeadshotURL(`${ScorerPlayerId}`);
@@ -385,17 +381,12 @@ export function PWHLPenaltyEmbedBuilder(penalty: PenaltyEvent, gameSummary: Game
 	// Determine which team got the penalty (Home=1, not Home=0)
 	const penaltyTeam = Home === 1 ? home : visitor;
 
-	// Check if this penalty is against our favorite team (we like penalties against opponents)
-	const favoriteTeamId = Environment.HOCKEYBOT_PWHL_TEAM_ID;
-	const isPenaltyAgainstOpponent = favoriteTeamId && penaltyTeam.id !== favoriteTeamId;
-
 	// Get team emoji
 	const teamEmoji = EmojiCache.getPWHLTeamEmoji(penaltyTeam.code);
 
 	const playerName = `${PenalizedPlayerFirstName} ${PenalizedPlayerLastName}`;
 
-	const penaltyText = isPenaltyAgainstOpponent ? "penalty!" : "penalty";
-	const title = teamEmoji ? `${teamEmoji} ${penaltyTeam.name} ${penaltyText}` : `${penaltyTeam.name} ${penaltyText}`;
+	const title = teamEmoji ? `${teamEmoji} ${penaltyTeam.nickname} penalty` : `${penaltyTeam.nickname} penalty`;
 
 	// Build description with infraction details
 	const infraction = `${OffenceDescription} - ${Minutes} minutes`;
@@ -408,7 +399,7 @@ export function PWHLPenaltyEmbedBuilder(penalty: PenaltyEvent, gameSummary: Game
 	}
 
 	const periodName = formatPWHLPeriodName(Period);
-	const timeString = `${Time} into the ${periodName} period`;
+	const timeString = `${Time} ${periodName}`;
 
 	// Build headshot URL
 	const headshotUrl = PenalizedPlayerId ? Paths.PWHL.HeadshotURL(`${PenalizedPlayerId}`) : undefined;
@@ -429,10 +420,8 @@ export const PWHLPeriodEndEmbedBuilder = (periodNumber: number, gameSummary: Gam
 	const homeEmoji = EmojiCache.getPWHLTeamEmoji(home.code);
 	const awayEmoji = EmojiCache.getPWHLTeamEmoji(visitor.code);
 
-	// Parse current score
-	const scores = meta.quick_score.split("-");
-	const awayScore = scores[0] || "0";
-	const homeScore = scores[1] || "0";
+	const awayScore = meta?.visiting_goal_count || "0";
+	const homeScore = meta?.home_goal_count || "0";
 
 	// Get shots if available
 	const awayShots = totalShots?.visitor ?? "?";
@@ -467,12 +456,9 @@ export const PWHLPeriodStartEmbedBuilder = (periodNumber: number, gameSummary: G
 	const homeEmoji = EmojiCache.getPWHLTeamEmoji(home.code);
 	const awayEmoji = EmojiCache.getPWHLTeamEmoji(visitor.code);
 
-	// Parse current score
-	const scores = meta.quick_score.split("-");
-	const awayScore = scores[0] || "0";
-	const homeScore = scores[1] || "0";
+	const awayScore = meta?.visiting_goal_count || "0";
+	const homeScore = meta?.home_goal_count || "0";
 
-	// Get shots if available
 	const awayShots = totalShots?.visitor ?? "?";
 	const homeShots = totalShots?.home ?? "?";
 
@@ -499,7 +485,7 @@ export const PWHLPeriodStartEmbedBuilder = (periodNumber: number, gameSummary: G
 };
 
 export const PWHLGameEndEmbedBuilder = (gameSummary: GameSummary): EmbedBuilder => {
-	const { home, visitor, meta, totalShots } = gameSummary;
+	const { home, visitor, meta, totalShots, status_value } = gameSummary;
 	const visitorCode = visitor.code;
 	const homeCode = home.code;
 
@@ -507,10 +493,8 @@ export const PWHLGameEndEmbedBuilder = (gameSummary: GameSummary): EmbedBuilder 
 	const homeEmoji = EmojiCache.getPWHLTeamEmoji(home.code);
 	const awayEmoji = EmojiCache.getPWHLTeamEmoji(visitor.code);
 
-	// Parse score
-	const scores = meta.quick_score.split("-");
-	const awayScore = parseInt(scores[0] || "0");
-	const homeScore = parseInt(scores[1] || "0");
+	const awayScore = parseInt(meta?.visiting_goal_count || "0");
+	const homeScore = parseInt(meta?.home_goal_count || "0");
 
 	const winningTeam = homeScore > awayScore ? home : visitor;
 	const winningEmoji = homeScore > awayScore ? homeEmoji : awayEmoji;
@@ -520,7 +504,22 @@ export const PWHLGameEndEmbedBuilder = (gameSummary: GameSummary): EmbedBuilder 
 	const weWon = favoriteTeamId && winningTeam.id === favoriteTeamId;
 
 	const winText = weWon ? "WIN!" : "win";
-	const title = winningEmoji ? `${winningEmoji} ${winningTeam.name} ${winText}` : `${winningTeam.name} ${winText}`;
+
+	// Determine if game went to OT/SO
+	const finalPeriod = parseInt(meta.period || "3");
+	const isShootout = (status_value || "").toUpperCase().includes("SO");
+	const isOT = finalPeriod >= 4 && !isShootout;
+
+	let titleSuffix = "";
+	if (isShootout) {
+		titleSuffix = " (SO)";
+	} else if (isOT) {
+		titleSuffix = ` (${formatPWHLPeriodName(finalPeriod)})`;
+	}
+
+	const title = winningEmoji
+		? `${winningEmoji} ${winningTeam.name} ${winText}${titleSuffix}`
+		: `${winningTeam.name} ${winText}${titleSuffix}`;
 
 	// Build fields for final score and stats
 	const fields = [

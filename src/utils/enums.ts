@@ -48,6 +48,29 @@ export enum BroadcastMarket {
 	away = "A",
 }
 
+export enum PWHLGameStatus {
+	Pregame = "1",
+	Live = "2",
+	Final = "3",
+	FinalOT = "4",
+	FinalSO = "5",
+}
+
+export const PWHL_LIVE_STATUSES = [PWHLGameStatus.Live];
+export const PWHL_FINAL_STATUSES = [PWHLGameStatus.Final, PWHLGameStatus.FinalOT, PWHLGameStatus.FinalSO];
+
+export function isPWHLGameStatus(status: string): status is PWHLGameStatus {
+	return Object.values(PWHLGameStatus).includes(status as PWHLGameStatus);
+}
+
+export function isPWHLGameLive(status: string): boolean {
+	return isPWHLGameStatus(status) && PWHL_LIVE_STATUSES.includes(status);
+}
+
+export function isPWHLGameFinal(status: string): boolean {
+	return isPWHLGameStatus(status) && PWHL_FINAL_STATUSES.includes(status);
+}
+
 export enum GameLocation {
 	home = "H",
 	road = "R",

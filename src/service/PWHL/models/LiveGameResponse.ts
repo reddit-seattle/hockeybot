@@ -224,6 +224,39 @@ export interface MVPs {
 }
 
 // ============================================================================
+// Shootout Models
+// ============================================================================
+
+export interface ShootoutPlayer {
+	FirstName: string;
+	LastName: string;
+	PlayerId: number;
+	JerseyNumber: number;
+	Goalie: boolean;
+}
+
+export interface ShootoutAttempt {
+	Goal: boolean;
+	Goalie: ShootoutPlayer;
+	IsHome: boolean;
+	LSEventId: number;
+	Shooter: ShootoutPlayer;
+}
+
+export interface GameShootoutData {
+	DatePlayed: string;
+	ShootoutAttempts: {
+		[eventId: string]: ShootoutAttempt;
+	};
+}
+
+export interface Shootouts {
+	games: {
+		[gameId: string]: GameShootoutData;
+	};
+}
+
+// ============================================================================
 // All Live Data (Master Endpoint)
 // ============================================================================
 
@@ -233,7 +266,7 @@ export interface AllLiveDataResponse {
 	penalties: [null, Penalties];
 	mvps: [null, MVPs];
 	runningclock: [null, RunningClock];
-	shootouts: [null, any]; // TODO - typing (requires active shootout game)
+	shootouts: [null, Shootouts];
 	shotssummary: [null, ShotSummary];
 	publishedclock?: [null, PublishedClock];
 }

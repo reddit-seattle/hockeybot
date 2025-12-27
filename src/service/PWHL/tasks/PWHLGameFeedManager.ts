@@ -11,9 +11,11 @@ import {
 	PWHLPeriodStartEmbedBuilder,
 } from "../../../utils/PWHLEmbedFormatters";
 import { Environment } from "../../../utils/constants";
+import { hasPeriodStarted } from "../../../utils/helpers";
 import { API } from "../API";
 import { GameSummary } from "../models/GameSummaryResponse";
-import { GoalEvent, PenaltyEvent, PublishedClockData } from "../models/LiveGameResponse";
+import { GoalEvent, PenaltyEvent } from "../models/LiveGameResponse";
+import { isPWHLGameFinal } from "../../../utils/enums";
 
 interface EventContainer {
 	message?: Message;
@@ -31,17 +33,13 @@ export class PWHLGameFeedManager {
 
 	// Tracking state
 	private trackedEvents: Map<string, EventContainer> = new Map();
-	private currentPeriod: number = 0;
+	private inIntermission: boolean = false;
 
 	constructor(thread: ThreadChannel, gameId: string, initialSummary: GameSummary, onGameComplete?: () => void) {
 		this.thread = thread;
 		this.gameId = gameId;
 		this.gameSummary = initialSummary;
 		this.onGameComplete = onGameComplete;
-
-		// Initialize current period
-		const periodNum = parseInt(initialSummary?.meta?.period || "0");
-		this.currentPeriod = periodNum;
 
 		// Start polling
 		const gameStatusChecker = new SimpleIntervalJob(
@@ -69,15 +67,6 @@ export class PWHLGameFeedManager {
 			// update summary
 			this.gameSummary = await API.Games.GetGameSummary(this.gameId);
 
-			// shots
-			const shotsData = await API.Live.GetShotsSummary(this.gameId);
-			if (shotsData) {
-				(this.gameSummary as any).totalShots = {
-					home: shotsData.HomeShotTotal,
-					visitor: shotsData.VisitorShotTotal,
-				};
-			}
-
 			// goals
 			const goalsData = await API.Live.GetGoals(this.gameId);
 			if (goalsData?.GameGoals) {
@@ -96,7 +85,7 @@ export class PWHLGameFeedManager {
 				Logger.warn(`[PWHL] No clock data found for game ${this.gameId}`);
 				return;
 			}
-			const { PeriodId, StatusId, Final } = clockData;
+			const { PeriodId, StatusId, Final, ClockMinutes, ClockSeconds } = clockData;
 
 			Logger.debug(
 				`[PWHL] Game ${this.gameId} - Period ${PeriodId} (${clockData.PeriodLongName}), Status: ${StatusId} (${clockData.StatusName}), Progress: ${clockData.ProgressString}`,
@@ -107,14 +96,21 @@ export class PWHLGameFeedManager {
 				Logger.debug(`[PWHL] Clock data for ${this.gameId}:`, JSON.stringify(clockData, null, 2));
 			}
 
-			// Check for period changes
-			if (PeriodId > this.currentPeriod) {
-				await this.handlePeriodChange(PeriodId, clockData);
-				this.currentPeriod = PeriodId;
+			// period end
+			if (ClockMinutes === 0 && ClockSeconds == 0 && !this.inIntermission) {
+				await this.announcePeriodEnd(PeriodId);
+				this.inIntermission = true;
 			}
 
-			// Check if game is over
-			if (Final) {
+			// period start
+			if (this.inIntermission && hasPeriodStarted(ClockMinutes, PeriodId)) {
+				await this.announcePeriodStart(PeriodId);
+				this.inIntermission = false;
+			}
+
+			// game over
+			const { status_value } = this.gameSummary;
+			if (isPWHLGameFinal(status_value ?? "") || Final) {
 				await this.handleGameEnd();
 			}
 		} catch (error) {
@@ -124,18 +120,17 @@ export class PWHLGameFeedManager {
 		}
 	};
 
-	private async handlePeriodChange(newPeriod: number, clockData: PublishedClockData): Promise<void> {
-		// Send period end embed for previous period (except when period 1 starts)
-		if (newPeriod > 1) {
-			const periodEndEmbed = PWHLPeriodEndEmbedBuilder(newPeriod - 1, this.gameSummary!);
-			await this.thread.send({ embeds: [periodEndEmbed] });
-			Logger.info(`[PWHL] Game ${this.gameId} - Period ${newPeriod - 1} ended`);
-		}
+	private async announcePeriodEnd(period: number): Promise<void> {
+		const periodEndEmbed = PWHLPeriodEndEmbedBuilder(period, this.gameSummary!);
+		await this.thread.send({ embeds: [periodEndEmbed] });
+		Logger.info(`[PWHL] Game ${this.gameId} - Period ${period} ended`);
+	}
 
+	private async announcePeriodStart(newPeriod: number): Promise<void> {
 		// Send period start embed for new period
 		const periodStartEmbed = PWHLPeriodStartEmbedBuilder(newPeriod, this.gameSummary!);
 		await this.thread.send({ embeds: [periodStartEmbed] });
-		Logger.info(`[PWHL] Game ${this.gameId} - Period ${newPeriod} (${clockData.PeriodLongName}) started`);
+		Logger.info(`[PWHL] Game ${this.gameId} - Period ${newPeriod} started`);
 	}
 
 	private async processGoals(goals: { [eventId: string]: GoalEvent }): Promise<void> {
