@@ -19,18 +19,18 @@ export interface ScheduleGame {
 	game_number: string;
 
 	// Dates and times
-	date_played: string; // YYYY-MM-DD format
-	date: string; // "Dec. 23" format
-	date_with_day: string; // "Tue, Dec 23" format
+	date_played: string; // YYYY-MM-DD
+	date: string; // "Dec. 23"
+	date_with_day: string; // "Tue, Dec 23"
 	date_time_played: string; // ISO8601 with Z
 	GameDateISO8601: string; // ISO8601 with timezone
-	schedule_time: string; // HH:MM:SS format
-	scheduled_time: string; // "7:00 pm EST" formatted
+	schedule_time: string; // HH:MM:SS
+	scheduled_time: string; // "7:00 pm EST"
 	timezone: string;
 
 	// Teams
-	home_team: string; // team ID
-	visiting_team: string; // team ID
+	home_team: string; // ID
+	visiting_team: string; // ID
 	home_team_name: string;
 	home_team_code: string;
 	home_team_nickname: string;
@@ -57,7 +57,7 @@ export interface ScheduleGame {
 
 	// Status
 	status: string;
-	game_status: string; // Can be time like "7:00 pm EST" for upcoming games
+	game_status: string; // "7:00 pm EST"
 	started: string; // "0" or "1"
 	final: string; // "0" or "1"
 

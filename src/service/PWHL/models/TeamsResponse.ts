@@ -3,7 +3,7 @@ export interface PWHLTeamsResponse {
 		Gametypes: any[];
 		Parameters: any;
 		Seasons: Season[];
-		Teamsbyseason: Team[]; // Flat array of teams, not grouped by division
+		Teamsbyseason: Team[];
 	};
 }
 

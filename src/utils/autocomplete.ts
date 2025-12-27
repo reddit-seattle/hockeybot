@@ -107,18 +107,14 @@ export const mlbGameAutocomplete = async (interaction: AutocompleteInteraction) 
 export const pwhlGameAutocomplete = async (interaction: AutocompleteInteraction) => {
 	try {
 		const focusedValue = interaction.options.getFocused();
-
-		// Get games from scorebar (today and nearby dates)
 		const games = await PWHLAPI.Schedule.GetScorebar(1, 1);
-
 		if (!games || games.length === 0) {
 			await interaction.respond([]);
 			return;
 		}
 
-		// Format games as "AWAY @ HOME" with game ID as value
 		const choices = games.map((game) => ({
-			name: `${game.VisitorCode} @ ${game.HomeCode} - ${game.GameStatusString}`,
+			name: `${game.VisitorCode} @ ${game.HomeCode}`,
 			value: game.ID,
 		}));
 
@@ -139,15 +135,12 @@ export const pwhlGameAutocomplete = async (interaction: AutocompleteInteraction)
 export const pwhlTeamAutocomplete = async (interaction: AutocompleteInteraction) => {
 	try {
 		const focusedValue = interaction.options.getFocused();
-
 		const teams = await PWHLAPI.Teams.GetTeamsBySeason();
 		const choices = teams.map((team) => ({
 			name: `${team.nickname} (${team.code})`,
 			value: team.code,
 		}));
-
 		const filtered = choices.filter((choice) => choice.name.toLowerCase().includes(focusedValue.toLowerCase()));
-
 		await interaction.respond(filtered.slice(0, 25));
 	} catch (error) {
 		Logger.error("Error fetching teams for autocomplete:", error);

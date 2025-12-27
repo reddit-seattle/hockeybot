@@ -64,7 +64,7 @@ class EmojiCacheManager {
 
 	/**
 	 * Get PWHL team emoji by team abbreviation
-	 * @param abbrev Team abbreviation (e.g., "SEA", "TOR", "MTL", "BOS", "MIN", "NYY", "OTT")
+	 * @param abbrev Team abbreviation ("SEA")
 	 * @returns ApplicationEmoji or empty string if not found
 	 */
 	public getPWHLTeamEmoji(abbrev: string): ApplicationEmoji | string {

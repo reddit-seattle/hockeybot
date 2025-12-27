@@ -1,12 +1,10 @@
 import { EmbedBuilder } from "@discordjs/builders";
-import { format, utcToZonedTime } from "date-fns-tz";
 import { TextChannel, ThreadAutoArchiveDuration, ThreadChannel } from "discord.js";
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
-import { Colors, Config, Environment, ThreadManagerState } from "../../../utils/constants";
-import { EmojiCache } from "../../../utils/EmojiCache";
-import { ApiDateString, relativeDateString } from "../../../utils/helpers";
+import { Environment, ThreadManagerState } from "../../../utils/constants";
+import { ApiDateString } from "../../../utils/helpers";
 import { Logger } from "../../../utils/Logger";
-import { PWHLGameStartEmbedBuilder } from "../../../utils/PWHLEmbedFormatters";
+import { PWHLGameAnnouncementEmbedBuilder, PWHLGameStartEmbedBuilder } from "../../../utils/PWHLEmbedFormatters";
 import { API } from "../API";
 import { GameSummary } from "../models/GameSummaryResponse";
 import { Game } from "../models/ScorebarResponse";
@@ -14,15 +12,7 @@ import { PWHLGameFeedManager } from "./PWHLGameFeedManager";
 
 const PREGAME_CHECKER_ID = "pwhl_pregame_checker";
 
-// PWHL game states based on GameStatus (numeric field)
-// GameStatus values:
-// 1 = Pregame (GameStatusString shows game time like "10:00PM")
-// 2 = Live/In Progress
-// 3 = Final
-// 4 = Final/OT
-// 5 = Final/SO
-const PWHL_PREGAME_STATUS = "1";
-const PWHL_LIVE_STATUSES = ["2"]; // Game is live/in progress
+const PWHL_LIVE_STATUSES = ["2"]; // Live/In Progress
 const PWHL_FINAL_STATUSES = ["3", "4", "5"]; // Final, Final/OT, Final/SO
 
 export class PWHLGameThreadManager {
@@ -58,7 +48,7 @@ export class PWHLGameThreadManager {
 			// Don't start new threads for games that are already over
 			if (PWHL_FINAL_STATUSES.includes(game.GameStatus)) {
 				Logger.info(
-					`[PWHL] Game ${this.gameId} is already over (status: ${game.GameStatus}), skipping thread creation`,
+					`[PWHL] Game ${this.gameId} not live (status: ${game.GameStatus}), skipping thread creation`,
 				);
 				this.processStateChange(ThreadManagerState.COMPLETED);
 				return;
@@ -73,11 +63,10 @@ export class PWHLGameThreadManager {
 			// If game is already live, start tracking events immediately
 			if (PWHL_LIVE_STATUSES.includes(game.GameStatus)) {
 				Logger.info(
-					`[PWHL] Game ${this.gameId} is already in progress (status: ${game.GameStatus}, ${game.GameStatusString}), starting event tracking immediately`,
+					`[PWHL] Game ${this.gameId} in progress (status: ${game.GameStatus}, ${game.GameStatusString}), tracking events`,
 				);
 				await this.startGameTracking();
 			} else {
-				// Otherwise start pregame checker
 				this.startPregameChecker();
 				this.processStateChange(ThreadManagerState.PREGAME);
 			}
@@ -100,60 +89,17 @@ export class PWHLGameThreadManager {
 		}
 
 		// Create thread with game announcement
-		const gameAnnounceEmbed = await this.createGameAnnouncementEmbed(game);
+		const gameAnnounceEmbed = await PWHLGameAnnouncementEmbedBuilder(game);
 		const message = await this.channel.send({ embeds: [gameAnnounceEmbed] });
 
 		this.thread = await this.channel.threads.create({
 			name: threadTitle,
-			autoArchiveDuration: ThreadAutoArchiveDuration.OneDay,
-			reason: "Creating PWHL Game Day Thread",
+			autoArchiveDuration: ThreadAutoArchiveDuration.OneHour,
+			reason: "PWHL Game Day Thread",
 			startMessage: message,
 		});
 
 		Logger.info(`[PWHL] Created new thread for game ${this.gameId}: ${this.thread.id}`);
-	}
-
-	private async createGameAnnouncementEmbed(game: Game): Promise<EmbedBuilder> {
-		// Format date/time
-		const gameDate = new Date(game.GameDateISO8601);
-		const relativeDate = relativeDateString(gameDate.toISOString());
-		const startDateZoned = utcToZonedTime(gameDate, Config.TIME_ZONE);
-		const gameStartTimeString = format(startDateZoned, Config.BODY_DATE_FORMAT);
-
-		// Get team names
-		const homeTeam = game.HomeLongName;
-		const awayTeam = game.VisitorLongName;
-
-		// Get team emojis
-		const homeEmoji = EmojiCache.getPWHLTeamEmoji(game.HomeCode);
-		const awayEmoji = EmojiCache.getPWHLTeamEmoji(game.VisitorCode);
-
-		// Check if this is our favorite team's game
-		const favoriteTeamId = Environment.HOCKEYBOT_PWHL_TEAM_ID;
-		const favoriteTeamName = Environment.HOCKEYBOT_PWHL_TEAM_NAME;
-		let title: string;
-		let embedColor: number = 0x0099ff; // Default color
-
-		// If either team matches our favorite team ID
-		if (favoriteTeamId && (game.HomeID === favoriteTeamId || game.VisitorID === favoriteTeamId)) {
-			// Add emoji to title
-			const ourTeamEmoji = game.HomeID === favoriteTeamId ? homeEmoji : awayEmoji;
-			title = ourTeamEmoji
-				? `${ourTeamEmoji} ${favoriteTeamName} game today!`
-				: `${favoriteTeamName} game today!`;
-			embedColor = Colors.KRAKEN_EMBED; // Could make this configurable
-		} else {
-			const awayDisplay = awayEmoji ? `${awayEmoji} ${awayTeam}` : awayTeam;
-			const homeDisplay = homeEmoji ? `${homeTeam} ${homeEmoji}` : homeTeam;
-			title = `${awayDisplay} vs ${homeDisplay}`;
-		}
-
-		// Create preview embed
-		const venue = game.venue_name || game.venue_location || "Venue TBA";
-		return new EmbedBuilder()
-			.setTitle(title)
-			.setDescription(`Game start: ${gameStartTimeString} (${relativeDate})\n${venue}`)
-			.setColor(embedColor);
 	}
 
 	private startPregameChecker(): void {
@@ -181,14 +127,11 @@ export class PWHLGameThreadManager {
 				throw new Error(`Game ${this.gameId} not found in scorebar`);
 			}
 
-			Logger.debug(
-				`[PWHL] Pregame check: ${this.gameId} - status: ${game.GameStatus} (${game.GameStatusString})`,
-			);
+			const { GameStatus, GameStatusString } = game;
+			Logger.debug(`[PWHL] Pregame check: ${this.gameId} - status: ${GameStatus} (${GameStatusString})`);
 
-			if (PWHL_LIVE_STATUSES.includes(game.GameStatus)) {
-				Logger.info(
-					`[PWHL] Game ${this.gameId} has started (status: ${game.GameStatus}, ${game.GameStatusString})`,
-				);
+			if (PWHL_LIVE_STATUSES.includes(GameStatus)) {
+				Logger.info(`[PWHL] Game ${this.gameId} has started (status: ${GameStatus}, ${GameStatusString})`);
 				this.stopPregameChecker();
 				await this.startGameTracking();
 			}
@@ -210,7 +153,7 @@ export class PWHLGameThreadManager {
 				Logger.debug(`[PWHL] Game summary structure for ${this.gameId}:`, JSON.stringify(gameSummary, null, 2));
 			}
 
-			// Post game start announcement
+			// game start announcement
 			const embed = await this.createGameStartEmbed(gameSummary);
 			await this.thread.send({ embeds: [embed] });
 

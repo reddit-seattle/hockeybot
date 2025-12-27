@@ -1,5 +1,3 @@
-// Response from: /feed/index.php?feed=modulekit&view=roster&team_id=3&season_id=5
-
 export interface PWHLRosterResponse {
 	SiteKit: {
 		Roster: Player[];

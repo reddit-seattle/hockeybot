@@ -2,6 +2,7 @@ import { SlashCommandBuilder } from "discord.js";
 import { Command } from "../../models/Command";
 import { API } from "../../service/PWHL/API";
 import { PWHLStandingsEmbedBuilder } from "../../utils/PWHLEmbedFormatters";
+import { Logger } from "../../utils/Logger";
 
 export const GetStandings: Command = {
 	name: "pwhl-standings",
@@ -9,7 +10,6 @@ export const GetStandings: Command = {
 	slashCommandDescription: new SlashCommandBuilder(),
 	executeSlashCommand: async (interaction) => {
 		await interaction.deferReply();
-
 		try {
 			const standings = await API.Standings.GetStandings();
 			if (!standings || standings.length === 0) {
@@ -21,7 +21,8 @@ export const GetStandings: Command = {
 				embeds: [await PWHLStandingsEmbedBuilder(sortedStandings, "Standings")],
 			});
 		} catch (error) {
-			await interaction.followUp(`Error fetching standings: ${error}`);
+			await interaction.followUp(`Error fetching / building standings.`);
+			Logger.error("[PWHL] Error fetching / building standings:", error);
 		}
 	},
 };

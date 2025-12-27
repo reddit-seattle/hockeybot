@@ -22,8 +22,8 @@ export interface Season {
 	season_id: string;
 	season_name: string;
 	shortname: string;
-	career: string; // "1" = counts toward career stats (regular + playoffs), "0" = doesn't count (preseason)
-	playoff: string; // "1" = playoffs, "0" = regular season or preseason
+	career: string; // "1" = (regular + playoffs), "0" = (preseason)
+	playoff: string; // "1" = playoffs, "0" = regular season, preseason
 	start_date: string; // YYYY-MM-DD
 	end_date: string; // YYYY-MM-DD
 }

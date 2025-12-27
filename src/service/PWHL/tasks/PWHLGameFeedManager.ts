@@ -66,20 +66,11 @@ export class PWHLGameFeedManager {
 				return Logger.debug(`[PWHL] Game ${this.gameId} is already over, skipping checkGameStatus`);
 			}
 
-			// Fetch latest game summary
-			const summary = await API.Games.GetGameSummary(this.gameId);
-			this.gameSummary = summary;
+			// update summary
+			this.gameSummary = await API.Games.GetGameSummary(this.gameId);
 
-			// Fetch live data
-			const clockData = await API.Live.GetPublishedClock(this.gameId);
+			// shots
 			const shotsData = await API.Live.GetShotsSummary(this.gameId);
-
-			if (!clockData) {
-				Logger.warn(`[PWHL] No clock data found for game ${this.gameId}`);
-				return;
-			}
-
-			// Update summary with shots data
 			if (shotsData) {
 				(this.gameSummary as any).totalShots = {
 					home: shotsData.HomeShotTotal,
@@ -87,12 +78,28 @@ export class PWHLGameFeedManager {
 				};
 			}
 
-			const currentPeriodNum = clockData.PeriodId;
-			const gameStatus = clockData.StatusId.toString();
-			const isFinal = clockData.Final;
+			// goals
+			const goalsData = await API.Live.GetGoals(this.gameId);
+			if (goalsData?.GameGoals) {
+				await this.processGoals(goalsData.GameGoals);
+			}
+
+			// penalties
+			const penaltiesData = await API.Live.GetPenalties(this.gameId);
+			if (penaltiesData?.GamePenalties) {
+				await this.processPenalties(penaltiesData.GamePenalties);
+			}
+
+			// clock data
+			const clockData = await API.Live.GetPublishedClock(this.gameId);
+			if (!clockData) {
+				Logger.warn(`[PWHL] No clock data found for game ${this.gameId}`);
+				return;
+			}
+			const { PeriodId, StatusId, Final } = clockData;
 
 			Logger.debug(
-				`[PWHL] Game ${this.gameId} - Period ${currentPeriodNum} (${clockData.PeriodLongName}), Status: ${gameStatus} (${clockData.StatusName}), Progress: ${clockData.ProgressString}`,
+				`[PWHL] Game ${this.gameId} - Period ${PeriodId} (${clockData.PeriodLongName}), Status: ${StatusId} (${clockData.StatusName}), Progress: ${clockData.ProgressString}`,
 			);
 
 			// Debug logging - game feed
@@ -101,25 +108,13 @@ export class PWHLGameFeedManager {
 			}
 
 			// Check for period changes
-			if (currentPeriodNum > this.currentPeriod) {
-				await this.handlePeriodChange(currentPeriodNum, clockData);
-				this.currentPeriod = currentPeriodNum;
-			}
-
-			// process goals
-			const goalsData = await API.Live.GetGoals(this.gameId);
-			if (goalsData?.GameGoals) {
-				await this.processGoals(goalsData.GameGoals);
-			}
-
-			// process penalties
-			const penaltiesData = await API.Live.GetPenalties(this.gameId);
-			if (penaltiesData?.GamePenalties) {
-				await this.processPenalties(penaltiesData.GamePenalties);
+			if (PeriodId > this.currentPeriod) {
+				await this.handlePeriodChange(PeriodId, clockData);
+				this.currentPeriod = PeriodId;
 			}
 
 			// Check if game is over
-			if (isFinal) {
+			if (Final) {
 				await this.handleGameEnd();
 			}
 		} catch (error) {
@@ -148,12 +143,11 @@ export class PWHLGameFeedManager {
 			const existingEvent = this.trackedEvents.get(eventId);
 
 			if (!existingEvent) {
-				// New goal - send message
+				// New goal message
 				await this.processGoal(goal, eventId);
 			} else {
-				// Check if goal data has changed
+				// only update if changed
 				if (!isEqual(existingEvent.event, goal)) {
-					// update message
 					const embed = PWHLGoalEmbedBuilder(goal, this.gameSummary!);
 					const editedMessage = await existingEvent.message?.edit({ embeds: [embed] });
 					this.trackedEvents.set(eventId, { message: editedMessage ?? existingEvent.message, event: goal });
@@ -170,12 +164,11 @@ export class PWHLGameFeedManager {
 			const existingEvent = this.trackedEvents.get(eventId);
 
 			if (!existingEvent) {
-				// New penalty - send message
+				// New penalty message
 				await this.processPenalty(penalty, eventId);
 			} else {
-				// Check if penalty data has changed
+				// only update if changed
 				if (!isEqual(existingEvent.event, penalty)) {
-					// update message
 					const embed = PWHLPenaltyEmbedBuilder(penalty, this.gameSummary!);
 					const editedMessage = await existingEvent.message?.edit({ embeds: [embed] });
 					this.trackedEvents.set(eventId, {

@@ -14,6 +14,15 @@ export interface GameSummary {
 	shotsByPeriod: any;
 	details?: GameDetails;
 	gameInfo?: GameInfo;
+	// Dynamic properties added during live game tracking
+	totalShots?: {
+		home: number;
+		visitor: number;
+	};
+	powerPlayCount?: {
+		home: number;
+		visitor: number;
+	};
 }
 
 export interface GameMeta {

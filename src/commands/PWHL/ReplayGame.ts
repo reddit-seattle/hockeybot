@@ -30,12 +30,10 @@ export const ReplayGame: Command = {
 				});
 
 				try {
-					// Start the replay
 					const replayManager = new PWHLGameReplayManager(thread, gameId);
 					await replayManager.start();
 				} catch (replayError: any) {
 					Logger.error("[PWHL] Replay failed:", replayError);
-					// Delete both the thread and its creation message
 					const starterMessage = await thread.fetchStarterMessage().catch(() => null);
 					await thread.delete("Replay failed - no data available");
 					if (starterMessage) {

@@ -133,7 +133,7 @@ const startMLBGameDayThreadChecker = async (guild: Guild) => {
 	// Start MLB monitor
 	const mlbScheduleMonitor = new MLBGameScheduleMonitor(
 		mlbGameDayChannel as TextChannel,
-		Environment.HOCKEYBOT_MLB_TEAM_ID
+		Environment.HOCKEYBOT_MLB_TEAM_ID,
 	);
 	mlbScheduleMonitor.initialize();
 	mlbScheduleMonitorService.set(mlbScheduleMonitor);
@@ -154,7 +154,7 @@ const startPWHLGameDayThreadChecker = async (guild: Guild) => {
 	// Start PWHL monitor
 	const pwhlScheduleMonitor = new PWHLGameScheduleMonitor(
 		pwhlGameDayChannel as TextChannel,
-		Environment.HOCKEYBOT_PWHL_TEAM_ID
+		Environment.HOCKEYBOT_PWHL_TEAM_ID,
 	);
 	pwhlScheduleMonitor.initialize();
 	pwhlScheduleMonitorService.set(pwhlScheduleMonitor);

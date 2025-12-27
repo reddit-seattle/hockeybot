@@ -29,12 +29,13 @@ export const GameThread: Command = {
 
 			if (wasAdded) {
 				await interaction.followUp({ content: `Tracking PWHL game ID: ${gameId}` });
-				Logger.info(`[PWHL] Manually added game ${gameId} to tracking`);
+				Logger.info(`[PWHL] Tracking game ID: ${gameId}`);
 			} else {
+				// todo - link to existing thread?
 				await interaction.followUp({ content: `Game ${gameId} is already being tracked.` });
 			}
 		} catch (e) {
-			Logger.error("[PWHL] Error tracking game:", e);
+			Logger.error("[PWHL] Error creating game thread:", e);
 			await interaction.followUp({ content: "Error creating game thread." });
 		}
 	},

@@ -11,16 +11,12 @@ import { API } from "../API";
 import { GameSummary } from "../models/GameSummaryResponse";
 import { GoalEvent, PenaltyEvent } from "../models/LiveGameResponse";
 
-/**
- * Replays a completed PWHL game for testing/debugging
- * Posts all goals, penalties, and final score in sequence
- */
 export class PWHLGameReplayManager {
 	private thread: ThreadChannel;
 	private gameId: string;
 	private gameSummary?: GameSummary;
 	private isRunning: boolean = false;
-	private delayMs: number = 500; // 500ms between messages
+	private delayMs: number = 100;
 
 	constructor(thread: ThreadChannel, gameId: string) {
 		this.thread = thread;
@@ -32,26 +28,16 @@ export class PWHLGameReplayManager {
 			Logger.warn(`[PWHL] Replay already running for game ${this.gameId}`);
 			return;
 		}
-
 		this.isRunning = true;
 		Logger.info(`[PWHL] Starting game replay for ${this.gameId}`);
-
 		try {
-			// Fetch the complete game data
 			await this.loadGameData();
 			if (!this.gameSummary) {
 				throw new Error("Failed to load game summary");
 			}
-
-			// Post game start
-			await this.postGameStart();
-
-			// Replay all events in chronological order
+			await this.announceGameStart();
 			await this.replayEvents();
-
-			// Post game end summary
-			await this.postGameEnd();
-
+			await this.announceGameEnd();
 			Logger.info(`[PWHL] Game replay completed for ${this.gameId}`);
 		} catch (error) {
 			Logger.error(`[PWHL] Error during game replay for ${this.gameId}:`, error);
@@ -70,8 +56,6 @@ export class PWHLGameReplayManager {
 	private async loadGameData(): Promise<void> {
 		Logger.info(`[PWHL] Loading game data for ${this.gameId}`);
 		this.gameSummary = await API.Games.GetGameSummary(this.gameId);
-
-		// Also load shots data for the embeds
 		const shotsData = await API.Live.GetShotsSummary(this.gameId);
 		if (shotsData) {
 			(this.gameSummary as any).totalShots = {
@@ -81,7 +65,7 @@ export class PWHLGameReplayManager {
 		}
 	}
 
-	private async postGameStart(): Promise<void> {
+	private async announceGameStart(): Promise<void> {
 		if (!this.gameSummary) return;
 
 		const embed = PWHLGameStartEmbedBuilder(this.gameSummary);
@@ -91,21 +75,16 @@ export class PWHLGameReplayManager {
 	private async replayEvents(): Promise<void> {
 		if (!this.gameSummary) return;
 
-		// Fetch live data
 		const goalsData = await API.Live.GetGoals(this.gameId);
 		const penaltiesData = await API.Live.GetPenalties(this.gameId);
-
 		if (!goalsData && !penaltiesData) {
 			throw new Error(`No live event data available for game ${this.gameId}, cannot replay.`);
 		}
-
-		// Combine all events with their type and sort by time
 		interface Event {
 			type: "goal" | "penalty";
 			eventId: number;
 			data: GoalEvent | PenaltyEvent;
 		}
-
 		const events: Event[] = [];
 
 		// Add all goals
@@ -130,7 +109,7 @@ export class PWHLGameReplayManager {
 			});
 		}
 
-		// Sort by event ID (chronological order)
+		// Sort
 		events.sort((a, b) => a.eventId - b.eventId);
 
 		const goalCount = goalsData?.GameGoals ? Object.keys(goalsData.GameGoals).length : 0;
@@ -150,8 +129,8 @@ export class PWHLGameReplayManager {
 			}
 
 			if (event.type === "goal") {
+				// we gotta track goals for reasons
 				const goalEvent = event.data as GoalEvent;
-				// Update score after this goal
 				if (goalEvent.IsHome) {
 					homeScore++;
 				} else {
@@ -159,9 +138,8 @@ export class PWHLGameReplayManager {
 				}
 				await this.postGoal(goalEvent, homeScore, awayScore);
 			} else {
-				await this.postPenalty(event.data as PenaltyEvent, homeScore, awayScore);
+				await this.postPenalty(event.data as PenaltyEvent);
 			}
-
 			await delay(this.delayMs);
 		}
 	}
@@ -169,26 +147,21 @@ export class PWHLGameReplayManager {
 	private async postGoal(goal: GoalEvent, homeScore: number, awayScore: number): Promise<void> {
 		if (!this.gameSummary) return;
 
-		// Update the meta.quick_score with calculated running score
+		// Use meta.quick_score to track running score
 		this.gameSummary.meta.quick_score = `${awayScore}-${homeScore}`;
 
 		const embed = PWHLGoalEmbedBuilder(goal, this.gameSummary);
 		await this.thread.send({ embeds: [embed] });
 	}
 
-	private async postPenalty(penalty: PenaltyEvent, homeScore: number, awayScore: number): Promise<void> {
+	private async postPenalty(penalty: PenaltyEvent): Promise<void> {
 		if (!this.gameSummary) return;
-
-		// Update the meta.quick_score with current running score
-		this.gameSummary.meta.quick_score = `${awayScore}-${homeScore}`;
-
 		const embed = PWHLPenaltyEmbedBuilder(penalty, this.gameSummary);
 		await this.thread.send({ embeds: [embed] });
 	}
 
-	private async postGameEnd(): Promise<void> {
+	private async announceGameEnd(): Promise<void> {
 		if (!this.gameSummary) return;
-
 		const embed = PWHLGameEndEmbedBuilder(this.gameSummary);
 		await this.thread.send({ embeds: [embed] });
 	}

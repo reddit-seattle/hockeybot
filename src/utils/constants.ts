@@ -225,6 +225,8 @@ export namespace Environment {
 	export const HOCKEYBOT_PWHL_TEAM_CODE = process.env["HOCKEYBOT_PWHL_TEAM_CODE"] || "SEA";
 	// PWHL Firebase auth token for real-time API access
 	export const HOCKEYBOT_PWHL_AUTH_TOKEN = process.env["HOCKEYBOT_PWHL_AUTH_TOKEN"];
+	// PWHL API key for HockeyTech API access
+	export const HOCKEYBOT_PWHL_API_KEY = process.env["HOCKEYBOT_PWHL_API_KEY"];
 
 
 	// Channel for general debug messages
@@ -288,14 +290,13 @@ export namespace Paths {
 		/**
 		 * PWHL uses the HockeyTech API via LeagueStat cluster
 		 * Base: https://lscluster.hockeytech.com/feed/
-		 * All endpoints require: key=446521baf8c38984&client_code=pwhl
 		 *
-		 * Note: Season IDs are fetched dynamically from the API using API.Season.GetCurrentSeasonId()
-		 * to avoid hardcoding values that need updating every season.
 		 */
 		export const API_ENDPOINT = "https://lscluster.hockeytech.com/feed";
-		export const API_KEY = "446521baf8c38984";
+		export const API_KEY = Environment.HOCKEYBOT_PWHL_API_KEY ?? "";
 		export const CLIENT_CODE = "pwhl";
+
+		export const HeadshotURL = (playerId: string) => `https://assets.leaguestat.com/pwhl/240x240/${playerId}.jpg`;
 
 		const buildUrl = (params: { [key: string]: string }) => {
 			const queryParams = new URLSearchParams({

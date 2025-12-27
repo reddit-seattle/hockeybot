@@ -12,47 +12,24 @@ export const GetScores: Command = {
 	slashCommandDescription: new SlashCommandBuilder().addStringOption(optionalDateOption),
 	executeSlashCommand: async (interaction) => {
 		await interaction.deferReply();
-
-		const dateInput = interaction.options.getString("date", false);
-		const adjustedDate = processLocalizedDateInput(dateInput);
-
 		try {
-			let games;
-			let titleDate: string;
+			const dateInput = interaction.options.getString("date", false);
+			const adjustedDate = processLocalizedDateInput(dateInput);
+			const allGames = await API.Schedule.GetScorebar();
+			const titleDate = format(adjustedDate ?? new Date(), Config.TITLE_DATE_FORMAT);
+			const title = `Scores for ${titleDate}`;
 
-			if (adjustedDate) {
-				// Use GetScorebar for live scores
-				const allGames = await API.Schedule.GetScorebar(365, 1);
-				const targetDate = format(adjustedDate, "yyyy-MM-dd");
-				games = allGames.filter((game) => game.GameDateISO8601.startsWith(targetDate));
-				titleDate = `Scores for ${format(adjustedDate, Config.TITLE_DATE_FORMAT)}`;
-			} else {
-				games = await API.Schedule.GetScorebar(1, 1);
-				const zonedNow = new Date();
-				const todayStr = format(zonedNow, "yyyy-MM-dd");
-				games = games.filter((game) => game.GameDateISO8601.startsWith(todayStr));
-				titleDate = `Scores for ${format(new Date(), Config.TITLE_DATE_FORMAT)}`;
-			}
+			// filter by date
+			const filteredGames = allGames.filter((game) =>
+				game.GameDateISO8601.startsWith(format(adjustedDate ?? new Date(), "yyyy-MM-dd")),
+			);
 
-			if (!games || games.length === 0) {
-				await interaction.followUp(
-					`No PWHL games ${
-						adjustedDate ? `on ${format(adjustedDate, Config.TITLE_DATE_FORMAT)}` : "today"
-					} :(`,
-				);
+			if (!filteredGames?.length) {
+				await interaction.followUp(`No games ${adjustedDate ? `on ${titleDate}` : "today"} :(`);
 				return;
 			}
-
-			// Filter to games that have started (status > 1)
-			const startedGames = games.filter((game) => parseInt(game.GameStatus) > 1);
-
-			if (startedGames.length === 0) {
-				await interaction.followUp("No games have started yet");
-				return;
-			}
-
 			await interaction.followUp({
-				embeds: [await PWHLScoresEmbedBuilder(startedGames, titleDate)],
+				embeds: [await PWHLScoresEmbedBuilder(filteredGames, title)],
 			});
 		} catch (error) {
 			await interaction.followUp(`Error fetching scores: ${error}`);
