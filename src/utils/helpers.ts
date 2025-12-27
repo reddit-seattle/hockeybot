@@ -102,6 +102,19 @@ export const periodToStr = (number: number, periodType: string) => {
 	}
 };
 
+// TODO - need to test SO handling
+export const formatPWHLPeriodName = (period: number): string => {
+	if (period <= 3) {
+		return getOrdinal(period);
+	} else if (period === 4) {
+		return "OT";
+	} else if (period === 5) {
+		return "SO";
+	} else {
+		return `${period}`;
+	}
+};
+
 export const isGameOver = (gameState: string) => {
 	return ([GameState.softFinal, GameState.hardFinal, GameState.official] as string[]).includes(gameState);
 };

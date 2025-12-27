@@ -7,7 +7,7 @@ import { GoalEvent, PenaltyEvent } from "../service/PWHL/models/LiveGameResponse
 import { Colors, Config, Environment, Paths, Strings } from "./constants";
 import { EmojiCache } from "./EmojiCache";
 import { format, utcToZonedTime } from "date-fns-tz";
-import { relativeDateString } from "./helpers";
+import { relativeDateString, formatPWHLPeriodName } from "./helpers";
 
 /**
  * All PWHL embed formatters - goals, penalties, period ends, period starts, and game end
@@ -83,7 +83,7 @@ export const PWHLScheduleEmbedBuilder = async (games: ScheduleGame[], title: str
 		const awayDisplay = `${awayEmoji ?? ""}${visiting_team_code}`;
 
 		let matchupLine: string;
-		if (parseInt(home_goal_count) && parseInt(visiting_goal_count)) {
+		if (!isNaN(parseInt(home_goal_count)) && !isNaN(parseInt(visiting_goal_count))) {
 			// Game has been played or is in progress
 			matchupLine = `${awayDisplay} ${visiting_goal_count} @ ${homeDisplay} ${home_goal_count}`;
 		} else {
@@ -141,7 +141,8 @@ export const PWHLScoresEmbedBuilder = async (games: Game[], title: string): Prom
 		const homeTeamString = homeEmoji ? `${homeEmoji} ${HomeCode}` : HomeCode;
 
 		// if game has not started, show schedule
-		const gameStarted = parseInt(GameStatus) > 1;
+		const gameStatusNum = parseInt(GameStatus);
+		const gameStarted = !isNaN(gameStatusNum) && gameStatusNum > 1;
 		if (!gameStarted) {
 			const gameDate = new Date(game.GameDateISO8601);
 			const relativeDate = relativeDateString(gameDate.toISOString());
@@ -393,9 +394,8 @@ export function PWHLPenaltyEmbedBuilder(penalty: PenaltyEvent, gameSummary: Game
 		description += `\n**Served by:** ${ServedPlayerFirstName} ${ServedPlayerLastName}`;
 	}
 
-	const timeString = `${Time} into the ${Period}${
-		Period === 1 ? "st" : Period === 2 ? "nd" : Period === 3 ? "rd" : "th"
-	} period`;
+	const periodName = formatPWHLPeriodName(Period);
+	const timeString = `${Time} into the ${periodName} period`;
 
 	// Build headshot URL
 	const headshotUrl = PenalizedPlayerId ? Paths.PWHL.HeadshotURL(`${PenalizedPlayerId}`) : undefined;
@@ -425,8 +425,7 @@ export const PWHLPeriodEndEmbedBuilder = (periodNumber: number, gameSummary: Gam
 	const awayShots = gameSummary.totalShots?.visitor ?? "?";
 	const homeShots = gameSummary.totalShots?.home ?? "?";
 
-	const periodName =
-		periodNumber === 4 ? "OT" : `${periodNumber}${periodNumber === 1 ? "st" : periodNumber === 2 ? "nd" : "rd"}`;
+	const periodName = formatPWHLPeriodName(periodNumber);
 
 	const fields = [
 		{
@@ -464,8 +463,7 @@ export const PWHLPeriodStartEmbedBuilder = (periodNumber: number, gameSummary: G
 	const awayShots = gameSummary.totalShots?.visitor ?? "?";
 	const homeShots = gameSummary.totalShots?.home ?? "?";
 
-	const periodName =
-		periodNumber === 4 ? "OT" : `${periodNumber}${periodNumber === 1 ? "st" : periodNumber === 2 ? "nd" : "rd"}`;
+	const periodName = formatPWHLPeriodName(periodNumber);
 
 	const fields = [
 		{
