@@ -148,10 +148,17 @@ export namespace API {
 			return await get<AllLiveDataResponse>(Paths.PWHL.Live.AllLiveData());
 		};
 
-		export const GetRunningClock = async (): Promise<RunningClockData | undefined> => {
+		export async function GetRunningClock(gameId: string): Promise<RunningClockData | undefined>;
+		export async function GetRunningClock(): Promise<GameDataDict<RunningClockData>>;
+		export async function GetRunningClock(
+			gameId?: string,
+		): Promise<RunningClockData | GameDataDict<RunningClockData> | undefined> {
 			const data = unwrap<RunningClock>(await get(Paths.PWHL.Live.RunningClock()));
-			return data?.games ? Object.values(data.games)[0] : undefined;
-		};
+			if (!gameId) {
+				return data?.games || {};
+			}
+			return data?.games?.[gameId];
+		}
 
 		export async function GetPublishedClock(gameId: string): Promise<PublishedClockData | undefined>;
 		export async function GetPublishedClock(): Promise<GameDataDict<PublishedClockData>>;

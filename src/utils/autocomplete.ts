@@ -3,7 +3,7 @@ import { first } from "underscore";
 import { API as MLBAPI } from "../service/MLB/API";
 import { API as NHLAPI } from "../service/NHL/API";
 import { API as PWHLAPI } from "../service/PWHL/API";
-import { TeamTriCode } from "./enums";
+import { isPWHLGameFinal, TeamTriCode } from "./enums";
 import { localizedTimeString } from "./helpers";
 import { Logger } from "./Logger";
 
@@ -113,7 +113,10 @@ export const pwhlGameAutocomplete = async (interaction: AutocompleteInteraction)
 			return;
 		}
 
-		const choices = games.map((game) => ({
+		// Filter out completed games
+		const activeGames = games.filter((game) => !isPWHLGameFinal(game.GameStatus));
+
+		const choices = activeGames.map((game) => ({
 			name: `${game.VisitorCode} @ ${game.HomeCode}`,
 			value: game.ID,
 		}));

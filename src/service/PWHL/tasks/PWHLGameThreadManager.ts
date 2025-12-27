@@ -2,6 +2,7 @@ import { EmbedBuilder } from "@discordjs/builders";
 import { TextChannel, ThreadAutoArchiveDuration, ThreadChannel } from "discord.js";
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { Environment, ThreadManagerState } from "../../../utils/constants";
+import { isPWHLGameFinal, isPWHLGameLive } from "../../../utils/enums";
 import { ApiDateString } from "../../../utils/helpers";
 import { Logger } from "../../../utils/Logger";
 import { PWHLGameAnnouncementEmbedBuilder, PWHLGameStartEmbedBuilder } from "../../../utils/PWHLEmbedFormatters";
@@ -11,9 +12,6 @@ import { Game } from "../models/ScorebarResponse";
 import { PWHLGameFeedManager } from "./PWHLGameFeedManager";
 
 const PREGAME_CHECKER_ID = "pwhl_pregame_checker";
-
-const PWHL_LIVE_STATUSES = ["2"]; // Live/In Progress
-const PWHL_FINAL_STATUSES = ["3", "4", "5"]; // Final, Final/OT, Final/SO
 
 export class PWHLGameThreadManager {
 	private channel: TextChannel;
@@ -46,7 +44,7 @@ export class PWHLGameThreadManager {
 			}
 
 			// Don't start new threads for games that are already over
-			if (PWHL_FINAL_STATUSES.includes(game.GameStatus)) {
+			if (isPWHLGameFinal(game.GameStatus)) {
 				Logger.info(
 					`[PWHL] Game ${this.gameId} not live (status: ${game.GameStatus}), skipping thread creation`,
 				);
@@ -61,7 +59,7 @@ export class PWHLGameThreadManager {
 			}
 
 			// If game is already live, start tracking events immediately
-			if (PWHL_LIVE_STATUSES.includes(game.GameStatus)) {
+			if (isPWHLGameLive(game.GameStatus)) {
 				Logger.info(
 					`[PWHL] Game ${this.gameId} in progress (status: ${game.GameStatus}, ${game.GameStatusString}), tracking events`,
 				);
@@ -130,7 +128,7 @@ export class PWHLGameThreadManager {
 			const { GameStatus, GameStatusString } = game;
 			Logger.debug(`[PWHL] Pregame check: ${this.gameId} - status: ${GameStatus} (${GameStatusString})`);
 
-			if (PWHL_LIVE_STATUSES.includes(GameStatus)) {
+			if (isPWHLGameLive(GameStatus)) {
 				Logger.info(`[PWHL] Game ${this.gameId} has started (status: ${GameStatus}, ${GameStatusString})`);
 				this.stopPregameChecker();
 				await this.startGameTracking();

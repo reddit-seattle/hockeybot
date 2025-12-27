@@ -102,7 +102,7 @@ export const periodToStr = (number: number, periodType: string) => {
 	}
 };
 
-// TODO - need to test SO handling
+// TODO - 5th period is either SO or 2OT depending on playoffs
 export const formatPWHLPeriodName = (period: number): string => {
 	if (period <= 3) {
 		return getOrdinal(period);
@@ -111,8 +111,14 @@ export const formatPWHLPeriodName = (period: number): string => {
 	} else if (period === 5) {
 		return "SO";
 	} else {
-		return `${period}`;
+		return `${period - 3}OT`;
 	}
+};
+
+export const hasPeriodStarted = (clockMinutes: number, periodId: number): boolean => {
+	const isOT = periodId >= 4;
+	const expectedStartMinutes = isOT ? 4 : 19;
+	return clockMinutes <= expectedStartMinutes;
 };
 
 export const isGameOver = (gameState: string) => {
