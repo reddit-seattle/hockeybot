@@ -137,7 +137,8 @@ export class NHLGameScheduleMonitor {
 			// Check for games we care about
 			if (this.favoriteTeamId) {
 				const teamGames = games.filter(
-					(game) => `${game.homeTeam.id}` === this.favoriteTeamId || `${game.awayTeam.id}` === this.favoriteTeamId,
+					(game) =>
+						`${game.homeTeam.id}` === this.favoriteTeamId || `${game.awayTeam.id}` === this.favoriteTeamId,
 				);
 				gamesToTrack.push(...teamGames);
 				if (teamGames.length > 0) {

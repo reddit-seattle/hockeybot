@@ -214,6 +214,21 @@ export namespace Environment {
 	// MLB Team name display
 	export const HOCKEYBOT_MLB_TEAM_NAME = process.env["HOCKEYBOT_MLB_TEAM_NAME"] || "Seattle Mariners";
 
+	// PWHL Configuration
+	// Channel for PWHL game threads
+	export const HOCKEYBOT_PWHL_CHANNEL_ID = process.env["HOCKEYBOT_PWHL_CHANNEL_ID"] || undefined;
+	// PWHL Team to track games (team ID from PWHL HockeyTech API)
+	export const HOCKEYBOT_PWHL_TEAM_ID = process.env["HOCKEYBOT_PWHL_TEAM_ID"];
+	// PWHL Team name display
+	export const HOCKEYBOT_PWHL_TEAM_NAME = process.env["HOCKEYBOT_PWHL_TEAM_NAME"] || "Seattle Torrent";
+	// Team code/abbreviation (e.g., "SEA", "TOR", "MTL", etc.)
+	export const HOCKEYBOT_PWHL_TEAM_CODE = process.env["HOCKEYBOT_PWHL_TEAM_CODE"] || "SEA";
+	// PWHL Firebase auth token for real-time API access
+	export const HOCKEYBOT_PWHL_AUTH_TOKEN = process.env["HOCKEYBOT_PWHL_AUTH_TOKEN"];
+	// PWHL API key for HockeyTech API access
+	export const HOCKEYBOT_PWHL_API_KEY = process.env["HOCKEYBOT_PWHL_API_KEY"];
+
+
 	// Channel for general debug messages
 	export const DEBUG_CHANNEL_ID = process.env["GUILD_DEBUG_CHANNEL_ID"] || undefined;
 	// Local / debug run flag
@@ -258,6 +273,7 @@ export const STARTED_STATES = [GameState.pregame, GameState.live, GameState.crit
 export enum ThreadManagerState {
 	INITIALIZED = "INITIALIZED",
 	PREGAME = "PREGAME",
+	TRACKING_EVENTS = "TRACKING_EVENTS",
 	LIVE = "LIVE",
 	COMPLETED = "COMPLETED",
 	ERROR = "ERROR",
@@ -270,6 +286,124 @@ export interface Record {
 }
 
 export namespace Paths {
+	export namespace PWHL {
+		/**
+		 * PWHL uses the HockeyTech API via LeagueStat cluster
+		 * Base: https://lscluster.hockeytech.com/feed/
+		 *
+		 */
+		export const API_ENDPOINT = "https://lscluster.hockeytech.com/feed";
+		export const API_KEY = Environment.HOCKEYBOT_PWHL_API_KEY ?? "";
+		export const CLIENT_CODE = "pwhl";
+
+		export const HeadshotURL = (playerId: string) => `https://assets.leaguestat.com/pwhl/240x240/${playerId}.jpg`;
+
+		const buildUrl = (params: { [key: string]: string }) => {
+			const queryParams = new URLSearchParams({
+				...params,
+				key: API_KEY,
+				client_code: CLIENT_CODE,
+			});
+			return `${API_ENDPOINT}/index.php?${queryParams.toString()}`;
+		};
+
+		export namespace Season {
+			// https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=seasons&key=...&client_code=pwhl
+			export const All = () => buildUrl({ feed: "modulekit", view: "seasons" });
+
+			// https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=seasons&key=...&client_code=pwhl
+			export const Current = () => buildUrl({ feed: "modulekit", view: "seasons" });
+		}
+
+		export namespace Teams {
+			// https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=teamsbyseason&season_id=5&key=...&client_code=pwhl
+			export const BySeasonId = (seasonId: string) =>
+				buildUrl({ feed: "modulekit", view: "teamsbyseason", season_id: seasonId });
+
+			// https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=roster&team_id=3&season_id=5&key=...&client_code=pwhl
+			export const Roster = (teamId: string, seasonId: string) =>
+				buildUrl({ feed: "modulekit", view: "roster", team_id: teamId, season_id: seasonId });
+		}
+
+		export namespace Schedule {
+			// https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=schedule&season_id=5&key=...&client_code=pwhl
+			export const BySeason = (seasonId: string) =>
+				buildUrl({ feed: "modulekit", view: "schedule", season_id: seasonId });
+
+			// https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=schedule&team_id=3&season_id=5&key=...&client_code=pwhl
+			export const ByTeam = (teamId: string, seasonId: string) =>
+				buildUrl({ feed: "modulekit", view: "schedule", team_id: teamId, season_id: seasonId });
+
+			// https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=gamesperday&start_date=2023-01-01&end_date=2026-01-01&key=...&client_code=pwhl
+			export const ByDateRange = (startDate: string, endDate: string) =>
+				buildUrl({ feed: "modulekit", view: "gamesperday", start_date: startDate, end_date: endDate });
+
+			// https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=scorebar&numberofdaysback=1000&numberofdaysahead=1000&key=...&client_code=pwhl
+			export const Scorebar = (daysBack: number = 1000, daysAhead: number = 1000) =>
+				buildUrl({
+					feed: "modulekit",
+					view: "scorebar",
+					numberofdaysback: daysBack.toString(),
+					numberofdaysahead: daysAhead.toString(),
+				});
+		}
+
+		export namespace Standings {
+			// https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=statviewtype&stat=conference&type=standings&season_id=5&key=...&client_code=pwhl
+			export const Current = (seasonId: string) =>
+				buildUrl({
+					feed: "modulekit",
+					view: "statviewtype",
+					stat: "conference",
+					type: "standings",
+					season_id: seasonId,
+				});
+		}
+
+		export namespace Games {
+			// https://lscluster.hockeytech.com/feed/index.php?feed=gc&tab=preview&game_id=137&key=...&client_code=pwhl
+			export const Preview = (gameId: string) => buildUrl({ feed: "gc", tab: "preview", game_id: gameId });
+
+			// https://lscluster.hockeytech.com/feed/index.php?feed=gc&tab=clock&game_id=137&key=...&client_code=pwhl
+			export const Clock = (gameId: string) => buildUrl({ feed: "gc", tab: "clock", game_id: gameId });
+
+			// https://lscluster.hockeytech.com/feed/index.php?feed=gc&tab=pxpverbose&game_id=137&key=...&client_code=pwhl
+			export const PlayByPlay = (gameId: string) => buildUrl({ feed: "gc", tab: "pxpverbose", game_id: gameId });
+
+			// https://lscluster.hockeytech.com/feed/index.php?feed=gc&tab=gamesummary&game_id=137&key=...&client_code=pwhl
+			export const Summary = (gameId: string) =>
+				buildUrl({ feed: "gc", tab: "gamesummary", game_id: gameId, site_id: "0", lang: "en" });
+		}
+
+		/**
+		 * Real-Time API Endpoints
+		 * Base: https://leaguestat-b9523.firebaseio.com/svf/pwhl/
+		 */
+		export namespace Live {
+			export const BASE_URL = "https://leaguestat-b9523.firebaseio.com/svf/pwhl";
+			export const AUTH_TOKEN = Environment.HOCKEYBOT_PWHL_AUTH_TOKEN || "";
+
+			const buildEndpoint = (endpoint: string) => {
+				return `${BASE_URL}${endpoint}?auth=${AUTH_TOKEN}`;
+			};
+
+			// All live game data in one call
+			export const AllLiveData = () => buildEndpoint(".json");
+
+			// Clock endpoints
+			export const RunningClock = () => buildEndpoint("/runningclock.json");
+			export const PublishedClock = () => buildEndpoint("/publishedclock.json");
+
+			// Event endpoints
+			export const Goals = () => buildEndpoint("/goals.json");
+			export const Penalties = () => buildEndpoint("/penalties.json");
+			export const Faceoffs = () => buildEndpoint("/faceoffs.json");
+
+			// Stats endpoints
+			export const ShotsSummary = () => buildEndpoint("/shotssummary.json");
+		}
+	}
+
 	export namespace NHL {
 		/***
 		 * All games today:               https://api-web.nhle.com/v1/schedule/now

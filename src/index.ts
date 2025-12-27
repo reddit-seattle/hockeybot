@@ -5,13 +5,25 @@ import { createServer } from "http";
 import { exit } from "process";
 import { Mariners, MLBGameThread, ReplayMLBGame } from "./commands/MLB";
 import { GameThread, GetSchedule, GetScores, GetStandings, GetStats, PlayoffBracket, ReplayGame } from "./commands/NHL";
+import {
+	GameThread as PWHLGameThread,
+	GetSchedule as PWHLGetSchedule,
+	GetScores as PWHLGetScores,
+	GetStandings as PWHLGetStandings,
+	ReplayGame as PWHLReplayGame,
+} from "./commands/PWHL";
 import { CommandDictionary } from "./models/Command";
 import { MLBGameScheduleMonitor } from "./service/MLB/tasks/MLBGameScheduleMonitor";
 import { NHLGameScheduleMonitor } from "./service/NHL/tasks/NHLGameScheduleMonitor";
-import { mlbScheduleMonitorService, nhlScheduleMonitorService } from "./service/ScheduleMonitorService";
+import {
+	mlbScheduleMonitorService,
+	nhlScheduleMonitorService,
+	pwhlScheduleMonitorService,
+} from "./service/ScheduleMonitorService";
 import { Environment } from "./utils/constants";
 // @ts-ignore
 import LogTimestamp from "log-timestamp";
+import { PWHLGameScheduleMonitor } from "./service/PWHL/tasks/PWHLGameScheduleMonitor";
 import { EmojiCache } from "./utils/EmojiCache";
 import { getPackageVersion } from "./utils/helpers";
 import { Logger } from "./utils/Logger";
@@ -36,6 +48,11 @@ const commands = [
 	Mariners, // MLB commands
 	MLBGameThread,
 	ReplayMLBGame,
+	PWHLGetSchedule, // PWHL commands
+	PWHLGetScores,
+	PWHLGetStandings,
+	PWHLGameThread,
+	PWHLReplayGame,
 ].reduce((map, obj) => {
 	map[obj.name] = obj;
 	return map;
@@ -123,12 +140,34 @@ const startMLBGameDayThreadChecker = async (guild: Guild) => {
 	Logger.info("MLB schedule monitor started");
 };
 
+const startPWHLGameDayThreadChecker = async (guild: Guild) => {
+	if (!Environment.HOCKEYBOT_PWHL_CHANNEL_ID) {
+		Logger.warn("PWHL channel ID not set. PWHL game day thread checker will not start.");
+		return;
+	}
+
+	const pwhlGameDayChannel = await guild.channels.fetch(Environment.HOCKEYBOT_PWHL_CHANNEL_ID);
+	if (!(pwhlGameDayChannel?.type == ChannelType.GuildText)) {
+		Logger.warn("PWHL game day channel not found or not a text channel.");
+		return;
+	}
+	// Start PWHL monitor
+	const pwhlScheduleMonitor = new PWHLGameScheduleMonitor(
+		pwhlGameDayChannel as TextChannel,
+		Environment.HOCKEYBOT_PWHL_TEAM_ID,
+	);
+	pwhlScheduleMonitor.initialize();
+	pwhlScheduleMonitorService.set(pwhlScheduleMonitor);
+	Logger.info("PWHL schedule monitor started");
+};
+
 client.once("ready", async () => {
 	Logger.info(`Logged in as ${client?.user?.tag}!`);
 	Logger.debug(`Version: ${getPackageVersion()}`);
 	client.guilds.cache.forEach((guild: Guild) => {
 		startNHLGameDayThreadChecker(guild);
 		startMLBGameDayThreadChecker(guild);
+		startPWHLGameDayThreadChecker(guild);
 	});
 	// keep this out of the loop, this actually loops through guilds
 	registerAllSlashCommands(client);

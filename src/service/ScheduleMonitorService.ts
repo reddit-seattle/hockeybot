@@ -1,5 +1,6 @@
 import { MLBGameScheduleMonitor } from "./MLB/tasks/MLBGameScheduleMonitor";
 import { NHLGameScheduleMonitor } from "./NHL/tasks/NHLGameScheduleMonitor";
+import { PWHLGameScheduleMonitor } from "./PWHL/tasks/PWHLGameScheduleMonitor";
 
 export class ScheduleMonitorService<T> {
 	private monitor?: T;
@@ -16,3 +17,4 @@ export class ScheduleMonitorService<T> {
 // Singleton instances
 export const nhlScheduleMonitorService = new ScheduleMonitorService<NHLGameScheduleMonitor>();
 export const mlbScheduleMonitorService = new ScheduleMonitorService<MLBGameScheduleMonitor>();
+export const pwhlScheduleMonitorService = new ScheduleMonitorService<PWHLGameScheduleMonitor>();
