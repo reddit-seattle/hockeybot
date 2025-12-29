@@ -103,7 +103,7 @@ export class PWHLGameFeedManager {
 			}
 
 			// period start
-			if (this.inIntermission && hasPeriodStarted(ClockMinutes, PeriodId)) {
+			if (this.inIntermission && hasPeriodStarted(ClockMinutes, ClockSeconds, PeriodId)) {
 				await this.announcePeriodStart(PeriodId);
 				this.inIntermission = false;
 			}

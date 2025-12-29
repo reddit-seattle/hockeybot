@@ -115,10 +115,17 @@ export const formatPWHLPeriodName = (period: number): string => {
 	}
 };
 
-export const hasPeriodStarted = (clockMinutes: number, periodId: number): boolean => {
-	const isOT = periodId >= 4;
-	const expectedStartMinutes = isOT ? 4 : 19;
-	return clockMinutes <= expectedStartMinutes;
+export const hasPeriodStarted = (clockMinutes: number, clockSeconds: number, periodId: number): boolean => {
+	const isOT = Number(periodId) >= 4;
+	const fullMinutes = isOT ? 5 : 20;
+
+	// If clock reads 0:00, period hasn't started
+	if (clockMinutes === 0 && clockSeconds === 0) return false;
+
+	// If clock reads full period value (e.g., 20:00 or 5:00), treat as not-started
+	if (clockMinutes === fullMinutes && clockSeconds === 0) return false;
+
+	return true;
 };
 
 export const isGameOver = (gameState: string) => {

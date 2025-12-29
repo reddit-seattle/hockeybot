@@ -270,7 +270,7 @@ export function PWHLGoalEmbedBuilder(goal: GoalEvent, gameSummary: GameSummary):
 		EmptyNet,
 		PenaltyShot,
 		Time,
-		PeriodShortName,
+		PeriodLongName,
 	} = goal;
 
 	// Determine which team scored
@@ -347,7 +347,7 @@ export function PWHLGoalEmbedBuilder(goal: GoalEvent, gameSummary: GameSummary):
 		},
 	);
 
-	const timestamp = `${Time} ${PeriodShortName}`;
+	const timestamp = `${Time} ${PeriodLongName}`;
 
 	// Build headshot URL
 	const headshotUrl = Paths.PWHL.HeadshotURL(`${ScorerPlayerId}`);
