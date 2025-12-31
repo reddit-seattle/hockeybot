@@ -103,6 +103,7 @@ export class PWHLGameFeedManager {
 			}
 
 			// period start
+			// todo - just keep track of periodId changing?
 			if (this.inIntermission && hasPeriodStarted(ClockMinutes, ClockSeconds, PeriodId)) {
 				await this.announcePeriodStart(PeriodId);
 				this.inIntermission = false;
