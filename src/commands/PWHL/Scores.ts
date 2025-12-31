@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { SlashCommandBuilder } from "discord.js";
 import { Command } from "../../models/Command";
 import { API } from "../../service/PWHL/API";
@@ -16,12 +17,13 @@ export const GetScores: Command = {
 			const dateInput = interaction.options.getString("date", false);
 			const adjustedDate = processLocalizedDateInput(dateInput);
 			const allGames = await API.Schedule.GetScorebar();
-			const titleDate = format(adjustedDate ?? new Date(), Config.TITLE_DATE_FORMAT);
+			const titleDate = formatInTimeZone(adjustedDate ?? new Date(), Config.TIME_ZONE, Config.TITLE_DATE_FORMAT);
 			const title = `Scores for ${titleDate}`;
 
-			// filter by date
 			const filteredGames = allGames.filter((game) =>
-				game.GameDateISO8601.startsWith(format(adjustedDate ?? new Date(), "yyyy-MM-dd")),
+				game.GameDateISO8601.startsWith(
+					formatInTimeZone(adjustedDate ?? new Date(), Config.TIME_ZONE, Config.GAME_DATE_FORMAT),
+				),
 			);
 
 			if (!filteredGames?.length) {

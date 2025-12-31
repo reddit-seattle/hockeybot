@@ -1,4 +1,5 @@
-import { addHours, format, getUnixTime } from "date-fns";
+import { format, getUnixTime } from "date-fns";
+import { zonedTimeToUtc } from "date-fns-tz";
 import { Channel, ChannelType, SlashCommandStringOption, TextChannel } from "discord.js";
 import { mkdirSync, writeFileSync } from "fs";
 import { any } from "underscore";
@@ -37,7 +38,7 @@ export function getProperty<T, K extends keyof T>(o: T, propertyName: K): T[K] {
  * @returns a string with the provided or current date formatted yyyy-MM-dd
  */
 export const ApiDateString: (date?: Date) => string = (date) => {
-	return format(date ?? new Date(), "yyyy-MM-dd");
+	return format(date ?? new Date(), Config.GAME_DATE_FORMAT);
 };
 
 /**
@@ -187,8 +188,8 @@ export const processLocalizedDateInput = (input?: string | Date | null) => {
 	if (!input) {
 		return undefined;
 	}
-	// all hail the pacific timezone
-	return addHours(new Date(input), 8);
+	const dateStr = typeof input === "string" ? input : format(input, Config.GAME_DATE_FORMAT);
+	return zonedTimeToUtc(`${dateStr} 00:00:00`, Config.TIME_ZONE);
 };
 
 // TODO - This is absolutely ridiculous

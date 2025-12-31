@@ -85,16 +85,9 @@ export class PWHLGameFeedManager {
 				Logger.warn(`[PWHL] No clock data found for game ${this.gameId}`);
 				return;
 			}
-			const { PeriodId, StatusId, Final, ClockMinutes, ClockSeconds } = clockData;
-
-			Logger.debug(
-				`[PWHL] Game ${this.gameId} - Period ${PeriodId} (${clockData.PeriodLongName}), Status: ${StatusId} (${clockData.StatusName}), Progress: ${clockData.ProgressString}`,
-			);
-
-			// Debug logging - game feed
-			if (Environment.LOCAL_RUN) {
-				Logger.debug(`[PWHL] Clock data for ${this.gameId}:`, JSON.stringify(clockData, null, 2));
-			}
+			const { PeriodId, Final, ClockMinutes, ClockSeconds } = clockData;
+			// debug clock data
+			Logger.debug(`[PWHL] Clock data for ${this.gameId}:`, JSON.stringify(clockData, null, 2));
 
 			// period end
 			if (ClockMinutes === 0 && ClockSeconds == 0 && !this.inIntermission) {
