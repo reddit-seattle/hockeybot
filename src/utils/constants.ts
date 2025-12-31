@@ -10,6 +10,7 @@ export namespace Config {
 	export const GAME_CHECKER_CRON = "0 0,30 9,10 * * *"; // 9:00, 9:30, 10:00, 10:30 AM
 	export const TIME_ZONE = "America/Los_Angeles";
 	export const BODY_DATE_FORMAT = `iii PP @ p`; // "Thu Dec 28, 2023 @ 4:16 PM"
+	export const GAME_DATE_FORMAT = `yyyy-MM-dd`;
 	export const TITLE_DATE_FORMAT = `iii PP`;
 	export const TRACKED_NHL_EVENT_TYPES = [
 		EventTypeCode.goal,

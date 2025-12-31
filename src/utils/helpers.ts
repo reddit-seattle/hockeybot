@@ -1,4 +1,5 @@
-import { addHours, format, getUnixTime } from "date-fns";
+import { format, getUnixTime } from "date-fns";
+import { zonedTimeToUtc } from "date-fns-tz";
 import { Channel, ChannelType, SlashCommandStringOption, TextChannel } from "discord.js";
 import { mkdirSync, writeFileSync } from "fs";
 import { any } from "underscore";
@@ -37,7 +38,7 @@ export function getProperty<T, K extends keyof T>(o: T, propertyName: K): T[K] {
  * @returns a string with the provided or current date formatted yyyy-MM-dd
  */
 export const ApiDateString: (date?: Date) => string = (date) => {
-	return format(date ?? new Date(), "yyyy-MM-dd");
+	return format(date ?? new Date(), Config.GAME_DATE_FORMAT);
 };
 
 /**
@@ -115,10 +116,17 @@ export const formatPWHLPeriodName = (period: number): string => {
 	}
 };
 
-export const hasPeriodStarted = (clockMinutes: number, periodId: number): boolean => {
-	const isOT = periodId >= 4;
-	const expectedStartMinutes = isOT ? 4 : 19;
-	return clockMinutes <= expectedStartMinutes;
+export const hasPeriodStarted = (clockMinutes: number, clockSeconds: number, periodId: number): boolean => {
+	const isOT = Number(periodId) >= 4;
+	const fullMinutes = isOT ? 5 : 20;
+
+	// If clock reads 0:00, period hasn't started
+	if (clockMinutes === 0 && clockSeconds === 0) return false;
+
+	// If clock reads full period value (e.g., 20:00 or 5:00), treat as not-started
+	if (clockMinutes === fullMinutes && clockSeconds === 0) return false;
+
+	return true;
 };
 
 export const isGameOver = (gameState: string) => {
@@ -180,8 +188,8 @@ export const processLocalizedDateInput = (input?: string | Date | null) => {
 	if (!input) {
 		return undefined;
 	}
-	// all hail the pacific timezone
-	return addHours(new Date(input), 8);
+	const dateStr = typeof input === "string" ? input : format(input, Config.GAME_DATE_FORMAT);
+	return zonedTimeToUtc(`${dateStr} 00:00:00`, Config.TIME_ZONE);
 };
 
 // TODO - This is absolutely ridiculous
