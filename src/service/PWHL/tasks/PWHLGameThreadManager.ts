@@ -1,9 +1,9 @@
 import { EmbedBuilder } from "@discordjs/builders";
 import { TextChannel, ThreadAutoArchiveDuration, ThreadChannel } from "discord.js";
+import { formatInTimeZone } from "date-fns-tz";
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
-import { Environment, ThreadManagerState } from "../../../utils/constants";
+import { Config, Environment, ThreadManagerState } from "../../../utils/constants";
 import { isPWHLGameFinal, isPWHLGameLive } from "../../../utils/enums";
-import { ApiDateString } from "../../../utils/helpers";
 import { Logger } from "../../../utils/Logger";
 import { PWHLGameAnnouncementEmbedBuilder, PWHLGameStartEmbedBuilder } from "../../../utils/PWHLEmbedFormatters";
 import { API } from "../API";
@@ -212,8 +212,7 @@ export class PWHLGameThreadManager {
 	// Generates thread title for the game, used to track existing threads
 	private generateThreadTitle(game: Game): string {
 		const teamSegment = `${game.VisitorCode} @ ${game.HomeCode}`;
-		const date = new Date(game.GameDateISO8601);
-		const dateStr = ApiDateString(date);
+		const dateStr = formatInTimeZone(new Date(game.GameDateISO8601), Config.TIME_ZONE, Config.GAME_DATE_FORMAT);
 		return `[PWHL] ${teamSegment} - ${dateStr}`;
 	}
 }
