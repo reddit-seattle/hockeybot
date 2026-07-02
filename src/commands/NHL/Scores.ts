@@ -5,7 +5,7 @@ import { API } from "../../service/NHL/API";
 import { Game } from "../../service/NHL/models/ScoresResponse";
 import { Config } from "../../utils/constants";
 import { EmojiCache } from "../../utils/EmojiCache";
-import { GameState, PeriodType } from "../../utils/enums";
+import { GameState, GameType, PeriodType } from "../../utils/enums";
 import {
 	hasGameStarted,
 	isGameInProgress,
@@ -14,6 +14,7 @@ import {
 	periodToStr,
 	processLocalizedDateInput,
 } from "../../utils/helpers";
+import { formatSeriesContextLine, getSeriesContextForGame } from "../../utils/PlayoffHelpers";
 
 export const GetScores: Command = {
 	name: "scores",
@@ -62,6 +63,14 @@ export const GetScores: Command = {
 
 				const gameScoreLine = `${away}\n${home}`;
 				let detailsLineItems = [];
+
+				// Playoff series context
+				if (game.gameType === GameType.playoffs) {
+					const seriesCtx = await getSeriesContextForGame(homeTeam.id, awayTeam.id);
+					if (seriesCtx) {
+						detailsLineItems.push(`*${formatSeriesContextLine(seriesCtx)}*`);
+					}
+				}
 
 				// pregame checks
 				if (gameState == GameState.pregame) {
