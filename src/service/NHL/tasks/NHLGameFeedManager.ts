@@ -8,6 +8,7 @@ import { GameFeedEmbedFormatter } from "../../../utils/EmbedFormatters";
 import { EventTypeCode, GameState } from "../../../utils/enums";
 import { isGameOver } from "../../../utils/helpers";
 import { Logger } from "../../../utils/Logger";
+import { EmojiCache } from "../../../utils/EmojiCache";
 import { getSeriesContextForGame } from "../../../utils/PlayoffHelpers";
 import { GameType } from "../../../utils/enums";
 import { API } from "../API";
@@ -196,13 +197,18 @@ export class GameFeedManager {
 			const seriesCtx = await getSeriesContextForGame(parseInt(homeTeam.id), parseInt(awayTeam.id));
 			if (!seriesCtx?.isSeriesOver || !seriesCtx.winnerAbbrev) return;
 
-			// Get full team names from the feed for the clinch message
-			const winnerTeam = homeTeam.abbrev === seriesCtx.winnerAbbrev ? homeTeam : awayTeam;
-			const loserTeam = homeTeam.abbrev === seriesCtx.winnerAbbrev ? awayTeam : homeTeam;
-			const totalGames = seriesCtx.topSeedWins + seriesCtx.bottomSeedWins;
+				const winnerTeam = homeTeam.abbrev === seriesCtx.winnerAbbrev ? homeTeam : awayTeam;
+				const loserTeam = homeTeam.abbrev === seriesCtx.winnerAbbrev ? awayTeam : homeTeam;
+				const totalGames = seriesCtx.topSeedWins + seriesCtx.bottomSeedWins;
+
+				const winnerEmoji = EmojiCache.getNHLTeamEmoji(winnerTeam.abbrev);
+				const isStanleyCupFinal = seriesCtx.roundNumber >= 4;
+				const title = isStanleyCupFinal
+					? `${winnerEmoji} ${winnerTeam.commonName.default} — Stanley Cup Champions!`
+					: `${winnerEmoji} ${winnerTeam.commonName.default} Advance`;
 
 			const embed = new EmbedBuilder()
-				.setTitle(`🏆 Series Over`)
+				.setTitle(title)
 				.setDescription(
 					`**${winnerTeam.commonName.default}** have defeated the **${loserTeam.commonName.default}** in ${totalGames} games.`,
 				)

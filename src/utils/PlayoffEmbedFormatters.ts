@@ -1,7 +1,6 @@
 import { EmbedBuilder } from "discord.js";
-import utcToZonedTime from "date-fns-tz/utcToZonedTime";
 import { Game } from "../service/NHL/models/DaySchedule";
-import { Colors, Config } from "./constants";
+import { Colors, Config, Strings } from "./constants";
 import { EmojiCache } from "./EmojiCache";
 import {
 	formatSeriesContextLine,
@@ -51,7 +50,7 @@ export const PlayoffDailySummaryEmbedBuilder = async (games: Game[]): Promise<Em
 		// Add round header as a field
 		fields.push({
 			name: `── ${roundName} ──`,
-			value: "\u200B", // zero-width space
+			value: Strings.ZERO_WIDTH_SPACE,
 			inline: false,
 		});
 
@@ -86,15 +85,10 @@ export const PlayoffDailySummaryEmbedBuilder = async (games: Game[]): Promise<Em
 				lines.push(`**Live**: ${awayTeam.abbrev} ${awayScore} - ${homeTeam.abbrev} ${homeScore}`);
 			} else {
 				// Upcoming game
-				const gameDate = utcToZonedTime(startTimeUTC, Config.TIME_ZONE);
-				const timeStr = gameDate
-					.toLocaleString("en-US", {
-						hour: "numeric",
-						minute: "2-digit",
-						hour12: true,
-					})
-					.replace("AM", "am")
-					.replace("PM", "pm");
+				const timeStr = new Date(startTimeUTC)
+						.toLocaleTimeString("en-US", Config.LOCAL_TIME_DISPLAY_OPTIONS)
+						.replace("AM", "am")
+						.replace("PM", "pm");
 				lines.push(`${relativeDateString(startTimeUTC)} — ${timeStr}`);
 				lines.push(venue.default);
 			}

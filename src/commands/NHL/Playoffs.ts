@@ -1,10 +1,9 @@
-import utcToZonedTime from "date-fns-tz/utcToZonedTime";
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import { max } from "underscore";
 import { Command } from "../../models/Command";
 import { API } from "../../service/NHL/API";
 import { Seed } from "../../service/NHL/models/PlayoffCarouselResponse";
-import { Colors, Config } from "../../utils/constants";
+import { Colors, Config, Strings } from "../../utils/constants";
 import { EmojiCache } from "../../utils/EmojiCache";
 import { getActiveRounds } from "../../utils/PlayoffHelpers";
 
@@ -36,7 +35,7 @@ export const PlayoffBracket: Command = {
 			// Round header separator
 			allFields.push({
 				name: `── ${roundLabel} ──`,
-				value: "\u200B",
+				value: Strings.ZERO_WIDTH_SPACE,
 			});
 
 			const seriesFields = await Promise.all(
@@ -73,16 +72,18 @@ export const PlayoffBracket: Command = {
 						};
 					}
 
-					const gameDate = utcToZonedTime(game.startTimeUTC, Config.TIME_ZONE);
-					const gameDateString = gameDate.toLocaleString("en-US", {
-						weekday: "short",
-						month: "numeric",
-						day: "numeric",
-						hour: "numeric",
-						minute: "2-digit",
-						hour12: true,
-					});
-					const gameTime = gameDateString.replace("AM", "am").replace("PM", "pm");
+					const gameTime = new Date(game.startTimeUTC)
+						.toLocaleString("en-US", {
+							weekday: "short",
+							month: "numeric",
+							day: "numeric",
+							hour: "numeric",
+							minute: "2-digit",
+							hour12: true,
+							timeZone: Config.TIME_ZONE,
+						})
+						.replace("AM", "am")
+						.replace("PM", "pm");
 					const gameVenue = game.venue.default;
 
 					return {
