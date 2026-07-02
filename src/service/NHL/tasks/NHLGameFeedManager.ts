@@ -222,9 +222,9 @@ export class GameFeedManager {
 	private startStoryPolling = () => {
 		let officialStateReached = false;
 		let officialStateTime: number | null = null;
-		const POLL_INTERVAL_MS = 1000 * 30; // 30 seconds
-		const POLLING_AFTER_OFFICIAL_MS = 1000 * 60 * 5; // 5 minutes
-		const POLLING_DELAY_MS = 1000 * 60; // 1 minute
+		const POLL_INTERVAL_MS = 1000 * 60; // 1 minute between polls
+		const POLLING_AFTER_OFFICIAL_MS = 1000 * 60 * 30; // poll for up to 30 min after official (three stars can be slow)
+		const POLLING_DELAY_MS = 1000 * 60 * 2; // wait 2 minutes before first poll
 
 		const pollStory = async (): Promise<void> => {
 			const boxScore = await API.Games.GetBoxScore(this.gameId);
@@ -234,24 +234,22 @@ export class GameFeedManager {
 			if (currentState === GameState.official && !officialStateReached) {
 				officialStateReached = true;
 				officialStateTime = Date.now();
+				Logger.info(`[GAME END] Game ${this.gameId} reached official state`);
 			}
 
 			// Try to get story data and send as new message
 			const story = await API.Games.GetStory(this.gameId);
+			const threeStars = story?.summary?.threeStars?.length || 0;
+			const gameStats = story?.summary?.teamGameStats?.length || 0;
+			Logger.info(`[GAME END] Story poll for ${this.gameId}: threeStars=${threeStars} gameStats=${gameStats} state=${currentState}`);
 
-			if (story?.summary) {
-				// Log what's available
-				const threeStars = story.summary.threeStars?.length || 0;
-				const gameStats = story.summary.teamGameStats?.length || 0;
-				// Send story summary as new message if we have meaningful data
-				if (threeStars > 0 || gameStats > 0) {
-					const storyEmbed = this.embedFormatter.createStoryEmbed(story);
-					await this?.thread?.send({ embeds: [storyEmbed] });
-					// Stop polling after successfully sending story
-					Logger.info(`[GAME END] Story data sent for game ${this.gameId}`);
-					this.finalizeGameThread();
-					return;
-				}
+			// Send story summary once we have meaningful data
+			if (threeStars > 0 || gameStats > 0) {
+				const storyEmbed = this.embedFormatter.createStoryEmbed(story);
+				await this?.thread?.send({ embeds: [storyEmbed] });
+				Logger.info(`[GAME END] Story data sent for game ${this.gameId}`);
+				this.finalizeGameThread();
+				return;
 			}
 
 			// Determine if we should continue polling
@@ -261,11 +259,11 @@ export class GameFeedManager {
 			if (shouldContinue) {
 				setTimeout(pollStory, POLL_INTERVAL_MS);
 			} else {
-				Logger.info(`[GAME END] Polling complete for game ${this.gameId}`);
+				Logger.warn(`[GAME END] Gave up waiting for story data for game ${this.gameId}`);
 				this.finalizeGameThread();
 			}
 		};
-		// Start polling after 1 minute
+		// Start polling after initial delay
 		setTimeout(pollStory, POLLING_DELAY_MS);
 	};
 
