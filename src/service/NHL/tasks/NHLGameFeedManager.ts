@@ -205,7 +205,7 @@ export class GameFeedManager {
 				const isStanleyCupFinal = seriesCtx.roundNumber >= 4;
 				const title = isStanleyCupFinal
 					? `${winnerEmoji} ${winnerTeam.commonName.default} — Stanley Cup Champions!`
-					: `${winnerEmoji} ${winnerTeam.commonName.default} Advance`;
+					: `${winnerEmoji} ${winnerTeam.commonName.default} Advance ${winnerEmoji}`;
 
 			const embed = new EmbedBuilder()
 				.setTitle(title)

@@ -58,7 +58,7 @@ export const PlayoffBracket: Command = {
 					const description =
 						bottomSeed.wins === topSeed.wins
 							? `Series tied ${topSeed.wins}-${bottomSeed.wins}`
-							: `${leader.abbrev} leads ${leader.wins}-${loser.wins}`;
+							: `${leaderEmoji} ${leader.abbrev} leads ${leader.wins}-${loser.wins}`;
 
 					const seriesDetails = await API.Playoffs.GetPlayoffSeries(`${season}`, seriesLetter.toLowerCase());
 					const gameNum = loser.wins + leader.wins + 1;
