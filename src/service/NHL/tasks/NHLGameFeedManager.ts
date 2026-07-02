@@ -8,6 +8,8 @@ import { GameFeedEmbedFormatter } from "../../../utils/EmbedFormatters";
 import { EventTypeCode, GameState } from "../../../utils/enums";
 import { isGameOver } from "../../../utils/helpers";
 import { Logger } from "../../../utils/Logger";
+import { getSeriesContextForGame } from "../../../utils/PlayoffHelpers";
+import { GameType } from "../../../utils/enums";
 import { API } from "../API";
 import { Play, PlayByPlayResponse } from "../models/PlayByPlayResponse";
 
@@ -170,20 +172,54 @@ export class GameFeedManager {
 
 		// Create initial game end embed
 		const scoreEmbed = this.embedFormatter.createGameEndEmbed();
-		const gameEndMessage = await this?.thread?.send({ embeds: [scoreEmbed] });
+		await this?.thread?.send({ embeds: [scoreEmbed] });
+
+		// Check for series clinch if this is a playoff game
+		if (this.feed?.gameType === GameType.playoffs) {
+			await this.postSeriesClinchIfApplicable();
+		}
 
 		// Start polling for story updates
-		this.startStoryPolling(gameEndMessage);
+		this.startStoryPolling();
 
 		// Stop main game status checker
 		this.Stop();
 	};
 
 	/**
+	 * After a playoff game ends, checks if the winning team just clinched the series.
+	 * If so, posts an elimination message in the thread.
+	 */
+	private postSeriesClinchIfApplicable = async (): Promise<void> => {
+		try {
+			const { homeTeam, awayTeam } = this.feed!;
+			const seriesCtx = await getSeriesContextForGame(parseInt(homeTeam.id), parseInt(awayTeam.id));
+			if (!seriesCtx?.isSeriesOver || !seriesCtx.winnerAbbrev) return;
+
+			// Get full team names from the feed for the clinch message
+			const winnerTeam = homeTeam.abbrev === seriesCtx.winnerAbbrev ? homeTeam : awayTeam;
+			const loserTeam = homeTeam.abbrev === seriesCtx.winnerAbbrev ? awayTeam : homeTeam;
+			const totalGames = seriesCtx.topSeedWins + seriesCtx.bottomSeedWins;
+
+			const embed = new EmbedBuilder()
+				.setTitle(`🏆 Series Over`)
+				.setDescription(
+					`**${winnerTeam.commonName.default}** have defeated the **${loserTeam.commonName.default}** in ${totalGames} games.`,
+				)
+				.setColor(0xffd700);
+
+			await this.thread?.send({ embeds: [embed] });
+			Logger.info(`[PLAYOFFS] Posted series clinch message for game ${this.gameId}`);
+		} catch (error) {
+			Logger.error(`[PLAYOFFS] Error posting series clinch for game ${this.gameId}:`, error);
+		}
+	};
+
+	/**
 	 * Polls for story updates, tracking state transitions and updating the embed with new data
 	 * Continues until OFFICIAL state, then polls for 5 more minutes before cleanup
 	 */
-	private startStoryPolling = (gameEndMessage: Message) => {
+	private startStoryPolling = () => {
 		let officialStateReached = false;
 		let officialStateTime: number | null = null;
 		const POLL_INTERVAL_MS = 1000 * 30; // 30 seconds

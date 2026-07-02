@@ -5,9 +5,10 @@ import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { Colors, Config, Environment, STARTED_STATES, ThreadManagerState } from "../../../utils/constants";
 import { GameAnnouncementEmbedBuilder } from "../../../utils/EmbedFormatters";
 import { EmojiCache } from "../../../utils/EmojiCache";
-import { GameState } from "../../../utils/enums";
+import { GameState, GameType } from "../../../utils/enums";
 import { ApiDateString, isGameOfficiallyOver, relativeDateString } from "../../../utils/helpers";
 import { Logger } from "../../../utils/Logger";
+import { formatSeriesContextLine, getSeriesContextForGame } from "../../../utils/PlayoffHelpers";
 import { API } from "../API";
 import { GameFeedManager } from "./NHLGameFeedManager";
 
@@ -97,8 +98,8 @@ class GameThreadManager {
 
 		// Create thread with game announcement
 		const gameAnnounceEmbed = await this.createGameAnnouncementEmbed(boxScore);
-		const message = await this.channel.send({ embeds: [gameAnnounceEmbed] });
 
+		const message = await this.channel.send({ embeds: [gameAnnounceEmbed] });
 		this.thread = await this.channel.threads.create({
 			name: threadTitle,
 			autoArchiveDuration: ThreadAutoArchiveDuration.OneDay,
@@ -110,7 +111,7 @@ class GameThreadManager {
 	}
 
 	private async createGameAnnouncementEmbed(boxScore: any): Promise<EmbedBuilder> {
-		const { awayTeam, homeTeam, startTimeUTC, venue } = boxScore;
+		const { awayTeam, homeTeam, startTimeUTC, venue, gameType } = boxScore;
 
 		// Format date/time
 		const relativeDate = relativeDateString(startTimeUTC);
@@ -142,10 +143,20 @@ class GameThreadManager {
 			title = `${awayDisplay} vs ${homeDisplay}`;
 		}
 
+		// Build description with optional series context for playoff games
+		let description = `Game start: ${gameStartTimeString} (${relativeDate})\n${venue.default}`;
+
+		if (gameType === GameType.playoffs) {
+			const seriesContext = await getSeriesContextForGame(homeTeam.id, awayTeam.id);
+			if (seriesContext) {
+				description += `\n${formatSeriesContextLine(seriesContext, { nextGame: true })}`;
+			}
+		}
+
 		// Create embed
 		return new EmbedBuilder()
 			.setTitle(title)
-			.setDescription(`Game start: ${gameStartTimeString} (${relativeDate})\n${venue.default}`)
+			.setDescription(description)
 			.setColor(embedColor);
 	}
 

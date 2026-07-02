@@ -9,8 +9,9 @@ import { Game as TeamMonthlyScheduleGame } from "../service/NHL/models/TeamMonth
 import { Game as TeamWeeklyScheduleGame } from "../service/NHL/models/TeamWeeklyScheduleResponse";
 import { Colors, Config, Environment, StoryStatCategories, Strings } from "./constants";
 import { EmojiCache } from "./EmojiCache";
-import { EventTypeCode } from "./enums";
+import { EventTypeCode, GameType } from "./enums";
 import { getSituationCodeString, periodToStr, relativeDateString } from "./helpers";
+import { formatSeriesContextLine, getSeriesContextForGame } from "./PlayoffHelpers";
 
 export class GameFeedEmbedFormatter {
 	private teamsMap: Map<string, Team> = new Map<string, Team>();
@@ -496,6 +497,15 @@ export const ScheduleEmbedBuilder = async (
 			)} (${dateSlug})`;
 			const venuStr = `Venue: ${venue.default}`;
 			let output = `${dateStr}\n${venuStr}`;
+
+			// Playoff series context
+			if (item.gameType === GameType.playoffs) {
+				const seriesCtx = await getSeriesContextForGame(homeTeam.id, awayTeam.id);
+				if (seriesCtx) {
+					output += `\n*${formatSeriesContextLine(seriesCtx, { nextGame: true })}*`;
+				}
+			}
+
 			// only show radio links if available
 			const { radioLink: awayAudio } = awayTeam;
 			const { radioLink: homeAudio } = homeTeam;

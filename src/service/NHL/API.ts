@@ -27,6 +27,10 @@ export namespace API {
 			const response = await get<DayScheduleResponse>(Paths.NHL.Schedule.AllGames(dateInput));
 			return response.gameWeek[0].games;
 		};
+		export const GetDailyScheduleResponse = async (date?: Date) => {
+			const dateInput = date && date instanceof Date ? ApiDateString(date) : undefined;
+			return await get<DayScheduleResponse>(Paths.NHL.Schedule.AllGames(dateInput));
+		};
 		export const GetTeamWeeklySchedule = async (team: string) => {
 			const response = await get<TeamWeeklyScheduleResponse>(Paths.NHL.Schedule.TeamWeeklySchedule(team));
 			return response.games;
